@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, MessageCircle, LogOut, Settings, Award, ChevronUp } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Settings, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function Layout() {
   const { profile } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(!isDark);
 
   const points = profile?.points || 0;
   const baseAltitude = 728; // Marzio altitude
@@ -16,84 +29,118 @@ export default function Layout() {
   // Simple badges derivation based on points/metrics
   const hasVillegiante = points >= 10;
   const hasCustode = points >= 50;
+  const hasSindaco = points >= 150;
   
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col md:flex-row md:p-6 md:gap-6 overflow-hidden font-sans relative">
+    <div className="min-h-screen bg-[#F7F5F0] dark:bg-[#0d1310] text-[#1a2e16] dark:text-[#e2e8f0] flex flex-col md:flex-row md:p-6 md:gap-6 overflow-hidden font-sans relative transition-colors duration-300">
+      
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#2D5A27]/5 dark:bg-[#2D5A27]/10 -z-10 rounded-l-full blur-3xl"></div>
+
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900/50 border border-slate-800 rounded-2xl flex-shrink-0 shadow-xl overflow-hidden relative">
-        <div className="p-6 border-b border-slate-800 flex justify-between items-start">
+      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-[#151e18] border border-slate-100 dark:border-[#24352b] rounded-2xl flex-shrink-0 shadow-lg overflow-hidden relative transition-colors duration-300">
+        <div className="p-6 border-b border-slate-100 dark:border-[#24352b] flex justify-between items-start bg-slate-50/50 dark:bg-[#1a261f]/50">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 flex-shrink-0 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">M</div>
+             <div className="w-10 h-10 flex-shrink-0 bg-[#2D5A27] rounded-xl flex items-center justify-center text-white shadow-md shadow-[#2D5A27]/20">
+                <Mountain size={20} />
+             </div>
              <div>
-               <h1 className="text-lg font-semibold tracking-tight text-white leading-tight uppercase">marzio1777</h1>
-               <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-tight mt-1">by Neo1777</p>
+               <h1 className="text-lg font-serif font-bold tracking-tight text-[#2D5A27] dark:text-[#42a83a] leading-tight">marzio1777</h1>
+               <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-tight mt-0.5">by Neo1777</p>
              </div>
           </div>
-          <button onClick={() => setShowSettings(true)} className="text-slate-500 hover:text-indigo-400 transition-colors p-1 bg-slate-800/40 rounded-md">
-            <Settings size={14} />
-          </button>
+          <div className="flex gap-1">
+             <button onClick={toggleTheme} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a] transition-colors p-1.5 bg-slate-100 dark:bg-[#24352b] rounded-md">
+               {isDark ? <Sun size={14} /> : <Moon size={14} />}
+             </button>
+             <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a] transition-colors p-1.5 bg-slate-100 dark:bg-[#24352b] rounded-md">
+               <Settings size={14} />
+             </button>
+          </div>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 py-6 overflow-y-auto">
+        <nav className="flex-1 px-4 space-y-1.5 py-6 overflow-y-auto">
           <NavItem to="/dashboard/piazza" icon={<Home size={18} />} label="La Piazza" />
           <NavItem to="/dashboard/baule" icon={<Camera size={18} />} label="Il Baule" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
-          <NavItem to="/dashboard/circolo" icon={<MessageCircle size={18} />} label="Il Circolo" />
+          <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" />
+          {(profile?.role === 'Root' || profile?.role === 'Admin') && (
+            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-[#24352b]">
+              <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Pannello Root" admin />
+            </div>
+          )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/30">
+        <div className="p-4 border-t border-slate-100 dark:border-[#24352b] bg-slate-50/50 dark:bg-[#1a261f]/50">
           <div className="mb-4 space-y-2">
             <div className="flex items-center justify-between px-2">
-               <span className="text-[10px] font-mono text-slate-500 uppercase">Altitudine</span>
-               <span className="text-xs font-mono text-emerald-400 font-bold flex items-center gap-1"><ChevronUp size={12}/>{currentAltitude}m</span>
+               <span className="text-[10px] font-sans font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Altitudine</span>
+               <span className="text-xs font-sans text-[#2D5A27] dark:text-[#42a83a] font-bold flex items-center gap-1"><ChevronUp size={12}/>{currentAltitude}m</span>
             </div>
             {hasVillegiante && (
-              <div className="px-2 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md flex items-center gap-2">
-                <Award size={12} className="text-indigo-400" />
-                <span className="text-[10px] font-mono text-indigo-300 uppercase">Il Villeggiante</span>
+              <div className="px-2 py-1.5 bg-[#F5A623]/10 border border-[#F5A623]/20 rounded-md flex items-center gap-2">
+                <Award size={12} className="text-[#F5A623]" />
+                <span className="text-[10px] font-sans font-semibold text-amber-700 dark:text-amber-500 uppercase">Il Villeggiante</span>
               </div>
             )}
             {hasCustode && (
-              <div className="px-2 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md flex items-center gap-2">
-                <Award size={12} className="text-amber-400" />
-                <span className="text-[10px] font-mono text-amber-300 uppercase">Custode Baule</span>
+              <div className="px-2 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-md flex items-center gap-2">
+                <Camera size={12} className="text-blue-500 dark:text-blue-400" />
+                <span className="text-[10px] font-sans font-semibold text-blue-700 dark:text-blue-400 uppercase">Custode Baule</span>
+              </div>
+            )}
+            {hasSindaco && (
+              <div className="px-2 py-1.5 bg-[#2D5A27]/10 border border-[#2D5A27]/20 rounded-md flex items-center gap-2">
+                <Award size={12} className="text-[#2D5A27] dark:text-[#42a83a]" />
+                <span className="text-[10px] font-sans font-semibold text-green-800 dark:text-green-500 uppercase">Sindaco di Marzio</span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-3 mb-4 p-2 bg-slate-800/40 rounded-xl">
-            <img src={profile?.photoURL || 'https://picsum.photos/seed/avatar/100/100'} className="w-8 h-8 rounded-full border border-slate-700" alt="avatar" referrerPolicy="no-referrer" />
+          <div className="flex items-center gap-3 mb-4 p-2 bg-white dark:bg-[#111814] border border-slate-100 dark:border-[#24352b] shadow-sm rounded-xl">
+            <img src={profile?.photoURL || 'https://picsum.photos/seed/avatar/100/100'} className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b]" alt="avatar" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-slate-200">{profile?.displayName}</p>
-              <p className="text-[10px] text-indigo-400 font-mono uppercase truncate">{profile?.role || 'GUEST'}</p>
+              <p className="text-sm font-semibold truncate text-[#1a2e16] dark:text-[#e2e8f0]">{profile?.displayName}</p>
+              <p className={`text-[10px] font-sans uppercase font-bold truncate ${profile?.role === 'Root' ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>{profile?.role || 'OSPITE'}</p>
             </div>
           </div>
-          <button onClick={logout} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs text-slate-400 font-bold uppercase tracking-wider hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors border border-transparent hover:border-slate-700">
+          <button onClick={logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors border border-transparent">
             <LogOut size={14} />
-            <span>Termina Sessione</span>
+            <span>Lascia il Paese</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative flex flex-col bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden pt-16 md:pt-0 pb-16 md:pb-0 shadow-xl">
-        <div className="md:hidden absolute top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 text-slate-200 flex items-center justify-between px-4 shadow-md z-10">
-          <h1 className="text-sm font-semibold tracking-widest uppercase">marzio1777</h1>
-          <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-indigo-400">
-             <Settings size={18} />
-          </button>
+      <main className="flex-1 relative flex flex-col bg-white/80 dark:bg-[#151e18]/80 backdrop-blur-sm border md:border-slate-100 dark:md:border-[#24352b] md:rounded-2xl overflow-hidden pt-16 md:pt-0 pb-16 md:pb-0 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-colors duration-300">
+        <div className="md:hidden absolute top-0 left-0 right-0 h-16 bg-white/90 dark:bg-[#151e18]/90 backdrop-blur border-b border-slate-100 dark:border-[#24352b] flex items-center justify-between px-4 shadow-sm z-10">
+          <div className="flex items-center gap-2">
+             <Mountain size={20} className="text-[#2D5A27] dark:text-[#42a83a]" />
+             <h1 className="text-base font-serif font-bold text-[#2D5A27] dark:text-[#42a83a]">marzio1777</h1>
+          </div>
+          <div className="flex gap-3">
+             <button onClick={toggleTheme} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a]">
+               {isDark ? <Sun size={20} /> : <Moon size={20} />}
+             </button>
+             <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a]">
+                <Settings size={20} />
+             </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-0 md:p-6 scrollbar-hide">
           <Outlet />
         </div>
       </main>
 
       {/* Bottom Nav for Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur border-t border-slate-800 text-slate-400 flex justify-around items-center h-16 pb-safe z-20">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#151e18] border-t border-slate-100 dark:border-[#24352b] text-slate-400 flex justify-around items-center h-16 pb-safe z-40 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_15px_rgba(0,0,0,0.5)] transition-colors duration-300">
         <MobileNavItem to="/dashboard/piazza" icon={<Home size={22} />} />
         <MobileNavItem to="/dashboard/baule" icon={<Camera size={22} />} />
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
-        <MobileNavItem to="/dashboard/circolo" icon={<MessageCircle size={22} />} />
+        <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} />
+        {(profile?.role === 'Root' || profile?.role === 'Admin') && (
+           <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
+        )}
       </nav>
 
       {/* Settings Modal */}
@@ -104,18 +151,18 @@ export default function Layout() {
   );
 }
 
-function NavItem({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) {
+function NavItem({ to, icon, label, admin }: { to: string, icon: React.ReactNode, label: string, admin?: boolean }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${isActive ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}>
+    <NavLink to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold ${isActive ? (admin ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400' : 'bg-[#2D5A27] text-white shadow-md shadow-[#2D5A27]/20') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1a261f] hover:text-[#2D5A27] dark:hover:text-[#42a83a] border border-transparent'}`}>
       {icon}
       <span>{label}</span>
     </NavLink>
   );
 }
 
-function MobileNavItem({ to, icon }: { to: string, icon: React.ReactNode }) {
+function MobileNavItem({ to, icon, admin }: { to: string, icon: React.ReactNode, admin?: boolean }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `p-3 rounded-xl transition-all duration-200 ${isActive ? 'text-indigo-400 bg-indigo-600/10 border border-indigo-500/20' : 'text-slate-500 active:bg-slate-800'}`}>
+    <NavLink to={to} className={({ isActive }) => `p-3 rounded-xl transition-all duration-200 ${isActive ? (admin ? 'text-red-500 bg-red-50 dark:bg-red-950/30' : 'text-[#2D5A27] dark:text-[#42a83a] bg-[#2D5A27]/10') : 'text-slate-400 dark:text-slate-500 active:bg-slate-50 dark:active:bg-[#1a261f]'}`}>
       {icon}
     </NavLink>
   );
@@ -129,21 +176,21 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-         <h3 className="text-lg font-bold text-white mb-2 tracking-tight">Impostazioni Avanzate</h3>
-         <p className="text-xs text-slate-400 mb-6 font-mono">Configura i nodi di intelligenza artificiale locale.</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D5A27]/40 dark:bg-black/60 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#151e18] rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100 dark:border-[#24352b]">
+         <h3 className="text-xl font-serif font-bold text-[#2D5A27] dark:text-[#42a83a] mb-2">Impostazioni Locali</h3>
+         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-sans">Configura l'intelligenza artificiale per l'analisi e il restauro delle vecchie foto.</p>
          
          <div className="space-y-4">
            <div>
-             <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2">Gemini API Key</label>
-             <input type="password" value={key} onChange={e => setKey(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 outline-none focus:border-indigo-500/50 transition-colors font-mono" placeholder="AIzaSy..." />
-             <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Questa chiave risiede solo nel tuo browser locale. Abilita la funzione di auto-descrizione nel Baule.</p>
+             <label className="block text-xs font-sans font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Gemini API Key</label>
+             <input type="password" value={key} onChange={e => setKey(e.target.value)} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg p-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all font-mono" placeholder="AIzaSy..." />
+             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">Salvata in locale. Abilita la funzione di auto-generazione didascalie nostalgiche.</p>
            </div>
            
            <div className="flex gap-3 pt-4">
-              <button onClick={onClose} className="flex-1 py-2.5 bg-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-700 transition-colors">Annulla</button>
-              <button onClick={saveKey} className="flex-1 py-2.5 bg-indigo-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-500 transition-colors">Salva Config</button>
+              <button onClick={onClose} className="flex-1 py-3 bg-white dark:bg-[#151e18] border border-slate-200 dark:border-[#24352b] text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-50 dark:hover:bg-[#1a261f] transition-colors">Annulla</button>
+              <button onClick={saveKey} className="flex-1 py-3 bg-[#2D5A27] text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-[#20401b] transition-colors shadow-lg shadow-[#2D5A27]/20">Salva e Chiudi</button>
            </div>
          </div>
       </motion.div>

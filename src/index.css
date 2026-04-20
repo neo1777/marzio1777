@@ -1,12 +1,58 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+  --color-marzio-seppia: #F7F5F0;
+  --color-marzio-verde: #2D5A27;
+  --color-marzio-oro: #F5A623;
+  --color-marzio-azzurro: #4A90E2;
+  --color-marzio-grigio: #8C928D;
+  
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }
 
 body {
-  background-color: #020617; /* slate-950 */
-  color: #e2e8f0; /* slate-200 */
+  font-family: var(--font-sans);
+  background-color: var(--color-marzio-seppia);
+}
+
+.dark body {
+  background-color: #0d1310;
+}
+
+.polaroid-frame {
+  background: white;
+  padding: 12px 12px 40px 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.dark .polaroid-frame {
+  background: #111814;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.4);
+  border: 1px solid #24352b;
+}
+
+.polaroid-loading {
+  position: relative;
+  overflow: hidden;
+}
+.polaroid-loading::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  animation: develop 4s ease-in-out forwards;
+}
+
+@keyframes develop {
+  0% { height: 100%; backdrop-filter: blur(10px); }
+  100% { height: 0%; backdrop-filter: blur(0px); }
 }

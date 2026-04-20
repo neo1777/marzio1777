@@ -6,7 +6,8 @@ import Landing from './pages/Landing';
 import LaPiazza from './pages/LaPiazza';
 import IlBaule from './pages/IlBaule';
 import LaMappa from './pages/LaMappa';
-import IlCircolo from './pages/IlCircolo';
+import LAlberone from './pages/LAlberone';
+import AdminPanel from './pages/AdminPanel';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -27,7 +28,8 @@ export default function App() {
             <Route path="piazza" element={<LaPiazza />} />
             <Route path="baule" element={<IlBaule />} />
             <Route path="mappa" element={<LaMappa />} />
-            <Route path="circolo" element={<IlCircolo />} />
+            <Route path="alberone" element={<LAlberone />} />
+            <Route path="admin" element={<AdminPanel />} />
           </Route>
         </Routes>
       </BrowserRouter>
