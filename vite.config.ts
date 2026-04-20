@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    // base: '/marzio1777/', // IMPORTANT: Rimuovi il commento se ospiti il sito su https://tuonome.github.io/marzio1777/
+    base: '/marzio1777/', // IMPORTANT: Rimuovi il commento se ospiti il sito su https://tuonome.github.io/marzio1777/
     plugins: [
       react(), 
       tailwindcss(),
