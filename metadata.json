@@ -1,0 +1,9 @@
+{
+  "name": "marzio1777",
+  "description": "A private community app to collect, share, and geolocate historical photos and memories of Marzio. Created by Neo1777.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

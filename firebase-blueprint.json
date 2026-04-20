@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of Marzio Memories",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["Root", "Admin", "Guest"], "default": "Guest" },
+        "points": { "type": "number", "default": 0 },
+        "apiKey": { "type": "string", "description": "LLM API Key" },
+        "createdAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A memory photo post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "imageUrl": { "type": "string", "description": "Thumbnail URL" },
+        "driveUrl": { "type": "string", "description": "High res Drive URL" },
+        "caption": { "type": "string" },
+        "location": {
+           "type": "object",
+           "properties": {
+             "lat": { "type": "number" },
+             "lng": { "type": "number" }
+           }
+        },
+        "decade": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "likesCount": { "type": "number" }
+      },
+      "required": ["authorId", "timestamp"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "User comment on a post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["postId", "authorId", "text", "timestamp"]
+    },
+    "ChatChannel": {
+      "title": "ChatChannel",
+      "description": "A chat channel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "createdBy"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat channel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "channelId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["channelId", "authorId", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "Memory posts"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Comments on a post"
+    },
+    "/chats/{channelId}": {
+      "schema": { "$ref": "#/entities/ChatChannel" },
+      "description": "Chat channels"
+    },
+    "/chats/{channelId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages inside a channel"
+    }
+  }
+}
