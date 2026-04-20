@@ -7,6 +7,7 @@ import LaPiazza from './pages/LaPiazza';
 import IlBaule from './pages/IlBaule';
 import LaMappa from './pages/LaMappa';
 import LAlberone from './pages/LAlberone';
+import IlBivacco from './pages/IlBivacco';
 import AdminPanel from './pages/AdminPanel';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -19,13 +20,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<Landing />} />
           
           <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="piazza" replace />} />
             <Route path="piazza" element={<LaPiazza />} />
+            <Route path="bivacco" element={<IlBivacco />} />
             <Route path="baule" element={<IlBaule />} />
             <Route path="mappa" element={<LaMappa />} />
             <Route path="alberone" element={<LAlberone />} />

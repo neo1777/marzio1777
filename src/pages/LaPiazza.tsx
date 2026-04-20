@@ -8,8 +8,11 @@ import { it } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import confetti from 'canvas-confetti';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function LaPiazza() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDecade, setActiveDecade] = useState('Tutti');
@@ -99,31 +102,49 @@ export default function LaPiazza() {
             {filteredPosts.map(post => (
               <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} key={post.id} className="polaroid-frame max-w-xl mx-auto rounded-xl transition-colors">
                 
-                {/* Image */}
-                <div className="relative bg-slate-100 dark:bg-[#080d0a] flex items-center justify-center border border-slate-200 dark:border-[#24352b] overflow-hidden rounded-sm" style={{ minHeight: '300px' }}>
-                  {post.imageUrl ? (
-                    <img src={post.imageUrl} alt="Memory Record" className="w-full object-contain" loading="lazy" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-full aspect-[4/3] flex items-center justify-center bg-slate-50 dark:bg-[#111814]">
-                      <span className="text-slate-400 dark:text-slate-500 font-sans font-medium text-sm">Foto non disponibile</span>
-                    </div>
-                  )}
-                </div>
+                {post.type === 'event' ? (
+                   <div className="p-8 bg-gradient-to-br from-[#f56a23]/10 to-[#f56a23]/5 dark:from-[#f56a23]/20 dark:to-[#f56a23]/5 border-b border-slate-200 dark:border-[#24352b] text-center rounded-t-sm flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-[#f56a23]/20 text-[#f56a23] rounded-full flex items-center justify-center mb-4">
+                         <MapPin size={28} />
+                      </div>
+                      <h4 className="text-xl font-serif font-bold text-[#1a2e16] dark:text-[#e2e8f0] mb-2">{post.title}</h4>
+                      <p className="text-sm font-sans text-slate-600 dark:text-slate-300 font-medium">Appuntamento a: {post.location}</p>
+                      <button className="mt-6 border border-[#f56a23] text-[#f56a23] px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#f56a23] hover:text-white transition-colors" onClick={() => navigate('/dashboard/bivacco')}>
+                         Vai a Il Bivacco
+                      </button>
+                   </div>
+                ) : (
+                   <div className="relative bg-slate-100 dark:bg-[#080d0a] flex items-center justify-center border border-slate-200 dark:border-[#24352b] overflow-hidden rounded-sm" style={{ minHeight: '300px' }}>
+                     {post.imageUrl ? (
+                       <img src={post.imageUrl} alt="Memory Record" className="w-full object-contain" loading="lazy" referrerPolicy="no-referrer" />
+                     ) : (
+                       <div className="w-full aspect-[4/3] flex items-center justify-center bg-slate-50 dark:bg-[#111814]">
+                         <span className="text-slate-400 dark:text-slate-500 font-sans font-medium text-sm">Foto non disponibile</span>
+                       </div>
+                     )}
+                   </div>
+                )}
 
                 {/* Caption & Meta directly under the photo like a polaroid */}
                 <div className="pt-6 px-2">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-serif text-xl font-bold text-[#1a2e16] dark:text-[#e2e8f0]">{post.decade}</h3>
-                    <div className="flex items-center gap-2">
-                      {post.location && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-[#2D5A27] dark:text-[#42a83a] font-sans font-bold uppercase px-2 py-1 bg-[#2D5A27]/5 dark:bg-[#42a83a]/10 rounded border border-[#2D5A27]/20 dark:border-[#42a83a]/30">
-                          <MapPin size={12} /> Marzio
-                        </div>
-                      )}
+                  {post.type !== 'event' && (
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-serif text-xl font-bold text-[#1a2e16] dark:text-[#e2e8f0]">{post.decade}</h3>
+                      <div className="flex items-center gap-2">
+                        {post.location && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#2D5A27] dark:text-[#42a83a] font-sans font-bold uppercase px-2 py-1 bg-[#2D5A27]/5 dark:bg-[#42a83a]/10 rounded border border-[#2D5A27]/20 dark:border-[#42a83a]/30">
+                            <MapPin size={12} /> Marzio
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed mb-6 font-serif italic">"{post.caption}"</p>
+                  {!post.type || post.type === 'photo' ? (
+                     <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed mb-6 font-serif italic">"{post.caption}"</p>
+                  ) : (
+                     <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed mb-6 font-sans italic">Un nuovo appuntamento è stato organizzato. Entra ne Il Bivacco per segnare cosa porterai e dare la tua conferma di partecipazione!</p>
+                  )}
                   
                   {/* Author Row */}
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#24352b]">
