@@ -25,12 +25,14 @@ export default defineConfig(({mode}) => {
             {
               src: 'https://api.dicebear.com/7.x/identicon/svg?seed=marzio1777',
               sizes: '192x192',
-              type: 'image/svg+xml'
+              type: 'image/svg+xml',
+              purpose: 'any maskable'
             },
                {
               src: 'https://api.dicebear.com/7.x/identicon/svg?seed=marzio1777',
               sizes: '512x512',
-              type: 'image/svg+xml'
+              type: 'image/svg+xml',
+              purpose: 'any maskable'
             }
           ]
         }
