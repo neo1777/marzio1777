@@ -1,74 +1,85 @@
-# 🌲 marzio1777
+# 🌲 Marzio1777
 **La Macchina del Tempo Digitale per i Ricordi di Montagna**
 
 Benvenuto in **marzio1777**, il progetto che prende i ricordi nostalgici (le estati al fresco, i tornanti in salita, l'odore di polenta, le foto sbiadite degli anni '80) e li sbatte prepotentemente nel Web 3.0 (o quasi). 
 
-Questo non è un semplice social network. È una **Piazza Comunale digitale**, un raccoglitore di memorie dove i villeggianti e i veri "marziesi" possono conservare la storia del paese prima che le tarme mangino i vecchi album fotografici.
+Questo non è un semplice "sito di foto". È una **Piazza Comunale digitale**, un raccoglitore di memorie dove i villeggianti e i "marziesi" doc possono conservare la storia del paese, organizzare eventi e ritrovarsi a fare salotto. E siccome non volevamo una cosa noiosa, ci abbiamo infilato punti, gagliardetti e giochi di società!
 
 ---
 
 ## 🗺️ Cosa c'è dentro? (Le Attrazioni)
 
-### 📸 1. La Piazza (Il Feed)
-Il luogo di ritrovo virtuale. Niente algoritmi tossici o influencer che vendono tisane dimagranti, solo polaroid quadrate dei decenni passati.
-- **Filtri Temporali:** Viaggia nel tempo istantaneamente schiacciando "Anni 70", "Anni 80", o "Anni 90".
+### 📸 1. La Piazza (Il Feed Social)
+Il luogo di ritrovo virtuale. Niente algoritmi tossici, solo polaroid quadrate del passato e aggiornamenti sui nostri ritrovi.
+- **Filtri Temporali:** Viaggia nel tempo visualizzando solo foto degli "Anni 70", "Anni 80" ecc.
 - **Esplosione di Cuori:** Metti mi piace a una foto e goditi un'esplosione di coriandoli a forma di foglie e fiocchi di neve (perché a Marzio o nevica o ci sono le foglie secche).
-- **Chiacchiere di Paese:** Commenta gli aneddoti per guadagnare Punti Altitudine.
+- **Commenti e Discussioni:** Chiacchiera, commenta, e guadagna "Punti Altitudine". (I *Guest* non possono commentare o inquinare il fiume).
 
-### 🧳 2. Il Baule (Centro di Caricamento)
-Non un semplice modulo di upload, ma un vero e proprio laboratorio di sviluppo fotografico.
-- **Buttaci dentro tutto:** Trascina 10 foto dal tuo PC, la coda intelligente te le farà scorrere una ad una senza farti venire il tunnel carpale.
-- **Ritaglio Libero:** Polaroid? Panorama? Adatta la geometria o lascia la foto "Così com'è".
-- **Il "Ricordo AI" 🤖:** Hai scansionato una foto ma sei troppo pigro per scriverci una descrizione strappalacrime? Clicca sulla scintilla e la nostra *Intelligenza Artificiale Nostalgica* capirà cosa c'è nella foto e scriverà la didascalia perfetta in dialetto/stile locale.
-- **Puntina Mappa Avanzata:** Aggancia il GPS, cerca "Via Roma" o piazza il pin a mano sfogliando la topografia.
+### 🏕️ 2. Il Bivacco (Eventi e Grigliate)
+La bacheca ufficiale in cui si programmano i ritrovi e gli eventi!
+- **Nuovo Appuntamento:** Fissa un punto di ritrovo, scegli la data, invita chi vuoi.
+- **Chi siamo e quanti siamo:** RSVP interattivo. Indichi in quanti partecipate, così non si compra troppa polenta.
+- **La Lista della Spesa Estrema:** Chi porta cosa? "Assegna a me" un elemento, o inseriscilo per qualcun altro. Una checkbox ti dirà se è tutto pronto.
+- **Il Wallet "Taccuino dei Conti":** Abbiamo diviso il conto in pizzeria o per la grigliata? Ognuno butta giù le spese che ha sostenuto e il sistema ti tira una riga matematica per dividere il conto e dirti chi deve dare i soldi a chi! 
 
-### 🧭 3. La Mappa (Cartografia Storica)
-Tutti i ricordi piazzati fisicamente su una mappa navigabile di Marzio. Abbiamo integrato un selettore di strati (Layers) assurdo:
-- **Esploratore:** Satellite iper-dettagliato per spiare il tetto del vicino.
-- **Sentieri:** Mappe open-source perfette per vedere dove finiva la passeggiata fungaiola nel '92.
-- **Visione Notturna:** Per guardare le foto alle 3 di notte fingendo di dormire.
+### 🎞 3. Il Cinematografo (La Sala Proiezioni)
+La nostra sala Cinema! Una galleria fotografica a schermo intero creata appositamente per le sere tra noi da essere proiettata su TV.
+- **Esposizione & Autoplay:** Lascialo girare pigramente o sfoglia con la tastiera la nostra vita. La "card" in in sovrapposizione riporta i crediti e puoi nasconderla come se fosse un sipario per far spazio alla foto.
+- **Filtri Rapidità:** Sfoglia la collezione unicamente focalizzata su chi l'ha caricata o scegli l'anagrafe (es. Guarda tutte le foto Anni 90 che non hai mai visto caricate da Mario Rossi).
+- **Giochi di Gruppo ("Gamification"):** Mettiti in "Indovina Chi!" e nascondi a tutto schermo le scritte e i Like prima di chiamare il pubblico per farti svelare chi ci stava dietro oppure "Indovina l'anno!".
 
-### 🌳 4. L'Alberone (Gamification)
-Più foto carichi e commenti, più punti accumuli. L'albero cresce con te. È letteralmente un Tamagotchi arboreo alimentato a nostalgia.
+### 🧳 4. Il Baule (Centro di Caricamento)
+Non un semplice modulo di upload, ma un vero e proprio laboratorio artigianale.
+- **Senza confini:** Trascina tantissime foto alla volta dal tuo PC: la coda di sviluppo automatizzata.
+- **Il "Ricordo AI" 🤖:** Usa lo scanner "Scintilla Magic Scan"! Non riesci a spiegare a parole cos'è quel casale? L'AI farà l'identikit descrivendolo in puro vocabolario "montanaro/dialettale" e lo compilerà per te!
+- **Puntina Mappa Avanzata:** Aggancia il tag GPS sfogliando la mappa digitale!
+
+### 🧭 5. La Mappa (Cartografia dei Ricordi)
+Tutte le memorie non volano nel vento ma atterrano spidate su mappa locale!
+- Cerca il chiosco o la via dove hai caricato le foto e la mappa le raggrupperà mostrando i classici pointer numerici interattivi. Clicca sui bollini e tuffati dritti nel post di partenza!
+
+### 🌳 6. L'Alberone (Bacheca In Diretta)
+La banchisa sotto l'albero. Si tratta di un'autentica stanzetta con chat real-time sincronizzata ("Sulle panchine sotto l'albero") per scrivere quattro scemenze super rapide in stile telegram a colpo d'occhio senza dover aprire il cellulare!  
+
+### 🪪 7. Il Profilo (Altitudine ed Esperienza)
+Un videogioco nella vita reale. Punti Altitudine accumulati interagendo, commentando o caricando foto! Se sali abbastanza conquisterai dei Gagliardetti fantastici da mostrare in giro tipo: *Il Villeggiante, Il Turista Esperto, Il Sindaco di Marzio*. 
 
 ---
 
-## 📱 Come Installare l'App (PWA - iPhone, Android, PC)
-
-Questa non è solo una pagina web. Abbiamo infuso la magia delle **Progressive Web App (PWA)**, il che significa che puoi trasformarla in un'App nativa sul tuo dispositivo in 10 secondi netti:
-
-- **Su iPhone (Safari):** Apri il sito web, tocca l'icona "Condividi" (il quadrato con la freccetta in su) e scegli **"Aggiungi alla schermata Home"**. Fatto.
-- **Su Android (Chrome):** Appena apri il sito, il browser dovrebbe chiederti con un popup "Installa App". Se non lo fa, premi i 3 puntini in alto a destra e fai pappa su **"Installa app"**.
-- **Su PC/Mac:** Sulla barra degli indirizzi di Chrome o Edge apparirà una piccola icona col simbolo di un monitor e una freccetta. Schiacciala e il sito diventerà un programma Desktop indipendente!
+## 🔒 Gerarchie & Sicurezza
+Dobbiamo proteggere il patrimonio storico:
+- **Guest (Turista di Passaggio):** L'ultimo nato nel sistema. Può solo guardare, non può né scrivere una singola lettera né spiare il Bivacco segreto o caricare foto. L'unica cosa che sa fare è ammirare.
+- **Admin (Segretaria Comunale):** Utenti regolari scelti da poteri forti. Possono elevare i poveri turisti a Admin e sbloccare tutto. 
+- **Root (Il Monarca Illuminato):** Esiste un solo Root che manipola destini (e ruoli).
 
 ---
 
-## 🛠️ Come avviare la baracca (Istruzioni per Sviluppatori)
+## 📱 Come Aggiungere l'App al Telefono (PWA)
 
-Vuoi mettere le mani sotto il cofano di questa gloriosa Fiat Panda 4x4 del codice?
+Puoi installarci facilmente senza intasare lo Store!
 
-1. **Assicurati di avere Node.js installato.**
-2. **Installa i pacchetti (metti benzina):**
+- **iOS / iPhone (su Safari):** Apri l'app in Safari > Tasto centrale (Quadrato con freccia ⬆️) > **"Aggiungi alla schermata Home"**.
+- **Android (su Chrome):** Apri l'app > I 3 Puntini in alto ⠇ > **"Aggiungi a schermata Home / Installa l'App"**.
+- Apparirà la nostra icona sul tuo smartphone ed entrerai saltando del tutto le finestre dei browser!
+
+---
+
+## 🛠️ Come Avviare l'App "Offline" o per Sviluppo (Istruzioni per l'Hacker del Paese)
+
+1. **Assicurati di usare Node.js.**
+2. **Scarica i Pacchetti:**
    ```bash
    npm install
    ```
-3. **Crea il tuo file `.env.local`** (opzionale, ma utile se vuoi gestire le chiavi backend in dev). 
-4. **Accendi il motore:**
+3. **Piazzate il vostro file speciale (chiavi DB etc)** `.env.local`  
+4. **Accendiamo tutto:**
    ```bash
    npm run dev
    ```
-5. Apri `http://localhost:3000` e respira l'aria pura di montagna.
+5. Ora sei collegato su `http://localhost:3000`.
 
-### 🤖 Auto-Deploy Globale (GitHub Actions)
-Il progetto è già cablato col filo spinato a GitHub Pages. 
-Dietro le quinte c'è un maggiordomo instancabile (un file chiamato `.github/workflows/deploy.yml`) che aspetta solo una cosa: ogni *Push* che fai sul branch `main` scatenerà i server di GitHub per compilare e lanciare online la tua ultima versione all'istante all'interno della piattaforma *GitHub Pages*. Niente abbonamenti server, si vive di rendita open-source.
-
-*Tip per gli Admin:* Per far funzionare lo scrittore AI, vai nel **Pannello Root** (icona ingranaggio in basso a sinistra) e incolla la tua API Key di Gemini. Senza di quella, il robot è muto come un pesce siluro.
+*Pro-Tip:* Il bot dell'AI (per descrivere le foto) richiede che nel menu Root (Pannello Amministratore visibile solo a Root o Admin) inseriate la chiave segreta dell'API Gemini. Senza non respira!
 
 ---
 
-## 🎩 Easter Eggs & Fun Facts
-- **Il Bug degli SVG Neri:** Gli SVG trasparenti diventavano inquietanti quadrati neri. Il motore Canvas (sotto il cofano de *Il Baule*) ora stende un intonaco bianco digitale su ogni immagine priva di sfondo prima di appenderla.
-- **Il tema scuro:** Non è grigio, è foresta. I colori dark mode si ispirano al buio tra i pini (`#111814` e `#080d0a`).
-
-*Sviluppato con amore, TypeScript e parecchia polenta da Neo1777 (e il suo fido assistente AI).*
+*Ideato a Marzio, scritto con codice, sudore ed amato da Neo1777.*
