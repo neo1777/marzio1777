@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Settings, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame } from 'lucide-react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../lib/firebase';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Layout() {
   const { profile } = useAuth();
-  const [showSettings, setShowSettings] = useState(false);
+  const navigate = useNavigate();
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
@@ -53,8 +52,8 @@ export default function Layout() {
              <button onClick={toggleTheme} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a] transition-colors p-1.5 bg-slate-100 dark:bg-[#24352b] rounded-md">
                {isDark ? <Sun size={14} /> : <Moon size={14} />}
              </button>
-             <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a] transition-colors p-1.5 bg-slate-100 dark:bg-[#24352b] rounded-md">
-               <Settings size={14} />
+             <button onClick={() => navigate('/dashboard/profilo')} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a] transition-colors p-1.5 bg-slate-100 dark:bg-[#24352b] rounded-md">
+               <UserCircle size={14} />
              </button>
           </div>
         </div>
@@ -98,7 +97,7 @@ export default function Layout() {
             )}
           </div>
           
-          <div className="flex items-center gap-3 mb-4 p-2 bg-white dark:bg-[#111814] border border-slate-100 dark:border-[#24352b] shadow-sm rounded-xl">
+          <div onClick={() => navigate('/dashboard/profilo')} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-[#24352b] transition-colors flex items-center gap-3 mb-4 p-2 bg-white dark:bg-[#111814] border border-slate-100 dark:border-[#24352b] shadow-sm rounded-xl">
             <img src={profile?.photoURL || 'https://picsum.photos/seed/avatar/100/100'} className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b]" alt="avatar" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-[#1a2e16] dark:text-[#e2e8f0]">{profile?.displayName}</p>
@@ -123,8 +122,8 @@ export default function Layout() {
              <button onClick={toggleTheme} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a]">
                {isDark ? <Sun size={20} /> : <Moon size={20} />}
              </button>
-             <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a]">
-                <Settings size={20} />
+             <button onClick={() => navigate('/dashboard/profilo')} className="text-slate-400 hover:text-[#2D5A27] dark:hover:text-[#42a83a]">
+                <UserCircle size={20} />
              </button>
           </div>
         </div>
@@ -144,11 +143,6 @@ export default function Layout() {
            <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
         )}
       </nav>
-
-      {/* Settings Modal */}
-      <AnimatePresence>
-        {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-      </AnimatePresence>
     </div>
   );
 }
@@ -167,35 +161,5 @@ function MobileNavItem({ to, icon, admin }: { to: string, icon: React.ReactNode,
     <NavLink to={to} className={({ isActive }) => `p-3 rounded-xl transition-all duration-200 ${isActive ? (admin ? 'text-red-500 bg-red-50 dark:bg-red-950/30' : 'text-[#2D5A27] dark:text-[#42a83a] bg-[#2D5A27]/10') : 'text-slate-400 dark:text-slate-500 active:bg-slate-50 dark:active:bg-[#1a261f]'}`}>
       {icon}
     </NavLink>
-  );
-}
-
-function SettingsModal({ onClose }: { onClose: () => void }) {
-  const [key, setKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const saveKey = () => {
-    localStorage.setItem('gemini_api_key', key);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D5A27]/40 dark:bg-black/60 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#151e18] rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100 dark:border-[#24352b]">
-         <h3 className="text-xl font-serif font-bold text-[#2D5A27] dark:text-[#42a83a] mb-2">Impostazioni Locali</h3>
-         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-sans">Configura l'intelligenza artificiale per l'analisi e il restauro delle vecchie foto.</p>
-         
-         <div className="space-y-4">
-           <div>
-             <label className="block text-xs font-sans font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Gemini API Key</label>
-             <input type="password" value={key} onChange={e => setKey(e.target.value)} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg p-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all font-mono" placeholder="AIzaSy..." />
-             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">Salvata in locale. Abilita la funzione di auto-generazione didascalie nostalgiche.</p>
-           </div>
-           
-           <div className="flex gap-3 pt-4">
-              <button onClick={onClose} className="flex-1 py-3 bg-white dark:bg-[#151e18] border border-slate-200 dark:border-[#24352b] text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-50 dark:hover:bg-[#1a261f] transition-colors">Annulla</button>
-              <button onClick={saveKey} className="flex-1 py-3 bg-[#2D5A27] text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-[#20401b] transition-colors shadow-lg shadow-[#2D5A27]/20">Salva e Chiudi</button>
-           </div>
-         </div>
-      </motion.div>
-    </div>
   );
 }

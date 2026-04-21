@@ -8,6 +8,7 @@ import IlBaule from './pages/IlBaule';
 import LaMappa from './pages/LaMappa';
 import LAlberone from './pages/LAlberone';
 import IlBivacco from './pages/IlBivacco';
+import ProfiloPersonale from './pages/ProfiloPersonale';
 import AdminPanel from './pages/AdminPanel';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="baule" element={<IlBaule />} />
             <Route path="mappa" element={<LaMappa />} />
             <Route path="alberone" element={<LAlberone />} />
+            <Route path="profilo" element={<ProfiloPersonale />} />
             <Route path="admin" element={<AdminPanel />} />
           </Route>
         </Routes>
