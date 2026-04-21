@@ -7,6 +7,7 @@ import L from 'leaflet';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Map, MapPin } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const customMarkerHtmlLight = `
   <div style="background-color: #2D5A27; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;">
@@ -37,6 +38,7 @@ const vintageIconDark = L.divIcon({
 });
 
 export default function LaMappa() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const marzioCenter: [number, number] = [45.9238, 8.8655];
   const [isDark, setIsDark] = useState(false);
@@ -65,12 +67,27 @@ export default function LaMappa() {
       const p: any[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.location) p.push({ id: doc.id, ...data });
+        if (data.location) {
+           let isVisible = false;
+           if (user && data.authorId === user.uid) {
+              isVisible = true;
+           } else if (data.visibilityStatus === 'public') {
+              isVisible = true;
+           } else if (data.visibilityStatus === 'scheduled' && data.visibilityTime && data.visibilityTime <= Date.now()) {
+              isVisible = true;
+           } else if (!data.visibilityStatus) {
+              isVisible = true;
+           }
+           
+           if (isVisible) {
+              p.push({ id: doc.id, ...data });
+           }
+        }
       });
       setPosts(p);
     });
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   return (
     <div className="max-w-4xl mx-auto w-full h-[calc(100vh-8rem)] md:h-full flex flex-col gap-4 p-4 md:p-0">

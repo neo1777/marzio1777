@@ -65,7 +65,20 @@ export default function LaPiazza() {
     }
   };
 
-  const filteredPosts = activeDecade === 'Tutti' ? posts : posts.filter(p => p.decade === activeDecade);
+  const isVisible = (post: any) => {
+    if (!user) return false;
+    if (post.authorId === user.uid) return true; // I can see my own
+    if (post.visibilityStatus === 'public') return true;
+    if (post.visibilityStatus === 'scheduled' && post.visibilityTime && post.visibilityTime <= Date.now()) return true;
+    
+    // Legacy posts without visibilityStatus are public
+    if (!post.visibilityStatus) return true;
+
+    return false;
+  };
+
+  const visiblePosts = posts.filter(isVisible);
+  const filteredPosts = activeDecade === 'Tutti' ? visiblePosts : visiblePosts.filter(p => p.decade === activeDecade);
 
   return (
     <div className="max-w-3xl mx-auto h-full flex flex-col gap-6">

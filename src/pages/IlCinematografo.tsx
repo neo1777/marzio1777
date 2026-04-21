@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';
 
 export default function IlCinematografo() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -42,6 +43,23 @@ export default function IlCinematografo() {
 
   // Filtered Posts
   const filteredPosts = posts.filter(post => {
+     // Visibility check
+     const isExplicitlyHiddenFromCinema = post.showInCinematografo === false;
+     if (isExplicitlyHiddenFromCinema) return false;
+
+     let isVisible = false;
+     if (user && post.authorId === user.uid) {
+        isVisible = true; // Can see own
+     } else if (post.visibilityStatus === 'public') {
+        isVisible = true;
+     } else if (post.visibilityStatus === 'scheduled' && post.visibilityTime && post.visibilityTime <= Date.now()) {
+        isVisible = true;
+     } else if (!post.visibilityStatus) {
+        isVisible = true; // Legacy
+     }
+
+     if (!isVisible) return false;
+
      if (selectedAuthor !== 'Tutti' && post.authorName !== selectedAuthor) return false;
      if (selectedDecade !== 'Tutti' && post.decade !== selectedDecade) return false;
      return true;

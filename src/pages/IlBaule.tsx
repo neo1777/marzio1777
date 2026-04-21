@@ -51,6 +51,11 @@ export default function IlBaule() {
   const [decade, setDecade] = useState('Anni 80');
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  
+  // Visibility States
+  const [visibilityStatus, setVisibilityStatus] = useState<string>('private');
+  const [showInCinematografo, setShowInCinematografo] = useState<boolean>(true);
+  const [visibilityTime, setVisibilityTime] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +108,9 @@ export default function IlBaule() {
       setIsMagicScan(false);
       setImagePreview(null);
       setCaption(''); // clear caption for the new file
+      setVisibilityStatus('private');
+      setShowInCinematografo(true);
+      setVisibilityTime('');
     };
     reader.onerror = () => {
       alert("Errore nella lettura del file.");
@@ -277,7 +285,7 @@ export default function IlBaule() {
       await uploadString(storageRef, imagePreview, 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
-      await addDoc(collection(db, 'posts'), {
+      const postData: any = {
         authorId: user.uid,
         authorName: user.displayName,
         imageUrl: downloadUrl,
@@ -286,8 +294,16 @@ export default function IlBaule() {
         location,
         timestamp: serverTimestamp(),
         likesCount: 0,
-        commentsCount: 0
-      });
+        commentsCount: 0,
+        visibilityStatus,
+        showInCinematografo
+      };
+
+      if (visibilityStatus === 'scheduled' && visibilityTime) {
+        postData.visibilityTime = new Date(visibilityTime).getTime();
+      }
+
+      await addDoc(collection(db, 'posts'), postData);
 
       const pointsToEarn = 10 + (location ? 5 : 0);
       await updateDoc(doc(db, 'users', user.uid), {
@@ -500,6 +516,32 @@ export default function IlBaule() {
                    <option>Anni 00+</option>
                  </select>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div>
+                    <label className="block text-xs font-bold font-sans text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Visibilità (Piazza)</label>
+                    <select value={visibilityStatus} onChange={e => setVisibilityStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl p-4 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all font-sans font-bold">
+                       <option value="private">Privato (Solo tu)</option>
+                       <option value="public">Pubblica Subito!</option>
+                       <option value="scheduled">Programmata A Tempo</option>
+                    </select>
+                 </div>
+                 
+                 <div>
+                    <label className="block text-xs font-bold font-sans text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Stanza Cinematografo</label>
+                    <select value={showInCinematografo ? 'true' : 'false'} onChange={e => setShowInCinematografo(e.target.value === 'true')} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl p-4 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all font-sans font-bold">
+                       <option value="true">Sì, proiettala</option>
+                       <option value="false">No, nascondila</option>
+                    </select>
+                 </div>
+              </div>
+
+              {visibilityStatus === 'scheduled' && (
+                 <div>
+                    <label className="block text-xs font-bold font-sans text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Rilascio Programmato</label>
+                    <input type="datetime-local" value={visibilityTime} onChange={e => setVisibilityTime(e.target.value)} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl p-4 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] transition-all font-sans font-bold" />
+                 </div>
+              )}
 
               <div className="pt-4">
                 <button disabled={loading} onClick={handleUpload} className="w-full py-4 bg-[#2D5A27] text-white font-bold font-sans text-sm tracking-wider rounded-xl shadow-lg shadow-[#2D5A27]/20 hover:bg-[#20401b] dark:bg-[#346b2d] dark:hover:bg-[#42a83a] transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
