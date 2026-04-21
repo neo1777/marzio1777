@@ -8,6 +8,7 @@ import IlBaule from './pages/IlBaule';
 import LaMappa from './pages/LaMappa';
 import LAlberone from './pages/LAlberone';
 import IlBivacco from './pages/IlBivacco';
+import IlCinematografo from './pages/IlCinematografo';
 import ProfiloPersonale from './pages/ProfiloPersonale';
 import AdminPanel from './pages/AdminPanel';
 
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="bivacco" element={<IlBivacco />} />
             <Route path="baule" element={<IlBaule />} />
             <Route path="mappa" element={<LaMappa />} />
+            <Route path="cinematografo" element={<IlCinematografo />} />
             <Route path="alberone" element={<LAlberone />} />
             <Route path="profilo" element={<ProfiloPersonale />} />
             <Route path="admin" element={<AdminPanel />} />

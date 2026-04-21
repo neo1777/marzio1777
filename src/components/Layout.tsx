@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../lib/firebase';
 
@@ -31,7 +31,7 @@ export default function Layout() {
   const hasSindaco = points >= 150;
   
   return (
-    <div className="min-h-screen bg-[#F7F5F0] dark:bg-[#0d1310] text-[#1a2e16] dark:text-[#e2e8f0] flex flex-col md:flex-row md:p-6 md:gap-6 overflow-hidden font-sans relative transition-colors duration-300">
+    <div className="h-[100dvh] bg-[#F7F5F0] dark:bg-[#0d1310] text-[#1a2e16] dark:text-[#e2e8f0] flex flex-col md:flex-row md:p-6 md:gap-6 overflow-hidden font-sans relative transition-colors duration-300">
       
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-1/3 h-full bg-[#2D5A27]/5 dark:bg-[#2D5A27]/10 -z-10 rounded-l-full blur-3xl"></div>
@@ -61,6 +61,7 @@ export default function Layout() {
         <nav className="flex-1 px-4 space-y-1.5 py-6 overflow-y-auto">
           <NavItem to="/dashboard/piazza" icon={<Home size={18} />} label="La Piazza" />
           <NavItem to="/dashboard/bivacco" icon={<Flame size={18} />} label="Il Bivacco" />
+          <NavItem to="/dashboard/cinematografo" icon={<Film size={18} />} label="Il Cinematografo" />
           <NavItem to="/dashboard/baule" icon={<Camera size={18} />} label="Il Baule" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
           <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" />
@@ -112,7 +113,7 @@ export default function Layout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative flex flex-col bg-white/80 dark:bg-[#151e18]/80 backdrop-blur-sm border md:border-slate-100 dark:md:border-[#24352b] md:rounded-2xl overflow-hidden pt-16 md:pt-0 pb-16 md:pb-0 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-colors duration-300">
+      <main className="flex-1 min-h-0 min-w-0 relative flex flex-col bg-white/80 dark:bg-[#151e18]/80 backdrop-blur-sm border md:border-slate-100 dark:md:border-[#24352b] md:rounded-2xl overflow-hidden pt-16 md:pt-0 pb-16 md:pb-0 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-colors duration-300">
         <div className="md:hidden absolute top-0 left-0 right-0 h-16 bg-white/90 dark:bg-[#151e18]/90 backdrop-blur border-b border-slate-100 dark:border-[#24352b] flex items-center justify-between px-4 shadow-sm z-10">
           <div className="flex items-center gap-2">
              <Mountain size={20} className="text-[#2D5A27] dark:text-[#42a83a]" />

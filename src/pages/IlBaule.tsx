@@ -26,7 +26,7 @@ function LocationPicker({ onSelect }: { onSelect: (ll: {lat: number, lng: number
 }
 
 export default function IlBaule() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   
   const [step, setStep] = useState<'upload' | 'crop' | 'edit'>('upload');
@@ -313,7 +313,15 @@ export default function IlBaule() {
       </header>
 
       <div className="bg-white dark:bg-[#151e18] p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-[#24352b] flex-1 overflow-y-auto transition-colors flex flex-col">
-        {step === 'upload' && (
+        {profile?.role === 'Guest' ? (
+           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-[#24352b] rounded-full flex items-center justify-center mb-4 border border-slate-200 dark:border-[#1a261f]">
+                 <BookOpen size={28} className="text-slate-400" />
+              </div>
+              <h3 className="text-xl font-serif font-bold text-slate-700 dark:text-slate-300 mb-2">Accesso in Lettura</h3>
+              <p className="text-sm font-sans text-slate-500 dark:text-slate-400 max-w-md">I visitatori non possono aggiungere foto al Baule. Contatta l'amministratore Root se desideri ottenere i permessi per contribuire ai ricordi.</p>
+           </div>
+        ) : step === 'upload' && (
           <div className="flex-1 flex flex-col justify-center space-y-8">
             
             {/* Desktop Upload Zone */}

@@ -34,12 +34,29 @@ export default function AdminPanel() {
   }, [profile]);
 
   const updateUserRole = async (uid: string, newRole: string) => {
-    if (profile?.role !== 'Root') {
-      alert("Solo il Root primario può modificare i ruoli.");
+    const userToUpdate = users.find(u => u.uid === uid);
+    if (!userToUpdate) return;
+
+    if (profile?.role === 'Admin') {
+      if (userToUpdate.role === 'Root') {
+        alert("Non puoi modificare il Root.");
+        return;
+      }
+      if (userToUpdate.role === 'Admin') {
+        alert("Non puoi retrocedere un Admin. Solo il Root può farlo.");
+        return;
+      }
+      if (newRole !== 'Admin') {
+        alert("Puoi solo promuovere i Guest a Admin.");
+        return;
+      }
+    } else if (profile?.role !== 'Root') {
+      alert("Non hai i permessi per modificare i ruoli.");
       return;
     }
+    
     if (uid === profile.uid) {
-      alert("Non puoi modificare il tuo stesso ruolo di Root!");
+      alert("Non puoi modificare il tuo stesso ruolo!");
       return;
     }
     
@@ -121,7 +138,7 @@ export default function AdminPanel() {
                     <select 
                       value={user.role} 
                       onChange={(e) => updateUserRole(user.uid, e.target.value)}
-                      disabled={profile?.role !== 'Root' || user.uid === profile?.uid}
+                      disabled={(profile?.role !== 'Root' && profile?.role !== 'Admin') || user.uid === profile?.uid || (profile?.role === 'Admin' && user.role !== 'Guest')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider outline-none border transition-colors cursor-pointer ${
                         user.role === 'Root' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400' :
                         user.role === 'Admin' ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400' :
@@ -150,7 +167,7 @@ export default function AdminPanel() {
          <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-xl flex items-start gap-3 transition-colors">
             <AlertTriangle className="text-orange-500 flex-shrink-0" size={20} />
             <p className="text-sm text-orange-800 dark:text-orange-300 font-sans leading-relaxed">
-              Hai privilegi di amministrazione per la moderazione, ma non puoi cambiare l'assegnazione dei ruoli. Solo il Root può elevare i Guest.
+              Hai privilegi parziali. Puoi promuovere i Guest ad Admin, ma non puoi retrocedere gli incarichi (riservato al Root).
             </p>
          </div>
       )}

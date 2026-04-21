@@ -73,8 +73,8 @@ export default function LaMappa() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto h-full flex flex-col gap-6">
-       <header className="flex flex-col border-b border-slate-200 dark:border-[#24352b] pb-4 transition-colors">
+    <div className="max-w-4xl mx-auto w-full h-[calc(100vh-8rem)] md:h-full flex flex-col gap-4 p-4 md:p-0">
+       <header className="flex flex-col border-b border-slate-200 dark:border-[#24352b] pb-2 md:pb-4 transition-colors shrink-0">
          <h2 className="text-xs font-bold font-sans uppercase tracking-widest text-[#8C928D] dark:text-slate-500 mb-1">Cartografia Storica</h2>
          <div className="flex items-center gap-2 text-3xl font-serif font-bold text-[#2D5A27] dark:text-[#42a83a] tracking-tight">
             La Mappa <Map size={24} className="text-[#8B5A2B]" />
@@ -90,8 +90,9 @@ export default function LaMappa() {
              <p className="text-[10px] font-sans text-slate-500 dark:text-slate-400 uppercase">Luoghi Esplorati: {posts.length}</p>
           </div>
           
-          <div className="flex-1 rounded-xl overflow-hidden shadow-inner border border-slate-200 dark:border-[#24352b] bg-[#F4F1E1] dark:bg-[#0d1310] transition-colors relative">
-            <MapContainer center={marzioCenter} zoom={16} className="w-full h-full z-0" zoomControl={true} key={isDark ? 'dark' : 'light'}>
+          <div className="flex-1 min-h-[300px] md:min-h-0 rounded-xl overflow-hidden shadow-inner border border-slate-200 dark:border-[#24352b] bg-[#F4F1E1] dark:bg-[#0d1310] transition-colors relative">
+            <div className="absolute inset-0">
+               <MapContainer center={marzioCenter} zoom={16} className="w-full h-full z-0" zoomControl={true} key={isDark ? 'dark' : 'light'}>
                <LayersControl position="topright">
                  <LayersControl.BaseLayer name="Esploratore (Satellitare HDR)" checked={!isDark}>
                    <TileLayer
@@ -141,6 +142,7 @@ export default function LaMappa() {
                   </Marker>
                ))}
             </MapContainer>
+            </div>
           </div>
 
           <style>{`

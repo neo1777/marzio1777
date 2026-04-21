@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import EventDetailModal from '../components/EventDetailModal';
 
 export default function IlBivacco() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -52,13 +52,15 @@ export default function IlBivacco() {
               Il Bivacco <Flame size={24} className="text-[#F5A623]" />
            </div>
         </div>
-        <button 
-           onClick={() => setShowCreateModal(true)}
-           className="flex items-center gap-2 bg-[#f56a23] hover:bg-[#e05612] text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f56a23]/20 transition-all text-sm"
-        >
-           <Plus size={18} />
-           Nuovo Appuntamento
-        </button>
+        {profile?.role !== 'Guest' && (
+          <button 
+             onClick={() => setShowCreateModal(true)}
+             className="flex items-center gap-2 bg-[#f56a23] hover:bg-[#e05612] text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f56a23]/20 transition-all text-sm"
+          >
+             <Plus size={18} />
+             Nuovo Appuntamento
+          </button>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto pb-8 space-y-10 scrollbar-hide">

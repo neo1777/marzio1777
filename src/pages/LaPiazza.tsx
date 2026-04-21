@@ -201,9 +201,11 @@ function CommentsSection({ postId, user }: { postId: string, user: any }) {
     return () => unsubscribe();
   }, [postId]);
 
+  const { profile } = useAuth();
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !user) return;
+    if (!text.trim() || !user || profile?.role === 'Guest') return;
     try {
       await addDoc(collection(db, `posts/${postId}/comments`), {
         authorId: user.uid,
@@ -240,8 +242,8 @@ function CommentsSection({ postId, user }: { postId: string, user: any }) {
          )}
        </div>
        <form onSubmit={handlePost} className="flex gap-2">
-         <input type="text" value={text} onChange={e => setText(e.target.value)} placeholder="Condividi un aneddoto..." className="flex-1 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] text-slate-800 dark:text-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all shadow-sm" />
-         <button type="submit" disabled={!text.trim()} className="bg-[#4A90E2] text-white hover:bg-blue-600 w-11 h-11 flex items-center justify-center rounded-xl shadow-md transition-all disabled:opacity-50">
+         <input type="text" value={text} onChange={e => setText(e.target.value)} disabled={profile?.role === 'Guest'} placeholder={profile?.role === 'Guest' ? "I Guest non possono commentare" : "Condividi un aneddoto..."} className="flex-1 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] text-slate-800 dark:text-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-[#0d1310]" />
+         <button type="submit" disabled={!text.trim() || profile?.role === 'Guest'} className="bg-[#4A90E2] text-white hover:bg-blue-600 w-11 h-11 flex items-center justify-center rounded-xl shadow-md transition-all disabled:opacity-50">
            <Send size={18} className="translate-x-[-1px] translate-y-[1px]" />
          </button>
        </form>
