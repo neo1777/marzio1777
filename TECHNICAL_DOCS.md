@@ -1,76 +1,149 @@
-# marzio1777 - Technical Architecture & Documentation
+# 🛠️ marzio1777 - Technical Architecture & Developer Documentation
 
-This document provides a highly detailed, professional overview of the architectural decisions, algorithms, and technical flows powering the `marzio1777` application.
+This document provides a highly detailed, professional overview of the architectural decisions, data models, algorithms, and technical flows powering the `marzio1777` application. It serves as the single source of truth for developers and contributors.
 
-## 1. System Architecture
+## 1. 🏗️ Architecture & Tech Stack
 
 `marzio1777` is built as a highly reactive Single Page Application (SPA).
-- **Frontend Framework:** React 18, bootstrapped via Vite for HMR and optimized builds.
+- **Frontend Framework:** React 18 (Functional Components, Hooks), bootstrapped via Vite for HMR and optimized builds.
 - **Language:** TypeScript explicitly for strict type-checking on external payloads and DOM refs.
 - **Backend as a Service (BaaS):** Firebase ecosystem:
   - **Firestore:** NoSQL state management and relations.
   - **Firebase Auth:** Google OAuth provider identity verification.
-  - **Firebase Storage:** Binary blob storage for compressed image assets.
-- **State Management:** React Context API (`AuthContext`) for global states, augmented by local `useState` and `useEffect` hooks relying on Firebase `onSnapshot` for real-time reactivity without state-management overlays like Redux.
-- **Styling Engine:** Tailwind CSS handles utility-first composition. Complex pseudo-states (like the Polaroid reveal animations) are mapped to standard CSS in `index.css`.
+  - **Firebase Storage:** Binary blob storage for compressed image assets (if needed, or directly mapped as base64 in initial prototyping).
+- **State Management:** React Context API (`AuthContext`) for global states, augmented by local `useState`, `useRef`, and `useEffect` hooks relying on Firebase `onSnapshot` for real-time reactivity without state-management overlays like Redux.
+- **Styling Engine:** Tailwind CSS handles utility-first composition. Complex pseudo-states are mapped to standard CSS in `index.css`.
+- **Animation:** Framer Motion (`AnimatePresence` for route/component transitions).
+- **Icons:** Lucide React.
+- **AI Integration:** Google Gemini API (via `@google/genai` or manual fetch depending on implementation) used for `Magic Scan` image caption generation.
 
-## 2. Core Modules & Algorithmic Flows
+---
 
-### 2.1 The "Il Baule" Upload & Processing Engine
+## 2. 💾 Firestore Data Schema
+
+The database uses a NoSQL document-based structure with normalized global documents and nested subcollections for specific relational features.
+
+### 1. `users` (Collection)
+Stores the user profile and RBAC configurations.
+- `uid` (Document ID)
+- `email` (String)
+- `displayName` (String)
+- `photoURL` (String)
+- `role` (String) -> `"" | "Guest" | "Admin" | "Root"`
+- `points` (Number) -> Determines gamification levels (Altitude)
+- `bio` (String)
+
+### 2. `posts` (Collection)
+The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and events.
+- `type` (String) -> `"photo"` | `"event"`
+- `imageUrl` (String - Base64 or CDN URL)
+- `caption` (String)
+- `decade` (String) -> "Anni 70", "Anni 80", etc.
+- `location` (String)
+- `authorId` (String - maps to `users.uid`)
+- `authorName` (String)
+- `timestamp` (Firestore Server Timestamp)
+- `likesCount` (Number)
+- `commentsCount` (Number)
+
+*(Subcollection)* `posts/{id}/comments`
+- `text` (String), `authorId`, `authorName`, `timestamp`
+
+### 3. `events` (Collection)
+Powers the `IlBivacco` functionality.
+- `title`, `description`, `location`, `date` (Strings/Timestamps)
+- `authorId`, `authorName`, `timestamp`
+
+*(Subcollections of Events)*
+- `/attendees/{userId}`: `status` ("Sì, ci sono!", ecc.), `count` (Number)
+- `/checklist/{itemId}`: `text`, `assigneeId`, `assigneeName`, `completed`
+- `/expenses/{expenseId}`: `description`, `amount`, `paidBy` (userId)
+
+### 4. `chats` (Collection)
+Powers `L'Alberone` (Realtime chat).
+- `channelId` (e.g., `"alberone_principale"`)
+
+*(Subcollection)* `chats/{id}/messages`
+- `text`, `authorId`, `authorName`, `timestamp`
+
+---
+
+## 3. 🔐 RBAC (Role-Based Access Control) Implementation
+
+The platform utilizes a strictly enforced Hierarchy injected into the `AuthContext` via the `profile` object.
+
+1. **Guest (Read-Only):**
+   - Default fallback. Cannot add posts, photos, comments, create events, or modify event logistics.
+   - Guarded at the UI level via conditional rendering (e.g., `profile?.role === 'Guest' ? <ReadOnlyPrompt /> : <UploadUI />`).
+2. **Admin (Standard Contributor):**
+   - Full read/write access to user-level features (Baule, Bivacco, Piazza).
+   - Partial access to the Admin Panel (Can observe roles, can promote `Guest` -> `Admin`).
+3. **Root (Superuser):**
+   - Retains all Admin privileges.
+   - Absolute control in the Admin Panel (Can demote Admins, promote to Root, remove accounts).
+   - Bypass mechanism implicitly applied to restrictive UI.
+
+---
+
+## 4. 🧩 Core Modules & Algorithmic Flows
+
+### 4.1 "Il Baule" Upload & Processing Engine
 The upload pipeline is one of the most complex state machines in the app.
+- **Batch Processing:** When users drop multiple files (`FileList`), the 0th index is loaded immediately into a `FileReader`. Indices `1` to `N` are sliced and stored into the `fileQueue` array.
+- **Recursive Unloading:** Upon successful save or skip, the component shifts the `fileQueue` array, autonomously loading the next `File`.
+- **Rotation & Scaling Mathematics:** `rotateSize` calculates the minimum bounding box needed to encompass a rotated image using sine/cosine trigonometry.
+- **The "Alpha-Channel Blackout" Fix:** SVGs and transparent PNGs natively resolve as `RGB: 0,0,0` (Black) when parsed into a `image/jpeg` canvas payload. The algorithm fixes this by explicitly invoking `ctx.fillRect(0, 0, finalWidth, finalHeight)` with `#ffffff` (White) *before* drawing the image blob on top.
+- **Magic Scan Matrix:** Applies a static CSS canvas filter matrix (`contrast(1.4) saturate(0.8) brightness(1.1)`) simulating a hardware scanner cleanup.
 
-**A. Batch Processing (The Queue System)**
-- When users drop multiple files (`FileList`), the application intercepts the array.
-- The 0th index is loaded immediately into a `FileReader`.
-- Indices `1` to `N` are sliced and stored into the `fileQueue` state.
-- **Recursive Unloading:** Upon successful save or deliberate skip to the next image (`handleNextInQueue`), the component shifts the `fileQueue` array, popping the next `File` into the active image processing state without unmounting the component, significantly decreasing cognitive load and clicks for the user.
-
-**B. Canvas Image Processing (`canvasUtils.ts`)**
-Instead of uploading bloated 15MB smartphone pictures, the app runs a client-side conversion engine.
-- **Rotation & Scaling Mathematics:** `rotateSize` uses Trigonometry (sine and cosine of the radian angle) to calculate the minimum bounding box needed to encompass a rotated image.
-- **Crop Coordinates:** `react-easy-crop` yields pixel-perfect coordinates which are fed into `ctx.drawImage()`. 
-- **The "Alpha-Channel Blackout" Fix:** SVGs and transparent PNGs natively resolve alpha-channels as `RGB: 0,0,0` (Black) when parsed into a `image/jpeg` `toDataURL` canvas context. The algorithm fixes this by explicitly invoking `ctx.fillRect(0, 0, finalWidth, finalHeight)` with `#ffffff` (White) *before* drawing the image blob on top, serving as a matte background.
-- **Magic Scan Matrix:** Toggling "Migliora Scansione" applies a static CSS canvas filter matrix (`contrast(1.4) saturate(0.8) brightness(1.1)`) simulating a hardware scanner/high-pass document filter.
-
-### 2.2 Geocoding & The Mapping System (`LaMappa.tsx` & `LocationModal`)
-The geographic data relies on dual implementations of Leaflet.
-
-- **Component:** `react-leaflet` acts as the mapping bridge.
-- **Dynamic Layering:** The map utilizes a `<LayersControl>`, initializing by default to `Esri World_Imagery` (High-resolution satellite). It features fallback layers for Street topology (OSM) and Topographic mapping.
-- **Dark Mode Context Injection:** The mapping engine reacts to the global DOM `classList` for `dark`. When active, it switches the Leaflet tile layer to `CartoDB dark_all` for eye comfort.
-- **Location Modal (`IlBaule`):** 
-  - *Auto GPS:* Taps `navigator.geolocation` async API.
-  - *Address Reverse Geocoding:* Uses a simple fetch to OpenStreetMap's Nominatim `search?format=json&q=Query`, offloading geo-search without paid Google Maps APIs.
-  - *Manual Pinning:* Employs a custom `LocationPicker` sub-component hooking into Leaflet's `useMapEvents` listener, tracking `click` coordinates in real-time.
-
-### 2.3 Local-First AI Integration (Gemini Vision)
+### 4.2 L'AI Integration (Gemini Vision)
 To maintain low server overhead and absolute privacy:
-- The app utilizes `@google/genai` purely on the client side.
-- Configuration API keys are isolated directly in Browser `localStorage` (`gemini_api_key`), meaning the host server acts completely stateless regarding LLM integration.
-- **Execution Payload:** The processed base64 JPEG from the canvas engine is attached via `inlineData` alongside a hardcoded, structured Italian prompt engineered to mimic a localized, nostalgic tone.
+- The app utilizes `@google/genai` completely on the client side.
+- Configuration API keys are isolated directly in Browser `localStorage` (`gemini_api_key`), managed safely via the `AdminPanel`.
+- **Execution Payload:** The processed base64 JPEG from the canvas engine is attached via `inlineData` alongside an Italian-crafted prompt engineered to return a localized, nostalgic tone.
 
-### 2.4 Gamification System
-Gamification logic ("L'Alberone") leverages Firestore atomic operations.
-- `increment(N)` from `firebase/firestore` is explicitly used for operations like adding a Post (+10 pts, +5 bonus for Geolocation) or leaving a Comment (+2 pts). 
-- This bypasses concurrency/race-condition issues that would occur if the frontend fetched previous points, added manually, and then patched the record.
+### 4.3 "Il Cinematografo" (Slideshow & Gamification)
+A complex presentation layer built to project images in fullscreen.
+- **State Management:** Uses React's `useRef` to maintain a stable reference to `filteredPosts` to prevent stale closure bugs inside the `setInterval` used for Autoplay.
+- **Animation Constraints:** `mode="wait"` in `<AnimatePresence>` ensures smooth transitions between slides and metadata cards without DOM collisions.
+- **Gamification Mechanics:** Metadata overlays are conditionally obscured based on the `mode` state (`indovina_chi`, `indovina_anno`), withholding author or chronological data until a `revealed` flag is tripped.
 
-## 3. Theming & Viewport Strategy
+### 4.4 "Il Bivacco" (Event Logistics Engine)
+- **The Wallet System:** Reads the `expenses` subcollection dynamically. A mathematical split function (`(total/partecipanti) - speso`) calculates net debts/credits iteratively via `onSnapshot` listeners to render real-time accounting inside the specific event.
+
+### 4.5 Geocoding & The Mapping System (`LaMappa`)
+The geographic data relies on dual implementations of Leaflet.
+- **Component:** `react-leaflet` acts as the mapping bridge, defaulting to `Esri World_Imagery` (High-resolution satellite).
+- **Dark Mode Context Injection:** Reacts to the global DOM `classList` for `dark`. When active, it switches the Leaflet tile layer to `CartoDB dark_all`.
+- **Location Modal (`IlBaule`):** Taps `navigator.geolocation` async API, uses OpenStreetMap's Nominatim Reverse Geocoding (`search?format=json&q=Query`), and employs manual pinning via `useMapEvents`.
+
+---
+
+## 5. 🎨 Theming, UI, & Viewport Strategy
+
+- **Viewport Locking:** The `Layout.tsx` operates on dynamic viewport constraints (`h-[100dvh]`, `min-h-0`). This ensures the `Outlet` correctly establishes its own scrollable context without distending the parent Flexbox container, effectively locking the Sidebar and native viewport for a professional "app-like" feel.
 - **Polaroid Aesthetic:** Box shadows and margins form the primary visual identity. In Dark Mode, polaroid variables transition dynamically (e.g., `bg-white` -> `bg-[#111814]`, borders invert to `border-[#24352b]`).
-- **Responsive Handling:** Core layouts use `flex-col md:flex-row`.
-- **Micro-interactions:** Canvas-based Confetti (`canvas-confetti`) is used on interactions (e.g., Liking). The animation mathematically spans over a duration via a custom `requestAnimationFrame` loop to ensure 60fps performance without locking the React main thread.
+- **Dark Mode Paradigm:** Modifies the global `<html>` class. Tailwind utilizes the `dark:` prefix. The application leverages a curated palette (`#151e18`, `#1a261f`, `#2D5A27`) to evoke a forest aesthetic rather than generic grays.
+- **Micro-interactions:** Canvas-based Confetti (`canvas-confetti`) is mathematically spanned over a custom `requestAnimationFrame` loop on interactions like Liking to ensure 60fps performance without locking React's main thread.
 
-## 4. Required Security Considerations
-- Current Firestore calls assume insecure baseline or `test` mode. For production rollout, standard Firebase Security Rules (ABAC/RBAC) are imperative, validating `request.auth.uid` against document ownership scopes.
+---
 
-## 5. Build Pipeline & Deployment (PWA & CI/CD)
-To guarantee cross-platform distribution without navigating strictly regulated app stores (iOS/Android), the architecture shifts deployment to the browser ecosystem.
+## 6. 🚀 Gamification, Points & Altitude
 
-**A. Progressive Web App (PWA) Integration**
-- **Plugin:** Utilizes `vite-plugin-pwa` built into the Vite configuration.
-- **Manifest:** Automates the generation of `manifest.webmanifest`. It declares display modes (`standalone`) which allows Chromium and WebKit mobile browsers to intercept the site and prompt "Install App" to the users' home screens, abstracting away the browser UI.
-- **Service Workers:** Acts as a network proxy layer enabling eventual offline fallbacks and aggressive internal asset caching.
+Gamification logic ("L'Alberone" and profile badges) leverages Firestore atomic operations.
+- `increment(N)` from `firebase/firestore` is explicitly used for adding a Post (+10 pts, +5 bonus for Geolocation) or leaving a Comment (+2 pts). 
+- This bypasses concurrency/race-condition issues that would occur if the frontend fetched previous points and patched them.
+- Altitude = Base Marzio Altitude (728) + Accumulated Points. Badges natively derived from point thresholds (10, 50, 150).
 
-**B. GitHub Actions (CI/CD Automated Deployments)**
-- **Workflow (`.github/workflows/deploy.yml`):** Implements a declarative CI/CD pipeline triggered by a `push` to `main` or `master` branches.
-- **Node Matrix:** Spins up an `ubuntu-latest` runner equipped with Node.js 20, executing immutable package installations (`npm ci`), caching node_modules, and running standard Vite build systems.
-- **GitHub Pages Delivery:** Uses the `actions/deploy-pages@v4` action to serve the artifact statically, fully decoupling hosting infrastructure from backend (Firebase) services.
+---
+
+## 7. 🛠️ Build Pipeline, CI/CD & Operational Guidelines
+
+- **Environment Variables:** Must establish `VITE_FIREBASE_*` constraints for deployment. 
+- **PWA Configuration:** Provided implicitly by `vite-plugin-pwa`. It generates `manifest.webmanifest` defining `standalone` display modes, enabling Chromium and WebKit mobile browsers to prompt "Install App" to the users' home screens.
+- **GitHub Actions (CI/CD Automated Deployments):**
+  - **Workflow (`.github/workflows/deploy.yml`):** Implements a declarative CI/CD pipeline triggered by a `push` to `main`.
+  - **Node Matrix:** Spins up an `ubuntu-latest` runner executing immutable package installations (`npm ci`), and running Vite build systems.
+  - **GitHub Pages Delivery:** Uses the `actions/deploy-pages@v4` action to serve the artifact statically, completely decoupling the hosting infrastructure from the BaaS features.
+
+---
+*Maintained by the Neo1777 team. May your code compile on the first try.*
