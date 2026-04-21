@@ -3,6 +3,10 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';
+import { format, isAfter } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { useAuth } from '../contexts/AuthContext';
+import EventDetailModal from '../components/EventDetailModal';
 
 export default function IlCinematografo() {
   const { user } = useAuth();
