@@ -624,14 +624,14 @@ export default function IlBaule() {
                       <div className="w-full h-64 bg-slate-100 dark:bg-[#111814] rounded-lg overflow-hidden border border-slate-200 dark:border-[#24352b] relative z-0">
                          <MapContainer center={tempLocation || [45.9238, 8.8655]} zoom={16} scrollWheelZoom={true} className="w-full h-full z-0 font-sans" zoomControl={true} key={isDark ? 'dark' : 'light'}>
                            <LayersControl position="topright">
-                             <LayersControl.BaseLayer name="Esploratore (Satellitare)" checked={!isDark}>
+                             <LayersControl.BaseLayer name="Esploratore (Satellitare)">
                                <TileLayer
                                  attribution='&copy; Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
                                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                  maxZoom={19}
                                />
                              </LayersControl.BaseLayer>
-                             <LayersControl.BaseLayer name="Sentieri (OSM)">
+                             <LayersControl.BaseLayer name="Sentieri e Strade (OpenStreetMap)" checked={!isDark}>
                                <TileLayer
                                  attribution='&copy; OpenStreetMap'
                                  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -37,12 +37,14 @@ Non un semplice modulo di upload, ma un vero e proprio laboratorio artigianale.
 ### 🧭 5. La Mappa (Cartografia dei Ricordi)
 Tutte le memorie non volano nel vento ma atterrano spidate su mappa locale!
 - Cerca il chiosco o la via dove hai caricato le foto e la mappa le raggrupperà mostrando i classici pointer numerici interattivi. Clicca sui bollini e tuffati dritti nel post di partenza!
+- **Condivisione in Tempo Reale:** Accendi la spunta nel tuo profilo e i tuoi amici potranno vedere la tua posizione "live" sulla mappa quando sei in giro per il paese ad esplorare.
 
 ### 🌳 6. L'Alberone (Bacheca In Diretta)
 La banchisa sotto l'albero. Si tratta di un'autentica stanzetta con chat real-time sincronizzata ("Sulle panchine sotto l'albero") per scrivere quattro scemenze super rapide in stile telegram a colpo d'occhio senza dover aprire il cellulare!  
 
-### 🪪 7. Il Profilo (Altitudine ed Esperienza)
-Un videogioco nella vita reale. Punti Altitudine accumulati interagendo, commentando o caricando foto! Se sali abbastanza conquisterai dei Gagliardetti fantastici da mostrare in giro tipo: *Il Villeggiante, Il Turista Esperto, Il Sindaco di Marzio*. 
+### 🪪 7. Il Profilo e Gestione Archivio (Privacy e Gamification)
+- **Gestione Archivio:** Non tutto deve finire subito in Piazza! Nascondi le tue foto imbarazzanti, decidile se mostrarle temporaneamente (a tempo), nascondile dal Cinematografo o applica permessi di massa a tutte le tue avventure passate.
+- **Altitudine ed Esperienza:** Un videogioco nella vita reale. Punti Altitudine accumulati interagendo, commentando o caricando foto! Se sali abbastanza conquisterai dei Gagliardetti fantastici da mostrare in giro tipo: *Il Villeggiante, Il Turista Esperto, Il Sindaco di Marzio*. 
 
 ---
 

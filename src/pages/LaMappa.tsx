@@ -37,11 +37,36 @@ const vintageIconDark = L.divIcon({
     popupAnchor: [0, -24]
 });
 
+const createLiveUserIcon = (user: any) => {
+  const avatar = user.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.id}`;
+  const name = user.displayName?.split(' ')[0] || 'User';
+  
+  return L.divIcon({
+    html: `
+      <div style="display: flex; flex-direction: column; items-center; justify-content: center; transform: translate(-50%, -100%); width: 60px;">
+         <div style="position: relative; width: 36px; height: 36px; margin: 0 auto;">
+            <img src="${avatar}" style="width: 100%; height: 100%; border-radius: 50%; border: 2px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.3); object-fit: cover;" />
+            <div style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background-color: #10b981; border: 2px solid white; border-radius: 50%;"></div>
+         </div>
+         <div style="background-color: rgba(16, 185, 129, 0.9); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 12px; margin-top: 4px; text-align: center; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif;">
+            ${name}
+         </div>
+      </div>
+    `,
+    className: 'live-user-marker',
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -45]
+  });
+};
+
 export default function LaMappa() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const marzioCenter: [number, number] = [45.9238, 8.8655];
   const [isDark, setIsDark] = useState(false);
+
+  const [liveUsers, setLiveUsers] = useState<any[]>([]);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -60,10 +85,9 @@ export default function LaMappa() {
     L.Marker.prototype.options.icon = isDark ? vintageIconDark : vintageIconLight;
   }, [isDark]);
 
-
   useEffect(() => {
-    const q = query(collection(db, 'posts'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const qPosts = query(collection(db, 'posts'));
+    const unsubscribePosts = onSnapshot(qPosts, (snapshot) => {
       const p: any[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -86,7 +110,27 @@ export default function LaMappa() {
       });
       setPosts(p);
     });
-    return () => unsubscribe();
+
+    const qUsers = query(collection(db, 'users'));
+    const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
+       const u: any[] = [];
+       const now = Date.now();
+       snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.shareLiveLocation && data.liveLocation) {
+             // Only show if updated in the last 15 minutes (900000 ms) to avoid stale data
+             if (data.liveLocation.updatedAt && (now - data.liveLocation.updatedAt.toMillis()) < 900000) {
+                u.push({ id: doc.id, ...data });
+             }
+          }
+       });
+       setLiveUsers(u);
+    });
+
+    return () => {
+       unsubscribePosts();
+       unsubscribeUsers();
+    };
   }, [user]);
 
   return (
@@ -111,7 +155,7 @@ export default function LaMappa() {
             <div className="absolute inset-0">
                <MapContainer center={marzioCenter} zoom={16} className="w-full h-full z-0" zoomControl={true} key={isDark ? 'dark' : 'light'}>
                <LayersControl position="topright">
-                 <LayersControl.BaseLayer name="Esploratore (Satellitare HDR)" checked={!isDark}>
+                 <LayersControl.BaseLayer name="Esploratore (Satellitare HDR)">
                    <TileLayer
                      attribution='&copy; <a href="https://www.esri.com/">Esri</a>, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -119,7 +163,7 @@ export default function LaMappa() {
                    />
                  </LayersControl.BaseLayer>
                  
-                 <LayersControl.BaseLayer name="Sentieri e Strade (OpenStreetMap)">
+                 <LayersControl.BaseLayer name="Sentieri e Strade (OpenStreetMap)" checked={!isDark}>
                    <TileLayer
                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                      url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -156,6 +200,23 @@ export default function LaMappa() {
                         </div>
                       </div>
                     </Popup>
+                  </Marker>
+               ))}
+               
+               {liveUsers.map(liveUser => (
+                  <Marker key={liveUser.id} position={[liveUser.liveLocation.lat, liveUser.liveLocation.lng]} icon={createLiveUserIcon(liveUser)}>
+                     <Popup className={`vintage-popup ${isDark ? 'dark-mode-popup' : ''}`}>
+                        <div className="w-48 overflow-hidden bg-emerald-50 dark:bg-[#132c1c] border border-emerald-200 dark:border-emerald-900 rounded-lg p-3 m-0 shadow-xl flex items-center gap-3">
+                           <div className="relative">
+                              <img src={liveUser.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${liveUser.id}`} alt="User" className="w-10 h-10 rounded-full border-2 border-emerald-500" />
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>
+                           </div>
+                           <div>
+                              <p className="font-bold font-sans text-emerald-900 dark:text-emerald-100 text-sm leading-tight">{liveUser.displayName}</p>
+                              <p className="text-[10px] font-sans font-bold text-emerald-600 dark:text-emerald-400 uppercase mt-1">In Movimento</p>
+                           </div>
+                        </div>
+                     </Popup>
                   </Marker>
                ))}
             </MapContainer>

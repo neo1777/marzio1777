@@ -11,6 +11,7 @@ import IlBivacco from './pages/IlBivacco';
 import IlCinematografo from './pages/IlCinematografo';
 import ProfiloPersonale from './pages/ProfiloPersonale';
 import AdminPanel from './pages/AdminPanel';
+import Istruzioni from './pages/Istruzioni';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="alberone" element={<LAlberone />} />
             <Route path="profilo" element={<ProfiloPersonale />} />
             <Route path="admin" element={<AdminPanel />} />
+            <Route path="istruzioni" element={<Istruzioni />} />
           </Route>
         </Routes>
       </BrowserRouter>

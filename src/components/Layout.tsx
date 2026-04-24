@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../lib/firebase';
 
@@ -68,6 +68,7 @@ export default function Layout() {
           {(profile?.role === 'Root' || profile?.role === 'Admin') && (
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-[#24352b]">
               <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Pannello Root" admin />
+              <NavItem to="/dashboard/istruzioni" icon={<BookOpen size={18} />} label="Istruzioni (Doc)" admin />
             </div>
           )}
         </nav>
@@ -141,7 +142,10 @@ export default function Layout() {
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
         <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} />
         {(profile?.role === 'Root' || profile?.role === 'Admin') && (
-           <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
+           <>
+              <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
+              <MobileNavItem to="/dashboard/istruzioni" icon={<BookOpen size={22} />} admin />
+           </>
         )}
       </nav>
     </div>

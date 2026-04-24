@@ -32,6 +32,8 @@ Stores the user profile and RBAC configurations.
 - `role` (String) -> `"" | "Guest" | "Admin" | "Root"`
 - `points` (Number) -> Determines gamification levels (Altitude)
 - `bio` (String)
+- `shareLiveLocation` (Boolean) -> Toggles geolocation tracking
+- `liveLocation` (Object) -> `{lat: Number, lng: Number, updatedAt: Timestamp}` used for map presence
 
 ### 2. `posts` (Collection)
 The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and events.
@@ -45,6 +47,9 @@ The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and eve
 - `timestamp` (Firestore Server Timestamp)
 - `likesCount` (Number)
 - `commentsCount` (Number)
+- `visibilityStatus` (String) -> `"public" | "private" | "scheduled"` determines rendering engine bypass
+- `visibilityTime` (Number) -> Timestamp used when `scheduled` is activated
+- `showInCinematografo` (Boolean) -> Granular toggle for the projection room
 
 *(Subcollection)* `posts/{id}/comments`
 - `text` (String), `authorId`, `authorName`, `timestamp`
@@ -112,9 +117,16 @@ A complex presentation layer built to project images in fullscreen.
 
 ### 4.5 Geocoding & The Mapping System (`LaMappa`)
 The geographic data relies on dual implementations of Leaflet.
-- **Component:** `react-leaflet` acts as the mapping bridge, defaulting to `Esri World_Imagery` (High-resolution satellite).
+- **Component:** `react-leaflet` acts as the mapping bridge, defaulting to `Sentieri e Strade (OpenStreetMap)`.
 - **Dark Mode Context Injection:** Reacts to the global DOM `classList` for `dark`. When active, it switches the Leaflet tile layer to `CartoDB dark_all`.
 - **Location Modal (`IlBaule`):** Taps `navigator.geolocation` async API, uses OpenStreetMap's Nominatim Reverse Geocoding (`search?format=json&q=Query`), and employs manual pinning via `useMapEvents`.
+- **Live User Tracking:** Leverages `navigator.geolocation.watchPosition` inside `AuthContext` to broadcast user coordinates to Firestore if `shareLiveLocation` is enabled. `LaMappa` renders these as custom animated pulsing avatars. Stale user locations (older than 15 minutes) are hidden to maintain accuracy.
+
+### 4.6 Privacy, Post Visibility & Gestione Archivio
+`marzio1777` features a granular privacy engine running natively across component lists.
+- **Global Rendering Condition:** The `<LaPiazza>` and `<IlCinematografo>` engines iterate through docs verifying `visibilityStatus` (`public`, `private`, or `scheduled`) against `visibilityTime` (timestamp diff matching). The user can forcefully bypass validation constraints dynamically on their own content (`if (post.authorId === user.uid)`).
+- **Scheduled Releases:** Time-based filtering restricts visibility of queued updates.
+- **Gestione Archivio Engine:** Within `ProfiloPersonale.tsx`, users can invoke bulk transactions updating `showInCinematografo` or visibility constraints via `Promise.all` across queried documents simultaneously, along with complete atomic deletion triggers.
 
 ---
 

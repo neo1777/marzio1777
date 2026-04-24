@@ -13,6 +13,7 @@ export default function GestioneArchivio() {
   // Per il bulk editor
   const [bulkCinematografo, setBulkCinematografo] = useState<boolean | null>(null);
   const [bulkVisibility, setBulkVisibility] = useState<string | null>(null);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -45,14 +46,18 @@ export default function GestioneArchivio() {
     }
   };
 
-  const deletePost = async (id: string) => {
-    if (confirm('Sei sicuro di voler eliminare permanentemente questo ricordo?')) {
-      try {
-        await deleteDoc(doc(db, 'posts', id));
-      } catch (e) {
-        console.error(e);
-      }
+  const confirmDelete = async () => {
+    if (!postToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'posts', postToDelete));
+      setPostToDelete(null);
+    } catch (e) {
+      console.error(e);
     }
+  };
+
+  const deletePost = (id: string) => {
+    setPostToDelete(id);
   };
 
   const handleBulkUpdate = async () => {
@@ -70,7 +75,7 @@ export default function GestioneArchivio() {
     setLoading(false);
     setBulkCinematografo(null);
     setBulkVisibility(null);
-    alert('Aggiornamento di massa completato!');
+    window.alert('Aggiornamento di massa completato!');
   };
 
   if (loading) return <div className="text-center py-10 text-slate-500">Recupero dell'archivio...</div>;
@@ -113,6 +118,19 @@ export default function GestioneArchivio() {
            ))
         )}
       </div>
+
+      {postToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#2D5A27]/40 dark:bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white dark:bg-[#151e18] rounded-2xl shadow-xl overflow-hidden p-6 border border-slate-200 dark:border-[#24352b]">
+            <h3 className="font-bold text-lg text-[#1a2e16] dark:text-[#e2e8f0] mb-2">Eliminare questo ricordo?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Attenzione: l'eliminazione sarà permanente e non potrai più recuperare il post o l'immagine allegata.</p>
+            <div className="flex justify-end gap-3">
+               <button onClick={() => setPostToDelete(null)} className="px-4 py-2 font-bold text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Annulla</button>
+               <button onClick={confirmDelete} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors shadow-md flex items-center gap-2"><Trash2 size={16}/> Elimina Definitivamente</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

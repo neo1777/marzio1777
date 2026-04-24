@@ -19,11 +19,15 @@ export default function ProfiloPersonale() {
   
   // Local Settings
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [shareLiveLocation, setShareLiveLocation] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
 
   useEffect(() => {
     if (profile?.bio) {
        setBio(profile.bio);
+    }
+    if (profile?.shareLiveLocation !== undefined) {
+       setShareLiveLocation(profile.shareLiveLocation);
     }
   }, [profile]);
 
@@ -170,17 +174,39 @@ export default function ProfiloPersonale() {
 
                  {/* Local App Settings */}
                  <div className="bg-slate-50 dark:bg-[#111814] rounded-2xl border border-slate-200 dark:border-[#24352b] p-6 overflow-hidden">
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-[#8C928D] dark:text-slate-500 mb-4 flex items-center gap-2"><Settings2 size={16} /> Impostazioni Locali App</h4>
-                    <div className="max-w-xl">
-                      <label className="block text-xs font-sans font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Cpu size={14}/> Gemini AI Api Key</label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                         <input type="password" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="flex-1 bg-white dark:bg-[#1a261f] border border-slate-200 dark:border-[#24352b] rounded-lg p-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none focus:border-[#2D5A27] focus:ring-1 focus:ring-[#2D5A27] transition-all font-mono" placeholder="AIzaSy..." />
-                         <button onClick={handleSaveLocalSettings} className="bg-[#2D5A27] text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-[#1b3b17] transition-colors shrink-0">Salva Chiave</button>
+                    <h4 className="text-sm font-bold uppercase tracking-widest text-[#8C928D] dark:text-slate-500 mb-4 flex items-center gap-2"><Settings2 size={16} /> Impostazioni e Privacy</h4>
+                    <div className="space-y-6 max-w-xl">
+                      
+                      {/* Live Location Toggle */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-slate-200 dark:border-[#24352b] rounded-xl bg-white dark:bg-[#1a261f]">
+                         <div>
+                            <h5 className="text-sm font-bold text-[#1a2e16] dark:text-[#e2e8f0] flex items-center gap-2"><MapPin size={16} className={shareLiveLocation ? 'text-emerald-500' : 'text-slate-400'}/> Condivisione Posizione in Tempo Reale</h5>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">Permette agli altri utenti di vederti in tempo reale sulla "Mappa" tramite un'icona quando hai l'app aperta.</p>
+                         </div>
+                         <button 
+                            onClick={async () => {
+                               const newVal = !shareLiveLocation;
+                               setShareLiveLocation(newVal);
+                               if (user) await updateDoc(doc(db, 'users', user.uid), { shareLiveLocation: newVal });
+                            }} 
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLiveLocation ? 'bg-[#2D5A27] dark:bg-[#42a83a]' : 'bg-slate-300 dark:bg-slate-700'}`}
+                         >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLiveLocation ? 'translate-x-6' : 'translate-x-1'}`} />
+                         </button>
                       </div>
-                      {savedMsg && <p className="text-xs font-bold text-green-600 mt-2">Impostazioni Salvate Localmente ✓</p>}
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed max-w-sm">
-                         Necessaria agli automatismi dell'intelligenza artificiale per l'analisi visiva delle vecchie fotografie d'archivio e per la stesura automatica dei ricordi. (Il salvataggio e di sola pertinenza di questo browser).
-                      </p>
+
+                      {/* API Key */}
+                      <div>
+                        <label className="block text-xs font-sans font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Cpu size={14}/> Gemini AI Api Key (Locale)</label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                           <input type="password" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="flex-1 bg-white dark:bg-[#1a261f] border border-slate-200 dark:border-[#24352b] rounded-lg p-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none focus:border-[#2D5A27] focus:ring-1 focus:ring-[#2D5A27] transition-all font-mono" placeholder="AIzaSy..." />
+                           <button onClick={handleSaveLocalSettings} className="bg-[#2D5A27] text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-[#1b3b17] transition-colors shrink-0">Salva Chiave</button>
+                        </div>
+                        {savedMsg && <p className="text-xs font-bold text-green-600 mt-2">Impostazioni Salvate Localmente ✓</p>}
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed max-w-sm">
+                           Necessaria agli automatismi dell'intelligenza artificiale per l'analisi visiva delle vecchie fotografie d'archivio e per la stesura automatica dei ricordi.
+                        </p>
+                      </div>
                     </div>
                  </div>
 
