@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, limit, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Send, TreeDeciduous, Users } from 'lucide-react';
@@ -15,15 +15,20 @@ export default function LAlberone() {
   const channelId = "alberone_principale";
 
   useEffect(() => {
-    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", createdBy: "System", createdAt: serverTimestamp() }, { merge: true });
+    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", createdBy: "System", communityId: 'marzio', createdAt: serverTimestamp() }, { merge: true });
 
-    const q = query(collection(db, `chats/${channelId}/messages`), orderBy('timestamp', 'asc'), limit(100));
+    const q = query(
+      collection(db, `chats/${channelId}/messages`), 
+      where('communityId', '==', 'marzio'),
+      orderBy('timestamp', 'asc'), 
+      limit(100)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const m: any[] = [];
       snapshot.forEach(d => m.push({ id: d.id, ...d.data() }));
       setMessages(m);
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    });
+    }, (err) => console.error("Chat fetch err:", err));
     return () => unsubscribe();
   }, [channelId]);
 
@@ -36,6 +41,7 @@ export default function LAlberone() {
         authorId: user.uid,
         authorName: user.displayName,
         text: newMessage.trim(),
+        communityId: 'marzio',
         timestamp: serverTimestamp()
       });
       setNewMessage('');

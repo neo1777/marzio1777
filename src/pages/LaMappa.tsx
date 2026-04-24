@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, or } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -86,14 +86,24 @@ export default function LaMappa() {
   }, [isDark]);
 
   useEffect(() => {
-    const qPosts = query(collection(db, 'posts'));
+    if (!user) return;
+    
+    // Explicit list query to satisfy strict security rules for posts
+    const qPosts = query(
+      collection(db, 'posts'),
+      or(
+        where('visibilityStatus', 'in', ['public', 'scheduled']),
+        where('authorId', '==', user.uid)
+      )
+    );
+    
     const unsubscribePosts = onSnapshot(qPosts, (snapshot) => {
       const p: any[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.location) {
            let isVisible = false;
-           if (user && data.authorId === user.uid) {
+           if (data.authorId === user.uid) {
               isVisible = true;
            } else if (data.visibilityStatus === 'public') {
               isVisible = true;
@@ -111,7 +121,8 @@ export default function LaMappa() {
       setPosts(p);
     });
 
-    const qUsers = query(collection(db, 'users'));
+    // Explicit list query to satisfy security rules for user_locations
+    const qUsers = query(collection(db, 'user_locations'), where('shareLiveLocation', '==', true));
     const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
        const u: any[] = [];
        const now = Date.now();

@@ -9,22 +9,42 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string", "enum": ["Root", "Admin", "Guest"], "default": "Guest" },
-        "points": { "type": "number", "default": 0 },
-        "apiKey": { "type": "string", "description": "LLM API Key" },
+        "role": { "type": "string", "enum": ["Root", "Admin", "Guest"] },
+        "points": { "type": "number" },
+        "shareLiveLocation": { "type": "boolean" },
+        "apiKey": { "type": "string" },
         "createdAt": { "type": "number", "description": "Timestamp" }
       },
       "required": ["uid", "email", "role"]
     },
-    "Post": {
-      "title": "Post",
-      "description": "A memory photo post",
+    "UserLocation": {
+      "title": "UserLocation",
+      "description": "Public volatile location data for map",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
+         "userId": { "type": "string" },
+         "displayName": { "type": "string" },
+         "photoURL": { "type": "string" },
+         "shareLiveLocation": { "type": "boolean" },
+         "liveLocation": {
+            "type": "object",
+            "properties": {
+               "lat": { "type": "number" },
+               "lng": { "type": "number" },
+               "updatedAt": { "type": "object" }
+            }
+         }
+      },
+      "required": ["userId"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A memory photo post or text post",
+      "type": "object",
+      "properties": {
         "authorId": { "type": "string" },
-        "imageUrl": { "type": "string", "description": "Thumbnail URL" },
-        "driveUrl": { "type": "string", "description": "High res Drive URL" },
+        "authorName": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "caption": { "type": "string" },
         "location": {
            "type": "object",
@@ -34,34 +54,75 @@
            }
         },
         "decade": { "type": "string" },
-        "timestamp": { "type": "number" },
-        "likesCount": { "type": "number" }
+        "timestamp": { "type": "object" },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "visibilityStatus": { "type": "string", "enum": ["public", "private", "scheduled"] },
+        "visibilityTime": { "type": "number" },
+        "showInCinematografo": { "type": "boolean" }
       },
-      "required": ["authorId", "timestamp"]
+      "required": ["authorId", "authorName", "timestamp", "likesCount", "commentsCount", "visibilityStatus"]
     },
     "Comment": {
       "title": "Comment",
       "description": "User comment on a post",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "postId": { "type": "string" },
         "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
         "text": { "type": "string" },
-        "timestamp": { "type": "number" }
+        "timestamp": { "type": "object" }
       },
-      "required": ["postId", "authorId", "text", "timestamp"]
+      "required": ["postId", "authorId", "authorName", "text", "timestamp"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Community event in Il Bivacco",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "timestamp": { "type": "object" }
+      },
+      "required": ["authorId", "authorName", "name", "date", "timestamp"]
+    },
+    "EventItem": {
+      "title": "EventItem",
+      "description": "Checklist item",
+      "type": "object",
+      "properties": {
+         "text": { "type": "string" },
+         "assignedTo": { "type": "string" },
+         "assignedName": { "type": "string" }
+      },
+      "required": ["text"]
+    },
+    "EventExpense": {
+      "title": "EventExpense",
+      "description": "Expense item",
+      "type": "object",
+      "properties": {
+         "description": { "type": "string" },
+         "amount": { "type": "number" },
+         "paidBy": { "type": "string" },
+         "paidByName": { "type": "string" }
+      },
+      "required": ["description", "amount", "paidBy", "paidByName"]
     },
     "ChatChannel": {
       "title": "ChatChannel",
-      "description": "A chat channel",
+      "description": "A chat channel in L Alberone",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "name": { "type": "string" },
         "description": { "type": "string" },
         "createdBy": { "type": "string" },
-        "createdAt": { "type": "number" }
+        "createdAt": { "type": "object" }
       },
       "required": ["name", "createdBy"]
     },
@@ -70,19 +131,22 @@
       "description": "A message in a chat channel",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "channelId": { "type": "string" },
         "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
         "text": { "type": "string" },
-        "timestamp": { "type": "number" }
+        "timestamp": { "type": "object" }
       },
-      "required": ["channelId", "authorId", "text", "timestamp"]
+      "required": ["authorId", "authorName", "text", "timestamp"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
-      "description": "User profiles"
+      "description": "User private profiles (PII)"
+    },
+    "/user_locations/{userId}": {
+      "schema": { "$ref": "#/entities/UserLocation" },
+      "description": "Public location data"
     },
     "/posts/{postId}": {
       "schema": { "$ref": "#/entities/Post" },
@@ -91,6 +155,18 @@
     "/posts/{postId}/comments/{commentId}": {
       "schema": { "$ref": "#/entities/Comment" },
       "description": "Comments on a post"
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Events"
+    },
+    "/events/{eventId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/EventItem" },
+      "description": "Event logistics items"
+    },
+    "/events/{eventId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/EventExpense" },
+      "description": "Event expenses"
     },
     "/chats/{channelId}": {
       "schema": { "$ref": "#/entities/ChatChannel" },

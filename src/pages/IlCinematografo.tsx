@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, or } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';
@@ -29,8 +29,18 @@ export default function IlCinematografo() {
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    // Fetch photos
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    if (!user) return;
+    
+    // Fetch photos with explicit rule-abiding constraints
+    const q = query(
+      collection(db, 'posts'), 
+      or(
+        where('visibilityStatus', 'in', ['public', 'scheduled']),
+        where('authorId', '==', user.uid)
+      ),
+      orderBy('timestamp', 'desc')
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const p: any[] = [];
       snapshot.forEach(doc => {
@@ -41,9 +51,12 @@ export default function IlCinematografo() {
       });
       setPosts(p);
       setLoading(false);
+    }, (error) => {
+      console.error("Firestore query error:", error);
+      setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   // Filtered Posts
   const filteredPosts = posts.filter(post => {

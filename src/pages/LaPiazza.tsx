@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, limit, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, or } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, MapPin, Send, Leaf } from 'lucide-react';
@@ -11,7 +11,7 @@ import confetti from 'canvas-confetti';
 import { useNavigate } from 'react-router-dom';
 
 export default function LaPiazza() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,18 +19,40 @@ export default function LaPiazza() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const p: any[] = [];
-      snapshot.forEach(doc => p.push({ id: doc.id, ...doc.data() }));
-      setPosts(p);
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, 'posts'), 
+        or(
+          where('visibilityStatus', 'in', ['public', 'scheduled']),
+          where('authorId', '==', user.uid)
+        ),
+        orderBy('timestamp', 'desc'), 
+        limit(50)
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const p: any[] = [];
+        snapshot.forEach(doc => {
+           const data = doc.data();
+           // In memory scheduled time check since Firestore rules allow reading scheduled posts, but we only show if time has passed
+           if (data.visibilityStatus === 'scheduled' && data.visibilityTime && data.visibilityTime > Date.now()) {
+              if (data.authorId !== user.uid) return; // Skip if not author
+           }
+           p.push({ id: doc.id, ...data });
+        });
+        setPosts(p);
+        setLoading(false);
+      }, (error) => {
+        console.error("Firestore query error (might need composite index):", error);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Error setting up query:", err);
       setLoading(false);
-    }, (error) => {
-      console.error(error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  }, [user]);
 
   const handleLike = async (postId: string) => {
     // Custom Snow/Leaf Confetti explosion on Like

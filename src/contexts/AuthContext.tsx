@@ -19,30 +19,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser);
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
         
-        // Failsafe: Ensure nicolainformatica@gmail.com is always Root, even if created previously
         const isRoot = firebaseUser.email === 'nicolainformatica@gmail.com';
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userRef);
         
-        if (userDoc.exists()) {
-           const data = userDoc.data();
-           if (isRoot && data.role !== 'Root') {
-               await setDoc(userRef, { role: 'Root' }, { merge: true });
+        try {
+           const userDoc = await getDoc(userRef);
+           if (!userDoc.exists()) {
+             // Create initial profile
+             await setDoc(userRef, { 
+                uid: firebaseUser.uid, 
+                email: firebaseUser.email, 
+                role: isRoot ? 'Root' : 'Guest',
+                displayName: firebaseUser.displayName || 'Nuovo Utente',
+                photoURL: firebaseUser.photoURL || '',
+                createdAt: serverTimestamp(),
+                points: 0,
+                shareLiveLocation: false
+             });
+           } else {
+             const data = userDoc.data();
+             if (isRoot && data.role !== 'Root') {
+                 await updateDoc(userRef, { role: 'Root' });
+             }
            }
+        } catch (e) {
+           console.error("Error setting up user profile", e);
         }
 
         const unsubscribeProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
           if (docSnap.exists()) {
-             const data = docSnap.data();
-             setProfile(data);
-             
-             // Check if we need to start or stop location sharing
-             if (data.shareLiveLocation && navigator.geolocation) {
-                // start tracking if not already set up globally
-                // To avoid multiple watchers, we handle it in a separate effect
-             }
+             setProfile(docSnap.data());
           }
           setLoading(false);
         });
@@ -58,9 +66,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
      let watchId: number | null = null;
      if (user && profile?.shareLiveLocation && navigator.geolocation) {
+        // First ensure user_locations document exists with basic info
+        setDoc(doc(db, 'user_locations', user.uid), {
+           userId: user.uid,
+           displayName: profile.displayName || user.displayName || 'Utente',
+           photoURL: profile.photoURL || user.photoURL || '',
+           shareLiveLocation: true
+        }, { merge: true }).catch(console.error);
+
         watchId = navigator.geolocation.watchPosition(
            (pos) => {
-              updateDoc(doc(db, 'users', user.uid), {
+              updateDoc(doc(db, 'user_locations', user.uid), {
                  liveLocation: {
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
@@ -78,17 +94,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
      };
   }, [user, profile?.shareLiveLocation]);
 
-  // Clean up live location on app close (best effort)
   useEffect(() => {
      const handleBeforeUnload = () => {
-        if (user && profile?.shareLiveLocation) {
-           // We try to remove liveLocation when they close the app, though beacon is better
-           // We'll leave it simple for now, and handle old locations in the UI
-        }
+        // Cannot reliably do async things here, but trying to set offline
      };
      window.addEventListener('beforeunload', handleBeforeUnload);
      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [user, profile?.shareLiveLocation]);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>
