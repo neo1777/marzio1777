@@ -13,6 +13,7 @@ export default function GestioneArchivio() {
   // Per il bulk editor
   const [bulkCinematografo, setBulkCinematografo] = useState<boolean | null>(null);
   const [bulkVisibility, setBulkVisibility] = useState<string | null>(null);
+  const [bulkVisibilityTime, setBulkVisibilityTime] = useState<string>('');
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +66,9 @@ export default function GestioneArchivio() {
       const updates: any = {};
       if (bulkCinematografo !== null) updates.showInCinematografo = bulkCinematografo;
       if (bulkVisibility !== null) updates.visibilityStatus = bulkVisibility;
+      if (bulkVisibility === 'scheduled' && bulkVisibilityTime) {
+         updates.visibilityTime = new Date(bulkVisibilityTime).getTime();
+      }
       if (Object.keys(updates).length > 0) {
          return updateDoc(doc(db, 'posts', post.id), updates);
       }
@@ -75,6 +79,7 @@ export default function GestioneArchivio() {
     setLoading(false);
     setBulkCinematografo(null);
     setBulkVisibility(null);
+    setBulkVisibilityTime('');
     window.alert('Aggiornamento di massa completato!');
   };
 
@@ -91,8 +96,16 @@ export default function GestioneArchivio() {
                  <option value="">-- Nessuna Modifica --</option>
                  <option value="public">Rendi tutto Pubblico</option>
                  <option value="private">Rendi tutto Privato</option>
+                 <option value="scheduled">Programmata A Tempo</option>
               </select>
            </div>
+
+           {bulkVisibility === 'scheduled' && (
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold text-slate-500 uppercase">Data/Ora Rilascio</label>
+                 <input type="datetime-local" value={bulkVisibilityTime} onChange={e => setBulkVisibilityTime(e.target.value)} className="bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg p-2 text-sm text-slate-700 dark:text-slate-200 outline-none" />
+              </div>
+           )}
            
            <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-500 uppercase">Cinematografo</label>
@@ -171,6 +184,12 @@ function PostManagerRow({ post, onUpdate, onDelete }: { post: any, onUpdate: any
              <Film className="text-slate-300" />
           )}
           <div className="absolute top-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[9px] text-white font-bold">{post.decade}</div>
+          {post.visibilityStatus === 'scheduled' && post.visibilityTime && post.visibilityTime > Date.now() && (
+             <div className="absolute top-1 right-1 bg-blue-600/90 rounded px-1.5 py-0.5 text-[9px] text-white font-bold flex items-center gap-1 backdrop-blur-md shadow-lg border border-blue-400/30">
+                <Clock size={10} />
+                Programmato
+             </div>
+          )}
        </div>
 
        <div className="flex-1 flex flex-col justify-between">

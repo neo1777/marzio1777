@@ -49,7 +49,7 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
   };
 
   const myRsvp = attendees[user.uid]?.status;
-  const totalPeople = Object.values(attendees).reduce((acc: number, curr: any) => acc + (curr.status === 'yes' ? 1 + (curr.guestCount || 0) : 0), 0);
+  const totalPeople = Object.values(attendees).reduce((acc: number, curr: any) => acc + (curr.status === 'yes' ? 1 + (curr.guestCount || 0) : 0), 0) as number;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-[#1a2e16]/60 dark:bg-black/70 backdrop-blur-md">

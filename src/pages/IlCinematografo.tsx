@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, where, or } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, or, and } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';

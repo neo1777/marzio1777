@@ -103,9 +103,17 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow get: if isSignedIn() && (resource.data.visibilityStatus in ['public', 'scheduled'] || resource.data.authorId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (
+         resource.data.visibilityStatus in ['public', 'scheduled'] || 
+         resource.data.authorId == request.auth.uid || 
+         isAdmin()
+      );
       // Client MUST query explicitly with visibilityStatus in [...] or authorId == request.auth.uid
-      allow list: if isSignedIn() && (resource.data.visibilityStatus in ['public', 'scheduled'] || resource.data.authorId == request.auth.uid);
+      // Note: We use client-side filtering for visibilityTime to avoid multiple-range-index database limitations
+      allow list: if isSignedIn() && (
+         resource.data.visibilityStatus in ['public', 'scheduled'] || 
+         resource.data.authorId == request.auth.uid
+      );
       allow create: if isSignedIn() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0;
       allow update: if isSignedIn() && isValidPost(incoming()) && (
          isAdmin() || (

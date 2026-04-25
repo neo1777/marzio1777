@@ -24,24 +24,32 @@ This document provides a highly detailed, professional overview of the architect
 The database uses a NoSQL document-based structure with normalized global documents and nested subcollections for specific relational features.
 
 ### 1. `users` (Collection)
-Stores the user profile and RBAC configurations.
+Stores the user private profile, credentials, and RBAC configurations.
 - `uid` (Document ID)
-- `email` (String)
+- `email` (String) - PII (Protected)
+- `apiKey` (String) - Secrets (Protected)
 - `displayName` (String)
 - `photoURL` (String)
-- `role` (String) -> `"" | "Guest" | "Admin" | "Root"`
+- `role` (String) -> `"Guest" | "Admin" | "Root"`
 - `points` (Number) -> Determines gamification levels (Altitude)
 - `bio` (String)
 - `shareLiveLocation` (Boolean) -> Toggles geolocation tracking
+- `createdAt` (Timestamp)
+
+### 2. `user_locations` (Collection) - *Split Collection Pattern*
+Stores strictly public geographical presence. Isolated from `users` to prevent PII leakage when sharing locations.
+- `userId` (Document ID)
+- `displayName` (String)
+- `photoURL` (String)
+- `shareLiveLocation` (Boolean)
 - `liveLocation` (Object) -> `{lat: Number, lng: Number, updatedAt: Timestamp}` used for map presence
 
-### 2. `posts` (Collection)
-The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and events.
-- `type` (String) -> `"photo"` | `"event"`
+### 3. `posts` (Collection)
+The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and text updates.
 - `imageUrl` (String - Base64 or CDN URL)
 - `caption` (String)
 - `decade` (String) -> "Anni 70", "Anni 80", etc.
-- `location` (String)
+- `location` (Object) -> `{lat: Number, lng: Number}`
 - `authorId` (String - maps to `users.uid`)
 - `authorName` (String)
 - `timestamp` (Firestore Server Timestamp)
@@ -52,41 +60,45 @@ The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and eve
 - `showInCinematografo` (Boolean) -> Granular toggle for the projection room
 
 *(Subcollection)* `posts/{id}/comments`
-- `text` (String), `authorId`, `authorName`, `timestamp`
+- `postId` (String)
+- `text` (String)
+- `authorId` (String)
+- `authorName` (String)
+- `timestamp` (Timestamp)
 
-### 3. `events` (Collection)
+### 4. `events` (Collection)
 Powers the `IlBivacco` functionality.
-- `title`, `description`, `location`, `date` (Strings/Timestamps)
-- `authorId`, `authorName`, `timestamp`
+- `name`, `description`, `location`, `date` (Strings)
+- `authorId`, `authorName`, `timestamp` (Strings/Timestamps)
 
 *(Subcollections of Events)*
-- `/attendees/{userId}`: `status` ("Sì, ci sono!", ecc.), `count` (Number)
-- `/checklist/{itemId}`: `text`, `assigneeId`, `assigneeName`, `completed`
-- `/expenses/{expenseId}`: `description`, `amount`, `paidBy` (userId)
+- `/items/{itemId}`: `text`, `assignedTo`, `assignedName`, `checked`
+- `/expenses/{expenseId}`: `description`, `amount`, `paidBy` (userId), `paidByName`
 
-### 4. `chats` (Collection)
+### 5. `chats` (Collection)
 Powers `L'Alberone` (Realtime chat).
 - `channelId` (e.g., `"alberone_principale"`)
+- `name`, `description`, `createdBy`, `createdAt`
 
 *(Subcollection)* `chats/{id}/messages`
 - `text`, `authorId`, `authorName`, `timestamp`
 
 ---
 
-## 3. 🔐 RBAC (Role-Based Access Control) Implementation
+## 3. 🔐 Security Architecture (Zero-Trust Firestore Rules)
 
-The platform utilizes a strictly enforced Hierarchy injected into the `AuthContext` via the `profile` object.
+The platform utilizes a strictly enforced Zero-Trust Architecture implemented natively via Firestore Security Rules.
 
-1. **Guest (Read-Only):**
-   - Default fallback. Cannot add posts, photos, comments, create events, or modify event logistics.
-   - Guarded at the UI level via conditional rendering (e.g., `profile?.role === 'Guest' ? <ReadOnlyPrompt /> : <UploadUI />`).
-2. **Admin (Standard Contributor):**
-   - Full read/write access to user-level features (Baule, Bivacco, Piazza).
-   - Partial access to the Admin Panel (Can observe roles, can promote `Guest` -> `Admin`).
-3. **Root (Superuser):**
-   - Retains all Admin privileges.
-   - Absolute control in the Admin Panel (Can demote Admins, promote to Root, remove accounts).
-   - Bypass mechanism implicitly applied to restrictive UI.
+1. **Explicit Identity & Schema Validation**
+   - Every `create` and `update` operation passes through mandatory `isValid*()` helpers to enforce schema integrity and string boundaries (preventing payload poisoning).
+2. **Action-Based Granular Updates**
+   - Documents are isolated utilizing `affectedKeys().hasOnly([...])`. E.g., users can increment `likesCount` via `update` but are strictly gated from arbitrarily editing `authorId` or escalating their own `role`.
+3. **PII Strict Isolation**
+   - The `users` collection specifically blocks blanket `allow list:` operations. Profile interactions must use explicit `get()` lookups. Public components querying for users (like Maps) utilize the standalone `user_locations` collection which strips sensitive data (`email`, `apiKey`).
+4. **Enforced Query Delegation**
+   - Client queries are forced to mirror relational or conditional bounds. Features querying `posts` must explicitly supply `or(where('visibilityStatus', 'in', ['public', 'scheduled']), where('authorId', '==', user.uid))` matching the Firestore rule constraints. Blanket unbounded reads are mathematically denied.
+5. **Role-Based Access Control (RBAC)**
+   - Roles (`Root`, `Admin`, `Guest`) exist in `/users`. Admin functions look directly at this trusted document (`get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role`). State manipulation of this field is exclusively restricted to Admins.
 
 ---
 

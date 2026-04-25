@@ -48,11 +48,14 @@ La banchisa sotto l'albero. Si tratta di un'autentica stanzetta con chat real-ti
 
 ---
 
-## 🔒 Gerarchie & Sicurezza
-Dobbiamo proteggere il patrimonio storico:
-- **Guest (Turista di Passaggio):** L'ultimo nato nel sistema. Può solo guardare, non può né scrivere una singola lettera né spiare il Bivacco segreto o caricare foto. L'unica cosa che sa fare è ammirare.
-- **Admin (Segretaria Comunale):** Utenti regolari scelti da poteri forti. Possono elevare i poveri turisti a Admin e sbloccare tutto. 
-- **Root (Il Monarca Illuminato):** Esiste un solo Root che manipola destini (e ruoli).
+## 🔒 Sicurezza & Architettura Zero-Trust
+Dobbiamo proteggere il patrimonio storico e i dati personali:
+- **Regole Firestore Invalicabili:** Abbiamo implementato un'architettura Zero-Trust (RBAC nativo backend). Chiunque tenti di agire oltre al proprio stato viene rifiutato.
+- **Split Collection (Privacy PII):** I dati sensibili (come la tua email o le chiavi) sono archiviati in cassaforti separate e illeggibili; solo la tua presenza pubblica per "La Mappa" viene trasmessa.
+- **Gerarchia Utenti:**
+  - **Guest (Turista di Passaggio):** L'ultimo nato nel sistema. Può solo ammirare, i nostri lucchetti gli impediscono modifiche, upload o l'avvelenamento malevolo del database.
+  - **Admin (Segretaria Comunale):** Possono elevare i poveri turisti a Admin e sbloccare tutte le funzioni di partecipazione del paese. 
+  - **Root (Il Monarca Illuminato):** Esiste un solo Root che riordina o manipola i destini (e ruoli).
 
 ---
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, where, or } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, or, and } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';

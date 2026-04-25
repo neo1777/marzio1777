@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { logout } from '../lib/firebase';
+import { logout, db } from '../lib/firebase';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 export default function Layout() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [alberoneUnread, setAlberoneUnread] = useState(0);
 
   useEffect(() => {
     if (isDark) {
@@ -20,6 +23,39 @@ export default function Layout() {
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(!isDark);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    if (location.pathname === '/dashboard/alberone') {
+       localStorage.setItem('alberoneLastRead', Date.now().toString());
+       setAlberoneUnread(0);
+       return;
+    }
+
+    const lastReadStr = localStorage.getItem('alberoneLastRead');
+    const lastReadMs = lastReadStr ? parseInt(lastReadStr, 10) : (Date.now() - 1000 * 60 * 60 * 24);
+    const lastReadDate = new Date(lastReadMs);
+
+    const q = query(
+      collection(db, 'chats/alberone_principale/messages'),
+      where('timestamp', '>', lastReadDate),
+      orderBy('timestamp', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+       let count = 0;
+       snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.authorId !== user.uid) {
+             count++;
+          }
+       });
+       setAlberoneUnread(count);
+    }, (err) => console.error("Chat unread hook error:", err));
+
+    return () => unsubscribe();
+  }, [user, location.pathname]);
 
   const points = profile?.points || 0;
   const baseAltitude = 728; // Marzio altitude
@@ -64,7 +100,7 @@ export default function Layout() {
           <NavItem to="/dashboard/cinematografo" icon={<Film size={18} />} label="Il Cinematografo" />
           <NavItem to="/dashboard/baule" icon={<Camera size={18} />} label="Il Baule" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
-          <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" />
+          <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" badge={alberoneUnread} />
           {(profile?.role === 'Root' || profile?.role === 'Admin') && (
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-[#24352b]">
               <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Pannello Root" admin />
@@ -140,7 +176,7 @@ export default function Layout() {
         <MobileNavItem to="/dashboard/bivacco" icon={<Flame size={22} />} />
         <MobileNavItem to="/dashboard/baule" icon={<Camera size={22} />} />
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
-        <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} />
+        <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} badge={alberoneUnread} />
         {(profile?.role === 'Root' || profile?.role === 'Admin') && (
            <>
               <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
@@ -152,19 +188,39 @@ export default function Layout() {
   );
 }
 
-function NavItem({ to, icon, label, admin }: { to: string, icon: React.ReactNode, label: string, admin?: boolean }) {
+function NavItem({ to, icon, label, admin, badge }: { to: string, icon: React.ReactNode, label: string, admin?: boolean, badge?: number }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold ${isActive ? (admin ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400' : 'bg-[#2D5A27] text-white shadow-md shadow-[#2D5A27]/20') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1a261f] hover:text-[#2D5A27] dark:hover:text-[#42a83a] border border-transparent'}`}>
-      {icon}
-      <span>{label}</span>
+    <NavLink to={to} className={({ isActive }) => `flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold ${isActive ? (admin ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400' : 'bg-[#2D5A27] text-white shadow-md shadow-[#2D5A27]/20') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1a261f] hover:text-[#2D5A27] dark:hover:text-[#42a83a] border border-transparent'}`}>
+      {({ isActive }) => (
+        <>
+          <div className="flex items-center gap-3">
+             {icon}
+             <span>{label}</span>
+          </div>
+          {!!badge && badge > 0 && (
+             <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}`}>
+               {badge > 9 ? '9+' : badge}
+             </span>
+          )}
+        </>
+      )}
     </NavLink>
   );
 }
 
-function MobileNavItem({ to, icon, admin }: { to: string, icon: React.ReactNode, admin?: boolean }) {
+function MobileNavItem({ to, icon, admin, badge }: { to: string, icon: React.ReactNode, admin?: boolean, badge?: number }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `p-3 rounded-xl transition-all duration-200 ${isActive ? (admin ? 'text-red-500 bg-red-50 dark:bg-red-950/30' : 'text-[#2D5A27] dark:text-[#42a83a] bg-[#2D5A27]/10') : 'text-slate-400 dark:text-slate-500 active:bg-slate-50 dark:active:bg-[#1a261f]'}`}>
-      {icon}
+    <NavLink to={to} className={({ isActive }) => `relative p-3 rounded-xl transition-all duration-200 ${isActive ? (admin ? 'text-red-500 bg-red-50 dark:bg-red-950/30' : 'text-[#2D5A27] dark:text-[#42a83a] bg-[#2D5A27]/10') : 'text-slate-400 dark:text-slate-500 active:bg-slate-50 dark:active:bg-[#1a261f]'}`}>
+      {({ isActive }) => (
+        <>
+          {icon}
+          {!!badge && badge > 0 && (
+             <span className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center text-[8px] font-bold bg-red-500 text-white rounded-full ring-2 ring-white dark:ring-[#151e18]">
+               {badge > 9 ? '9+' : badge}
+             </span>
+          )}
+        </>
+      )}
     </NavLink>
   );
 }

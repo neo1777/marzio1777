@@ -19,7 +19,6 @@ export default function LAlberone() {
 
     const q = query(
       collection(db, `chats/${channelId}/messages`), 
-      where('communityId', '==', 'marzio'),
       orderBy('timestamp', 'asc'), 
       limit(100)
     );
