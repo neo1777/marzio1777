@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 uid: firebaseUser.uid, 
                 email: firebaseUser.email, 
                 role: isRoot ? 'Root' : 'Guest',
+                accountStatus: isRoot ? 'approved' : 'pending',
                 displayName: firebaseUser.displayName || 'Nuovo Utente',
                 photoURL: firebaseUser.photoURL || '',
                 createdAt: serverTimestamp(),
@@ -40,8 +41,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
              });
            } else {
              const data = userDoc.data();
-             if (isRoot && data.role !== 'Root') {
-                 await updateDoc(userRef, { role: 'Root' });
+             const updates: any = {};
+             if (isRoot && data.role !== 'Root') updates.role = 'Root';
+             if (isRoot && data.accountStatus !== 'approved') updates.accountStatus = 'approved';
+             if (!data.accountStatus) updates.accountStatus = 'approved'; // Migrate legacy users automatically to approved
+             if (Object.keys(updates).length > 0) {
+                 await updateDoc(userRef, updates);
              }
            }
         } catch (e) {

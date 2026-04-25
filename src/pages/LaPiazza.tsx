@@ -20,6 +20,12 @@ export default function LaPiazza() {
 
   useEffect(() => {
     if (!user) return;
+    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+        setPosts([]);
+        setLoading(false);
+        return;
+    }
+    
     try {
       const q = query(
         collection(db, 'posts'), 

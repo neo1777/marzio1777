@@ -31,6 +31,7 @@ Stores the user private profile, credentials, and RBAC configurations.
 - `displayName` (String)
 - `photoURL` (String)
 - `role` (String) -> `"Guest" | "Admin" | "Root"`
+- `accountStatus` (String) -> `"pending" | "approved"`
 - `points` (Number) -> Determines gamification levels (Altitude)
 - `bio` (String)
 - `shareLiveLocation` (Boolean) -> Toggles geolocation tracking
@@ -66,39 +67,36 @@ The core content feed for `LaPiazza` and `IlCinematografo`. Mixes photos and tex
 - `authorName` (String)
 - `timestamp` (Timestamp)
 
-### 4. `events` (Collection)
-Powers the `IlBivacco` functionality.
-- `name`, `description`, `location`, `date` (Strings)
-- `authorId`, `authorName`, `timestamp` (Strings/Timestamps)
-
-*(Subcollections of Events)*
-- `/items/{itemId}`: `text`, `assignedTo`, `assignedName`, `checked`
-- `/expenses/{expenseId}`: `description`, `amount`, `paidBy` (userId), `paidByName`
-
-### 5. `chats` (Collection)
-Powers `L'Alberone` (Realtime chat).
-- `channelId` (e.g., `"alberone_principale"`)
-- `name`, `description`, `createdBy`, `createdAt`
-
-*(Subcollection)* `chats/{id}/messages`
-- `text`, `authorId`, `authorName`, `timestamp`
+### 4. `events`, `chats` (Collections)
+Powers `IlBivacco` (Events) and `L'Alberone` (Real-time chats). Uses similar strict data ownership models.
 
 ---
 
-## 3. 🔐 Security Architecture (Zero-Trust Firestore Rules)
+## 3. 🔐 Security Architecture, PBAC & RBAC (Zero-Trust Firestore Rules)
 
-The platform utilizes a strictly enforced Zero-Trust Architecture implemented natively via Firestore Security Rules.
+The platform utilizes a strictly enforced Zero-Trust Architecture implemented natively via Firestore Security Rules, centered around a complex Role and Account Status Based Access Control pipeline.
 
-1. **Explicit Identity & Schema Validation**
+1. **User Onboarding Flow (Anti-Bot & Approval Mechanism):**
+   - New registrations are forcefully clamped to `accountStatus: "pending"` and `role: "Guest"` during the initial OAuth mapping in `AuthContext`, unless the user's email strictly equals the hardcoded Root email (`nicolainformatica@gmail.com`).
+   - The Root user is immediately constructed as `accountStatus: "approved"` and `role: "Root"`.
+   - "Pending" users are blocked at the Firestore Database level. The React frontend mirrors this by halting data reads and presenting an explicitly styled "Accesso in Attesa" overlay in `Layout.tsx`.
+
+2. **The Three Roles Hierarchy:**
+   - **Root (`nicolainformatica@gmail.com`):** Absolute highest tier. Handled by explicit rules `isRoot()`. Only Root can perform demotions (`Admin` -> `Guest`) and only Root can approve a pending user directly into an `Admin`.
+   - **Admin:** Has the ability to view the internal `users` collection to operate the `AdminPanel`. Can approve a `pending` user into a `Guest`. Can promote an existing `Guest` into an `Admin`. Cannot demote other Admins.
+   - **Guest (`Guest` / Pending):** Confined to read-only views on the React frontend, yet specifically blocked from loading main collections (`events`, `chats`, `posts`) due to explicit client-side guards and database rules checking for `accountStatus == 'approved' && role != 'Guest'`.
+
+3. **Explicit Identity & Schema Validation:**
    - Every `create` and `update` operation passes through mandatory `isValid*()` helpers to enforce schema integrity and string boundaries (preventing payload poisoning).
-2. **Action-Based Granular Updates**
-   - Documents are isolated utilizing `affectedKeys().hasOnly([...])`. E.g., users can increment `likesCount` via `update` but are strictly gated from arbitrarily editing `authorId` or escalating their own `role`.
-3. **PII Strict Isolation**
-   - The `users` collection specifically blocks blanket `allow list:` operations. Profile interactions must use explicit `get()` lookups. Public components querying for users (like Maps) utilize the standalone `user_locations` collection which strips sensitive data (`email`, `apiKey`).
-4. **Enforced Query Delegation**
-   - Client queries are forced to mirror relational or conditional bounds. Features querying `posts` must explicitly supply `or(where('visibilityStatus', 'in', ['public', 'scheduled']), where('authorId', '==', user.uid))` matching the Firestore rule constraints. Blanket unbounded reads are mathematically denied.
-5. **Role-Based Access Control (RBAC)**
-   - Roles (`Root`, `Admin`, `Guest`) exist in `/users`. Admin functions look directly at this trusted document (`get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role`). State manipulation of this field is exclusively restricted to Admins.
+
+4. **Action-Based Granular Updates:**
+   - Documents are isolated utilizing `affectedKeys().hasOnly([...])`. E.g., users can increment `likesCount` via `update` but are strictly gated from arbitrarily editing `authorId` or escalating their own `role` or `accountStatus`. Only Admin/Root users can manipulate these two fields via strictly crafted rules (`isAdminOrRoot()` combined with key-checking logic).
+
+5. **PII Strict Isolation & Blanket Guarding:**
+   - The `users` collection specifically blocks blanket `allow list:` operations except for Admins (`allow list: if isSignedIn() && isAdminOrRoot()`), acting as the primary PII and RBAC shield. Public components querying for users (like Maps) utilize the standalone `user_locations` collection which strips sensitive data (`email`, `apiKey`).
+
+6. **Notification/Queue Filters:**
+   - Admins receive UI badging on the navigation bar (e.g., `Gestione (2)`) indicating pending user registrations relying on a precise Firestore `where("accountStatus", "==", "pending")` snapshot listener.
 
 ---
 
@@ -122,7 +120,7 @@ To maintain low server overhead and absolute privacy:
 A complex presentation layer built to project images in fullscreen.
 - **State Management:** Uses React's `useRef` to maintain a stable reference to `filteredPosts` to prevent stale closure bugs inside the `setInterval` used for Autoplay.
 - **Animation Constraints:** `mode="wait"` in `<AnimatePresence>` ensures smooth transitions between slides and metadata cards without DOM collisions.
-- **Gamification Mechanics:** Metadata overlays are conditionally obscured based on the `mode` state (`indovina_chi`, `indovina_anno`), withholding author or chronological data until a `revealed` flag is tripped.
+- **Gamification & Viewing Modes:** Metadata overlays are conditionally obscured based on the `mode` state (including `solo_immagini` for zero-UI immersion, `indovina_chi`, `indovina_anno`). For games, the app dynamically generates multi-choice buttons, prompting users to guess information, automatically calling the backend (`users` collection) to allocate +5 points on success or deduct 2 points on failure inside `IlCinematografo.tsx`.
 
 ### 4.4 "Il Bivacco" (Event Logistics Engine)
 - **The Wallet System:** Reads the `expenses` subcollection dynamically. A mathematical split function (`(total/partecipanti) - speso`) calculates net debts/credits iteratively via `onSnapshot` listeners to render real-time accounting inside the specific event.

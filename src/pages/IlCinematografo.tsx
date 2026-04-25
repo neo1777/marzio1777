@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, where, or, and } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, or, and, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';
@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import EventDetailModal from '../components/EventDetailModal';
 
 export default function IlCinematografo() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -25,11 +25,18 @@ export default function IlCinematografo() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Gamification Modes
-  const [mode, setMode] = useState<'normale' | 'indovina_chi' | 'indovina_anno'>('normale');
+  const [mode, setMode] = useState<'normale' | 'indovina_chi' | 'indovina_anno' | 'solo_immagini'>('normale');
   const [revealed, setRevealed] = useState(false);
+  const [guessOptions, setGuessOptions] = useState<string[]>([]);
+  const [guessResult, setGuessResult] = useState<'none' | 'correct' | 'incorrect'>('none');
 
   useEffect(() => {
     if (!user) return;
+    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+        setPosts([]);
+        setLoading(false);
+        return;
+    }
     
     // Fetch photos with explicit rule-abiding constraints
     const q = query(
@@ -96,18 +103,30 @@ export default function IlCinematografo() {
      }
   }, [filteredPosts.length, currentIndex]);
 
+  const isPlayingRef = useRef(isPlaying);
+  const modeRef = useRef(mode);
+  const revealedRef = useRef(revealed);
+  
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { revealedRef.current = revealed; }, [revealed]);
+
   // Slideshow
   useEffect(() => {
      let interval: any;
      if (isPlaying) {
         interval = setInterval(() => {
+           if (modeRef.current !== 'normale' && !revealedRef.current) {
+               // wait for the user to make a guess
+               return;
+           }
            setRevealed(false);
            setCurrentIndex((prev) => {
                const len = filteredPostsRef.current.length;
                if (len <= 1) return prev;
                return (prev + 1) % len;
            });
-        }, 5000); // 5 sec per slide
+        }, 8000); // 8 sec per slide to give time to guess
      }
      return () => clearInterval(interval);
   }, [isPlaying]);
@@ -150,6 +169,41 @@ export default function IlCinematografo() {
   const uniqueAuthors = Array.from(new Set(posts.map(p => p.authorName || 'Anonimo')));
   const uniqueDecades = Array.from(new Set(posts.map(p => p.decade || 'Sconosciuto')));
 
+  useEffect(() => {
+     setRevealed(false);
+     setGuessResult('none');
+     if (!currentPost) return;
+
+     if (mode === 'indovina_chi') {
+        const correct = currentPost.authorName || 'Anonimo';
+        const others = uniqueAuthors.filter(a => a !== correct).sort(() => 0.5 - Math.random()).slice(0, 3);
+        setGuessOptions([correct, ...others].sort(() => 0.5 - Math.random()));
+     } else if (mode === 'indovina_anno') {
+        const correct = currentPost.decade || 'Sconosciuto';
+        const others = uniqueDecades.filter(d => d !== correct).sort(() => 0.5 - Math.random()).slice(0, 3);
+        setGuessOptions([correct, ...others].sort(() => 0.5 - Math.random()));
+     }
+  }, [currentIndex, mode, currentPost?.id, posts.length]);
+
+  const handleGuess = async (guess: string) => {
+     if (!user || guessResult !== 'none' || revealed) return;
+     const correct = mode === 'indovina_chi' ? (currentPost.authorName || 'Anonimo') : (currentPost.decade || 'Sconosciuto');
+     
+     if (guess === correct) {
+        setGuessResult('correct');
+        setRevealed(true);
+        try {
+           await updateDoc(doc(db, 'users', user.uid), { points: increment(5) });
+        } catch (e) { console.error(e); }
+     } else {
+        setGuessResult('incorrect');
+        setRevealed(true);
+        try {
+           await updateDoc(doc(db, 'users', user.uid), { points: increment(-2) });
+        } catch (e) { console.error(e); }
+     }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full">
@@ -190,6 +244,7 @@ export default function IlCinematografo() {
                <HelpCircle size={14} className="text-[#2D5A27] dark:text-[#42a83a] mr-2" />
                <select className="bg-transparent text-sm font-bold text-[#2D5A27] dark:text-[#42a83a] outline-none" value={mode} onChange={(e) => { setMode(e.target.value as any); setRevealed(false); }}>
                   <option value="normale">Modalità Esposizione</option>
+                  <option value="solo_immagini">Solo Immagini</option>
                   <option value="indovina_chi">Gioco: Indovina Chi!</option>
                   <option value="indovina_anno">Gioco: Indovina L'Anno!</option>
                </select>
@@ -242,65 +297,84 @@ export default function IlCinematografo() {
                        </div>
 
                        {/* Metadata Overlay positioned at the bottom */}
-                       <div className={`absolute bottom-0 inset-x-0 p-8 flex flex-col items-center justify-end transition-opacity duration-500 ${isPlaying && !revealed && mode !== 'normale' ? 'opacity-0' : 'opacity-100'} z-20`}>
-                          <AnimatePresence mode="wait">
-                             {isInfoVisible ? (
-                                <motion.div 
-                                   key="info-card"
-                                   initial={{ opacity: 0, y: 50 }}
-                                   animate={{ opacity: 1, y: 0 }}
-                                   exit={{ opacity: 0, y: 50, transition: { duration: 0.2 } }}
-                                   className="relative bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center max-w-2xl w-full shadow-2xl"
-                                >
-                                   <button 
-                                      onClick={(e) => { e.stopPropagation(); setIsInfoVisible(false); }} 
-                                      className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full p-1"
-                                      title="Nascondi Dettagli"
+                       <div className="absolute bottom-0 inset-x-0 p-8 flex flex-col items-center justify-end z-20 pointer-events-none">
+                             <AnimatePresence mode="wait">
+                             {mode !== 'solo_immagini' && (
+                                isInfoVisible ? (
+                                   <motion.div 
+                                      key="info-card"
+                                      initial={{ opacity: 0, y: 50 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: 50, transition: { duration: 0.2 } }}
+                                      className="relative bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center max-w-2xl w-full shadow-2xl pointer-events-auto"
                                    >
-                                      <ChevronDown size={20} />
-                                   </button>
-                                   
-                                   {/* GIOCHI LOGIC */}
-                                   {mode === 'indovina_chi' && !revealed ? (
-                                      <div className="space-y-4">
-                                         <HelpCircle size={32} className="mx-auto text-amber-400 animate-bounce" />
-                                         <h3 className="text-white text-xl font-bold uppercase tracking-widest font-sans">Chi ha portato questo ricordo?</h3>
-                                         <button onClick={() => setRevealed(true)} className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-colors">Svela Autore!</button>
-                                      </div>
-                                   ) : mode === 'indovina_anno' && !revealed ? (
-                                      <div className="space-y-4">
-                                         <HelpCircle size={32} className="mx-auto text-purple-400 animate-bounce" />
-                                         <h3 className="text-white text-xl font-bold uppercase tracking-widest font-sans">Di che decade è questa foto?</h3>
-                                         <button onClick={() => setRevealed(true)} className="bg-purple-500 text-white px-6 py-2 rounded-full font-bold hover:bg-purple-400 transition-colors">Svela Anno!</button>
-                                      </div>
-                                   ) : (
-                                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                                         <div className="flex items-center justify-center gap-2 mb-2">
-                                            <span className="text-xs bg-[#f56a23] text-white px-3 py-1 rounded-full font-bold uppercase tracking-widest">{currentPost.decade}</span>
+                                      <button 
+                                         onClick={(e) => { e.stopPropagation(); setIsInfoVisible(false); }} 
+                                         className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full p-1"
+                                         title="Nascondi Dettagli"
+                                      >
+                                         <ChevronDown size={20} />
+                                      </button>
+                                      
+                                      {/* GIOCHI LOGIC */}
+                                      {mode === 'indovina_chi' && !revealed ? (
+                                         <div className="space-y-4">
+                                            <HelpCircle size={32} className="mx-auto text-amber-400 animate-bounce" />
+                                            <h3 className="text-white text-xl font-bold uppercase tracking-widest font-sans">Chi ha portato questo ricordo?</h3>
+                                            <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                               {guessOptions.map(opt => (
+                                                  <button key={opt} onClick={() => handleGuess(opt)} className="bg-amber-500/20 border border-amber-500/50 text-amber-100 px-4 py-2 rounded-xl font-bold hover:bg-amber-500 hover:text-black transition-colors min-w-[120px]">
+                                                     {opt}
+                                                  </button>
+                                               ))}
+                                            </div>
                                          </div>
-                                         <p className="text-white text-xl md:text-2xl font-serif italic mb-4 break-words">"{currentPost.caption}"</p>
-                                         <div className="flex items-center justify-center gap-2 pt-4 border-t border-white/20">
-                                            <span className="text-slate-300 font-sans text-sm">Caricata da:</span>
-                                            <span className="text-[#f56a23] font-bold font-sans text-lg">{currentPost.authorName || 'Anonimo'}</span>
+                                      ) : mode === 'indovina_anno' && !revealed ? (
+                                         <div className="space-y-4">
+                                            <HelpCircle size={32} className="mx-auto text-purple-400 animate-bounce" />
+                                            <h3 className="text-white text-xl font-bold uppercase tracking-widest font-sans">Di che decade è questa foto?</h3>
+                                            <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                               {guessOptions.map(opt => (
+                                                  <button key={opt} onClick={() => handleGuess(opt)} className="bg-purple-500/20 border border-purple-500/50 text-purple-100 px-4 py-2 rounded-xl font-bold hover:bg-purple-500 hover:text-white transition-colors min-w-[120px]">
+                                                     {opt}
+                                                  </button>
+                                               ))}
+                                            </div>
                                          </div>
-                                      </motion.div>
-                                   )}
-                                </motion.div>
-                             ) : (
-                                <motion.div
-                                   key="info-tab"
-                                   initial={{ opacity: 0, y: 20 }}
-                                   animate={{ opacity: 1, y: 0 }}
-                                   exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-                                   className="absolute bottom-4"
-                                >
-                                   <button 
-                                      onClick={(e) => { e.stopPropagation(); setIsInfoVisible(true); }} 
-                                      className="bg-black/60 backdrop-blur-md text-white/80 hover:text-white rounded-full px-5 py-2 flex items-center gap-2 border border-white/10 hover:bg-black/80 hover:border-white/20 transition-all font-bold text-sm shadow-xl"
+                                      ) : (
+                                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                                            {guessResult !== 'none' && (
+                                               <div className={`text-sm font-bold uppercase tracking-widest mb-4 ${guessResult === 'correct' ? 'text-green-400' : 'text-red-400'}`}>
+                                                  {guessResult === 'correct' ? 'Risposta Esatta! +5 Punti' : 'Sbagliato! -2 Punti'}
+                                               </div>
+                                            )}
+                                            <div className="flex items-center justify-center gap-2 mb-2">
+                                               <span className="text-xs bg-[#f56a23] text-white px-3 py-1 rounded-full font-bold uppercase tracking-widest">{currentPost.decade}</span>
+                                            </div>
+                                            <p className="text-white text-xl md:text-2xl font-serif italic mb-4 break-words">"{currentPost.caption}"</p>
+                                            <div className="flex items-center justify-center gap-2 pt-4 border-t border-white/20">
+                                               <span className="text-slate-300 font-sans text-sm">Caricata da:</span>
+                                               <span className="text-[#f56a23] font-bold font-sans text-lg">{currentPost.authorName || 'Anonimo'}</span>
+                                            </div>
+                                         </motion.div>
+                                      )}
+                                   </motion.div>
+                                ) : (
+                                   <motion.div
+                                      key="info-tab"
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
+                                      className="absolute bottom-4 pointer-events-auto"
                                    >
-                                      <Eye size={18} /> Mostra Dettagli
-                                   </button>
-                                </motion.div>
+                                      <button 
+                                         onClick={(e) => { e.stopPropagation(); setIsInfoVisible(true); }} 
+                                         className="bg-black/60 backdrop-blur-md text-white/80 hover:text-white rounded-full px-5 py-2 flex items-center gap-2 border border-white/10 hover:bg-black/80 hover:border-white/20 transition-all font-bold text-sm shadow-xl"
+                                      >
+                                         <Eye size={18} /> Mostra Dettagli
+                                      </button>
+                                   </motion.div>
+                                )
                              )}
                           </AnimatePresence>
                        </div>

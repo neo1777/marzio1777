@@ -13,7 +13,7 @@ Questo non è un semplice "sito di foto". È una **Piazza Comunale digitale**, u
 Il luogo di ritrovo virtuale. Niente algoritmi tossici, solo polaroid quadrate del passato e aggiornamenti sui nostri ritrovi.
 - **Filtri Temporali:** Viaggia nel tempo visualizzando solo foto degli "Anni 70", "Anni 80" ecc.
 - **Esplosione di Cuori:** Metti mi piace a una foto e goditi un'esplosione di coriandoli a forma di foglie e fiocchi di neve (perché a Marzio o nevica o ci sono le foglie secche).
-- **Commenti e Discussioni:** Chiacchiera, commenta, e guadagna "Punti Altitudine". (I *Guest* non possono commentare o inquinare il fiume).
+- **Commenti e Discussioni:** Chiacchiera, commenta, e guadagna "Punti Altitudine".
 
 ### 🏕️ 2. Il Bivacco (Eventi e Grigliate)
 La bacheca ufficiale in cui si programmano i ritrovi e gli eventi!
@@ -26,7 +26,8 @@ La bacheca ufficiale in cui si programmano i ritrovi e gli eventi!
 La nostra sala Cinema! Una galleria fotografica a schermo intero creata appositamente per le sere tra noi da essere proiettata su TV.
 - **Esposizione & Autoplay:** Lascialo girare pigramente o sfoglia con la tastiera la nostra vita. La "card" in in sovrapposizione riporta i crediti e puoi nasconderla come se fosse un sipario per far spazio alla foto.
 - **Filtri Rapidità:** Sfoglia la collezione unicamente focalizzata su chi l'ha caricata o scegli l'anagrafe (es. Guarda tutte le foto Anni 90 che non hai mai visto caricate da Mario Rossi).
-- **Giochi di Gruppo ("Gamification"):** Mettiti in "Indovina Chi!" e nascondi a tutto schermo le scritte e i Like prima di chiamare il pubblico per farti svelare chi ci stava dietro oppure "Indovina l'anno!".
+- **Modalità "Solo Immagini":** Attiva questa modalità per nascondere integralmente metadati, crediti ed interfacce, godendoti un'esperienza visiva completamente immersiva in full-screen.
+- **Giochi di Gruppo ("Gamification"):** Mettiti alla prova con "Indovina Chi!" e "Indovina l'anno!". Scegli tra le 4 opzioni a schermo per svelare i dettagli della foto: una risposta corretta ti farà guadagnare +5 Punti Altitudine, ma un errore te ne farà perdere -2!
 
 ### 🧳 4. Il Baule (Centro di Caricamento)
 Non un semplice modulo di upload, ma un vero e proprio laboratorio artigianale.
@@ -48,14 +49,17 @@ La banchisa sotto l'albero. Si tratta di un'autentica stanzetta con chat real-ti
 
 ---
 
-## 🔒 Sicurezza & Architettura Zero-Trust
-Dobbiamo proteggere il patrimonio storico e i dati personali:
-- **Regole Firestore Invalicabili:** Abbiamo implementato un'architettura Zero-Trust (RBAC nativo backend). Chiunque tenti di agire oltre al proprio stato viene rifiutato.
+## 🔒 Sicurezza, Ruoli & Architettura Zero-Trust
+Dobbiamo proteggere il patrimonio storico e i dati personali della nostra piccola comunità. Il sistema utilizza una complessa logica basata su ruoli (RBAC) e la convalida delle richieste in tempo reale:
+
+- **La Porta della Città (Account Pending):** Quando un utente fa il login la prima volta, non entra subito! Diventa uno stato *In attesa (Pending)*. Per evitare bot o ficcanaso, l'applicazione gli mostra subito un cancello chiuso. Nel "Pannello Gestione", gli amministratori vedranno un badge rosso di notifica con i nuovi "immigrati" in attesa e potranno valutare se farli entrare in paese.
+- **Filastrocca dei Permessi (Ruoli in App):**
+  - **Guest (Turista di Passaggio):** Una volta approvati come Guest, gli utenti entrano in App ma vedono solo... l'applicazione stessa. A livello di codice, a un Guest è severamente precluso l'accesso e la lettura di qualsiasi dato generato dalla comunità (post, chat, utenti, eventi, mappe). Può navigare le pagine ma queste risulteranno completamente "vergini". L'interfaccia, inoltre, sfuma tutto con un overlay esplicito dicendogli che, finché un amministratore non ritiene opportuno promuoverlo, non c'è nulla da fare.
+  - **Admin (Il Sindaco/Sceriffo):** Usano l'App nella sua interezza. Interagiscono, commentano, postano. Hanno un "Pannello di Gestione" con cui valutano i Pending. Possono promuovere i volti noti da Guest ad Admin, e possono approvare l'ingresso dei nuovi arrivati "Pending" nominandoli "Guest". Non possono fare danni peggiori (nessun downgrade dagli Admin in giù).
+  - **Root (Il Monarca Illuminato):** C'è un solo creatore (nicolainformatica). Il Root non va in panchina, supervisiona. Può fare tutto quello che fa un Admin ma aggiunge poteri divini: approvare un Pending rendendolo direttamente Admin, riportare all'ovile un cattivo Admin retrocedendolo a Guest. Solo il Root è in cima alla catena alimentare dell'App. Nessuno lo scalza.
+
+- **Regole Firestore Invalicabili:** Questo filtro non è visivo, è blindato ai livelli di "Database Zero-Trust" (RBAC nativo backend). Chiunque tenti di agire oltre al proprio stato viene rifiutato.
 - **Split Collection (Privacy PII):** I dati sensibili (come la tua email o le chiavi) sono archiviati in cassaforti separate e illeggibili; solo la tua presenza pubblica per "La Mappa" viene trasmessa.
-- **Gerarchia Utenti:**
-  - **Guest (Turista di Passaggio):** L'ultimo nato nel sistema. Può solo ammirare, i nostri lucchetti gli impediscono modifiche, upload o l'avvelenamento malevolo del database.
-  - **Admin (Segretaria Comunale):** Possono elevare i poveri turisti a Admin e sbloccare tutte le funzioni di partecipazione del paese. 
-  - **Root (Il Monarca Illuminato):** Esiste un solo Root che riordina o manipola i destini (e ruoli).
 
 ---
 
@@ -83,7 +87,7 @@ Puoi installarci facilmente senza intasare lo Store!
    ```
 5. Ora sei collegato su `http://localhost:3000`.
 
-*Pro-Tip:* Il bot dell'AI (per descrivere le foto) richiede che nel menu Root (Pannello Amministratore visibile solo a Root o Admin) inseriate la chiave segreta dell'API Gemini. Senza non respira!
+*Pro-Tip:* Il bot dell'AI (per descrivere le foto) richiede che nel menu Gestione Root (visibile agli Admin/Root) inseriate la chiave segreta dell'API Gemini. Senza non respira!
 
 ---
 

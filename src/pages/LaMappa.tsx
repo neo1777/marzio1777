@@ -61,7 +61,7 @@ const createLiveUserIcon = (user: any) => {
 };
 
 export default function LaMappa() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const marzioCenter: [number, number] = [45.9238, 8.8655];
   const [isDark, setIsDark] = useState(false);
@@ -87,6 +87,11 @@ export default function LaMappa() {
 
   useEffect(() => {
     if (!user) return;
+    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+        setPosts([]);
+        setLiveUsers([]);
+        return;
+    }
     
     // Explicit list query to satisfy strict security rules for posts
     const qPosts = query(
@@ -174,7 +179,7 @@ export default function LaMappa() {
                    />
                  </LayersControl.BaseLayer>
                  
-                 <LayersControl.BaseLayer name="Sentieri e Strade (OpenStreetMap)" checked={!isDark}>
+                 <LayersControl.BaseLayer name="Sentieri e Strade (OpenStreetMap)" checked={true}>
                    <TileLayer
                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                      url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -190,7 +195,7 @@ export default function LaMappa() {
                    />
                  </LayersControl.BaseLayer>
 
-                 <LayersControl.BaseLayer name="Visione Notturna" checked={isDark}>
+                 <LayersControl.BaseLayer name="Visione Notturna">
                    <TileLayer
                      attribution='&copy; <a href="https://cartodb.com/attributions">CartoDB</a>'
                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

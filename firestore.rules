@@ -11,15 +11,23 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
-    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Root']; }
+    
+    function isRoot() { return isSignedIn() && request.auth.token.email == 'nicolainformatica@gmail.com'; }
+    function isAdminOrRoot() { 
+        if (isRoot()) { return true; }
+        return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved' &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Root']; 
+    }
     function isOwner(authorId) { return isSignedIn() && request.auth.uid == authorId; }
 
     // --- VALIDATORS ---
     function isValidUser(data) {
-       return data.keys().hasAll(['uid', 'email', 'role']) &&
+       return data.keys().hasAll(['uid', 'email', 'role', 'accountStatus']) &&
               data.uid is string && data.uid.size() <= 128 &&
               data.email is string && data.email.size() <= 200 &&
               data.role in ['Root', 'Admin', 'Guest'] &&
+              data.accountStatus in ['pending', 'approved'] &&
               data.uid == request.auth.uid; // Identity verify
     }
 
@@ -79,44 +87,52 @@ service cloud.firestore {
     // --- RULES ---
 
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow list: if false; // NO BLANKET READS for PII
-      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming());
-      allow update: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId && (
-         isAdmin() || (
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdminOrRoot());
+      allow list: if isSignedIn() && isAdminOrRoot();
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && incoming().role == (isRoot() ? 'Root' : 'Guest') && incoming().accountStatus == (isRoot() ? 'approved' : 'pending');
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+         (request.auth.uid == userId && (
             incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'apiKey', 'shareLiveLocation']) &&
             incoming().role == existing().role && 
+            incoming().accountStatus == existing().accountStatus &&
             incoming().points == existing().points
-         )
+         )) ||
+         (isRoot() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'accountStatus'])) ||
+         (isAdminOrRoot() && !isRoot() && existing().role != 'Root' && incoming().role != 'Root' && (
+            // Admin can approve pending to Guest
+            (existing().accountStatus == 'pending' && incoming().accountStatus == 'approved' && incoming().role == 'Guest' && incoming().diff(existing()).affectedKeys().hasOnly(['accountStatus', 'role', 'updatedAt'])) ||
+            // Admin can promote Guest to Admin
+            (existing().accountStatus == 'approved' && existing().role == 'Guest' && incoming().role == 'Admin' && incoming().accountStatus == 'approved' && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'updatedAt']))
+         ))
       );
-      allow delete: if isAdmin();
+      allow delete: if isRoot();
     }
 
     match /user_locations/{userId} {
-      allow get: if isSignedIn() && (resource.data.shareLiveLocation == true || request.auth.uid == userId);
+      allow get: if isSignedIn() && isAdminOrRoot() && (resource.data.shareLiveLocation == true || request.auth.uid == userId);
       // Client explicitly MUST filter by shareLiveLocation == true
-      allow list: if isSignedIn() && resource.data.shareLiveLocation == true;
-      allow create: if isSignedIn() && isValidId(userId) && isValidUserLocation(incoming());
-      allow update: if isSignedIn() && isValidUserLocation(incoming()) && request.auth.uid == userId && (
+      allow list: if isSignedIn() && isAdminOrRoot() && resource.data.shareLiveLocation == true;
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(userId) && isValidUserLocation(incoming());
+      allow update: if isSignedIn() && isAdminOrRoot() && isValidUserLocation(incoming()) && request.auth.uid == userId && (
          incoming().diff(existing()).affectedKeys().hasOnly(['shareLiveLocation', 'liveLocation', 'displayName', 'photoURL', 'updatedAt'])
       );
     }
 
     match /posts/{postId} {
-      allow get: if isSignedIn() && (
+      allow get: if isSignedIn() && isAdminOrRoot() && (
          resource.data.visibilityStatus in ['public', 'scheduled'] || 
          resource.data.authorId == request.auth.uid || 
-         isAdmin()
+         isAdminOrRoot()
       );
       // Client MUST query explicitly with visibilityStatus in [...] or authorId == request.auth.uid
       // Note: We use client-side filtering for visibilityTime to avoid multiple-range-index database limitations
-      allow list: if isSignedIn() && (
+      allow list: if isSignedIn() && isAdminOrRoot() && (
          resource.data.visibilityStatus in ['public', 'scheduled'] || 
          resource.data.authorId == request.auth.uid
       );
-      allow create: if isSignedIn() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0;
-      allow update: if isSignedIn() && isValidPost(incoming()) && (
-         isAdmin() || (
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0;
+      allow update: if isSignedIn() && isAdminOrRoot() && isValidPost(incoming()) && (
+         isAdminOrRoot() || (
             request.auth.uid == existing().authorId &&
             incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'location', 'decade', 'visibilityStatus', 'visibilityTime', 'showInCinematografo'])
          ) || (
@@ -126,55 +142,55 @@ service cloud.firestore {
              incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
          )
       );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+      allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());
 
       match /comments/{commentId} {
-        allow read: if isSignedIn() && (get(/databases/$(database)/documents/posts/$(postId)).data.visibilityStatus in ['public', 'scheduled'] || get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
-        allow create: if isSignedIn() && isValidId(commentId) && isValidComment(incoming());
-        allow update: if isSignedIn() && isValidComment(incoming()) && request.auth.uid == existing().authorId && incoming().diff(existing()).affectedKeys().hasOnly(['text', 'timestamp']);
-        allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+        allow read: if isSignedIn() && isAdminOrRoot() && (get(/databases/$(database)/documents/posts/$(postId)).data.visibilityStatus in ['public', 'scheduled'] || get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
+        allow create: if isSignedIn() && isAdminOrRoot() && isValidId(commentId) && isValidComment(incoming());
+        allow update: if isSignedIn() && isAdminOrRoot() && isValidComment(incoming()) && request.auth.uid == existing().authorId && incoming().diff(existing()).affectedKeys().hasOnly(['text', 'timestamp']);
+        allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());
       }
     }
 
     match /events/{eventId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(eventId) && isValidEvent(incoming());
-      allow update: if isSignedIn() && isValidEvent(incoming()) && (
-         isAdmin() || (
+      allow read: if isSignedIn() && isAdminOrRoot();
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(eventId) && isValidEvent(incoming());
+      allow update: if isSignedIn() && isAdminOrRoot() && isValidEvent(incoming()) && (
+         isAdminOrRoot() || (
             request.auth.uid == existing().authorId &&
             incoming().diff(existing()).affectedKeys().hasOnly(['name', 'date', 'location', 'description'])
          )
       );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+      allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());
 
       match /items/{itemId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && isValidId(itemId) && isValidEventItem(incoming());
-        allow update: if isSignedIn() && isValidEventItem(incoming()) && (
+        allow read: if isSignedIn() && isAdminOrRoot();
+        allow create: if isSignedIn() && isAdminOrRoot() && isValidId(itemId) && isValidEventItem(incoming());
+        allow update: if isSignedIn() && isAdminOrRoot() && isValidEventItem(incoming()) && (
            incoming().diff(existing()).affectedKeys().hasOnly(['text', 'assignedTo', 'assignedName', 'checked'])
         );
-        allow delete: if isSignedIn();
+        allow delete: if isSignedIn() && isAdminOrRoot();
       }
 
       match /expenses/{expenseId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && isValidId(expenseId) && isValidEventExpense(incoming());
-        allow update: if isSignedIn() && isValidEventExpense(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['description', 'amount', 'paidBy', 'paidByName']);
-        allow delete: if isSignedIn() && (request.auth.uid == resource.data.paidBy || isAdmin());
+        allow read: if isSignedIn() && isAdminOrRoot();
+        allow create: if isSignedIn() && isAdminOrRoot() && isValidId(expenseId) && isValidEventExpense(incoming());
+        allow update: if isSignedIn() && isAdminOrRoot() && isValidEventExpense(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['description', 'amount', 'paidBy', 'paidByName']);
+        allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.paidBy || isAdminOrRoot());
       }
     }
 
     match /chats/{channelId} {
-      allow read: if isSignedIn(); // Assume chats are public to registered users
-      allow create: if isSignedIn() && isValidId(channelId) && isValidChatChannel(incoming());
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && isAdminOrRoot(); // Assume chats are public to registered users
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(channelId) && isValidChatChannel(incoming());
+      allow update: if isAdminOrRoot();
+      allow delete: if isAdminOrRoot();
 
       match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
+        allow read: if isSignedIn() && isAdminOrRoot();
+        allow create: if isSignedIn() && isAdminOrRoot() && isValidId(messageId) && isValidChatMessage(incoming());
         allow update: if false; // Messages are immutable
-        allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.authorId);
+        allow delete: if isAdminOrRoot() || (isSignedIn() && isAdminOrRoot() && request.auth.uid == resource.data.authorId);
       }
     }
   }

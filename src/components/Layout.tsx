@@ -26,6 +26,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (!user) return;
+    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') return;
     
     if (location.pathname === '/dashboard/alberone') {
        localStorage.setItem('alberoneLastRead', Date.now().toString());
@@ -55,7 +56,20 @@ export default function Layout() {
     }, (err) => console.error("Chat unread hook error:", err));
 
     return () => unsubscribe();
-  }, [user, location.pathname]);
+  }, [user, location.pathname, profile?.role, profile?.accountStatus]);
+
+  const [pendingUsers, setPendingUsers] = useState(0);
+
+  useEffect(() => {
+     if (!user || !profile) return;
+     if (profile.role === 'Admin' || profile.role === 'Root') {
+        const q = query(collection(db, 'users'), where('accountStatus', '==', 'pending'));
+        const unsub = onSnapshot(q, (snap) => {
+           setPendingUsers(snap.size);
+        });
+        return () => unsub();
+     }
+  }, [user, profile]);
 
   const points = profile?.points || 0;
   const baseAltitude = 728; // Marzio altitude
@@ -103,7 +117,7 @@ export default function Layout() {
           <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" badge={alberoneUnread} />
           {(profile?.role === 'Root' || profile?.role === 'Admin') && (
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-[#24352b]">
-              <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Pannello Root" admin />
+              <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Gestione" admin badge={pendingUsers} />
               <NavItem to="/dashboard/istruzioni" icon={<BookOpen size={18} />} label="Istruzioni (Doc)" admin />
             </div>
           )}
@@ -165,6 +179,29 @@ export default function Layout() {
              </button>
           </div>
         </div>
+        
+        {/* Pending or Guest Overlay */}
+        {(profile?.accountStatus === 'pending' || profile?.role === 'Guest') && location.pathname !== '/dashboard/profilo' && (
+           <div className="absolute inset-0 bg-white/60 dark:bg-[#151e18]/80 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                 <ShieldAlert size={32} />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-[#1a2e16] dark:text-slate-200 mb-2">
+                 {profile?.accountStatus === 'pending' ? 'Accesso in Attesa' : 'Accesso Ospite'}
+              </h2>
+              <p className="max-w-md text-slate-600 dark:text-slate-400 leading-relaxed font-sans mb-6">
+                 {profile?.accountStatus === 'pending' 
+                   ? "La tua richiesta di registrazione è in attesa di approvazione da parte di un Amministratore o del Sindaco. Sarai ricontattato o potrai accedere presto."
+                   : "Hai un account Ospite. L'applicazione è riservata e attualmente non puoi vedere i contenuti della comunità."
+                 }
+              </p>
+              <button onClick={logout} className="px-6 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2">
+                 <LogOut size={16} />
+                 Esci dall'applicazione
+              </button>
+           </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-0 md:p-6 scrollbar-hide">
           <Outlet />
         </div>
@@ -179,7 +216,7 @@ export default function Layout() {
         <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} badge={alberoneUnread} />
         {(profile?.role === 'Root' || profile?.role === 'Admin') && (
            <>
-              <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin />
+              <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin badge={pendingUsers} />
               <MobileNavItem to="/dashboard/istruzioni" icon={<BookOpen size={22} />} admin />
            </>
         )}

@@ -16,6 +16,11 @@ export default function IlBivacco() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   useEffect(() => {
+    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+        setEvents([]);
+        setLoading(false);
+        return;
+    }
     // Ordiniamo per data evento (stringa yyyy-mm-dd o timestamp) decrescente o crescente
     const q = query(collection(db, 'events'), orderBy('date', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
