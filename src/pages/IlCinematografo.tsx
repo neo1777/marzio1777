@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, where, or, and, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle } from 'lucide-react';
+import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle, Heart } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import EventDetailModal from '../components/EventDetailModal';
+import confetti from 'canvas-confetti';
 
 export default function IlCinematografo() {
   const { user, profile } = useAuth();
@@ -29,6 +30,7 @@ export default function IlCinematografo() {
   const [revealed, setRevealed] = useState(false);
   const [guessOptions, setGuessOptions] = useState<string[]>([]);
   const [guessResult, setGuessResult] = useState<'none' | 'correct' | 'incorrect'>('none');
+  const [likedAnimId, setLikedAnimId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -204,6 +206,46 @@ export default function IlCinematografo() {
      }
   };
 
+  const handleLike = async () => {
+     if (!currentPost) return;
+
+     setLikedAnimId(currentPost.id);
+     setTimeout(() => {
+        setLikedAnimId(null);
+     }, 400); // Reset animation state after 400ms
+
+     // Confetti explosion
+     const duration = 2000;
+     const end = Date.now() + duration;
+
+     (function frame() {
+        confetti({
+           particleCount: 3,
+           angle: 60,
+           spread: 55,
+           origin: { x: 0 },
+           colors: ['#F5A623', '#2D5A27', '#ffffff'] // Oro scoiattolo, Verde, Neve
+        });
+        confetti({
+           particleCount: 3,
+           angle: 120,
+           spread: 55,
+           origin: { x: 1 },
+           colors: ['#F5A623', '#2D5A27', '#ffffff']
+        });
+
+        if (Date.now() < end) {
+           requestAnimationFrame(frame);
+        }
+     }());
+
+     try {
+        await updateDoc(doc(db, 'posts', currentPost.id), { likesCount: increment(1) });
+     } catch(err) {
+        console.error(err);
+     }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full">
@@ -281,10 +323,12 @@ export default function IlCinematografo() {
                     className="absolute inset-0 flex items-center justify-center p-4 md:p-12"
                  >
                     <div className="relative h-full w-full flex items-center justify-center group">
-                       <img 
+                       <motion.img 
                           src={currentPost.imageUrl} 
                           alt="Proiezione" 
                           referrerPolicy="no-referrer"
+                          animate={{ scale: likedAnimId === currentPost.id ? 1.05 : 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
                           className="max-h-full max-w-full object-contain rounded-sm shadow-2xl" 
                        />
 
@@ -352,9 +396,19 @@ export default function IlCinematografo() {
                                                <span className="text-xs bg-[#f56a23] text-white px-3 py-1 rounded-full font-bold uppercase tracking-widest">{currentPost.decade}</span>
                                             </div>
                                             <p className="text-white text-xl md:text-2xl font-serif italic mb-4 break-words">"{currentPost.caption}"</p>
-                                            <div className="flex items-center justify-center gap-2 pt-4 border-t border-white/20">
-                                               <span className="text-slate-300 font-sans text-sm">Caricata da:</span>
-                                               <span className="text-[#f56a23] font-bold font-sans text-lg">{currentPost.authorName || 'Anonimo'}</span>
+                                            <div className="flex items-center justify-center gap-4 pt-4 border-t border-white/20">
+                                               <div className="flex items-center gap-2">
+                                                  <span className="text-slate-300 font-sans text-sm">Caricata da:</span>
+                                                  <span className="text-[#f56a23] font-bold font-sans text-lg">{currentPost.authorName || 'Anonimo'}</span>
+                                               </div>
+                                               <button 
+                                                  onClick={handleLike}
+                                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-500/20 hover:bg-red-500/40 text-red-100 transition-colors border border-red-500/50"
+                                                  title="Mi Piace"
+                                               >
+                                                  <Heart size={16} className={likedAnimId === currentPost.id ? "fill-current text-white" : ""} />
+                                                  <span>{currentPost.likesCount || 0}</span>
+                                               </button>
                                             </div>
                                          </motion.div>
                                       )}
