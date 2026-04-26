@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { Shield, Users, Activity, AlertTriangle, Key, UserCheck, Clock } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface UserData {
   uid: string;
@@ -159,70 +160,88 @@ export default function AdminPanel() {
                      <UserCheck size={32} className="opacity-50" />
                      <p className="text-sm font-bold uppercase">Nessuna richiesta in attesa</p>
                   </div>
-               ) : pendingUsers.map(user => (
-                  <div key={user.uid} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-amber-200 dark:border-amber-900/30 rounded-xl gap-4 hover:shadow-sm transition-all shadow-amber-500/5">
-                     <div className="flex items-center gap-3">
-                     <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
-                     <div>
-                        <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>
-                     </div>
-                     </div>
-                     <div className="flex items-center gap-2">
-                        <button onClick={() => approveUser(user.uid, 'Guest')} className="px-4 py-2 bg-[#2D5A27] hover:bg-[#1a3817] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
-                           Approva come Guest
-                        </button>
-                        {profile?.role === 'Root' && (
-                           <button onClick={() => approveUser(user.uid, 'Admin')} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
-                              Approva come Admin
-                           </button>
-                        )}
-                     </div>
-                  </div>
-               ))}
+               ) : (
+                  <AnimatePresence>
+                     {pendingUsers.map(user => (
+                        <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           exit={{ opacity: 0, x: -50 }}
+                           key={user.uid} 
+                           className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-amber-200 dark:border-amber-900/30 rounded-xl gap-4 hover:shadow-sm transition-shadow shadow-amber-500/5"
+                        >
+                           <div className="flex items-center gap-3">
+                           <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
+                           <div>
+                              <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>
+                           </div>
+                           </div>
+                           <div className="flex items-center gap-2">
+                              <button onClick={() => approveUser(user.uid, 'Guest')} className="px-4 py-2 bg-[#2D5A27] hover:bg-[#1a3817] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
+                                 Approva come Guest
+                              </button>
+                              {profile?.role === 'Root' && (
+                                 <button onClick={() => approveUser(user.uid, 'Admin')} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
+                                    Approva come Admin
+                                 </button>
+                              )}
+                           </div>
+                        </motion.div>
+                     ))}
+                  </AnimatePresence>
+               )}
              </div>
           ) : (
-            <div className="space-y-3">
-              {approvedUsers.map(user => (
-                <div key={user.uid} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl gap-4 hover:border-[#F5A623]/50 dark:hover:border-[#F5A623]/30 hover:shadow-sm transition-all">
-                  <div className="flex items-center gap-3">
-                    <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
-                    <div>
-                      <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>
+              <div className="space-y-3">
+                 <AnimatePresence>
+                {approvedUsers.map(user => (
+                  <motion.div 
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, scale: 0.9 }}
+                     key={user.uid} 
+                     className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl gap-4 hover:border-[#2D5A27]/50 dark:hover:border-[#42a83a]/30 hover:shadow-sm transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
+                      <div>
+                        <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 sm:w-auto w-full">
-                    <div className="flex flex-col text-right hidden sm:flex">
-                      <span className="text-xs text-slate-400 dark:text-slate-500 font-sans uppercase font-bold">Altitudine</span>
-                      <span className="text-sm font-bold font-serif text-[#2D5A27] dark:text-[#42a83a]">{728 + user.points}m</span>
+                    
+                    <div className="flex items-center gap-3 sm:w-auto w-full">
+                      <div className="flex flex-col text-right hidden sm:flex">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-sans uppercase font-bold">Altitudine</span>
+                        <span className="text-sm font-bold font-serif text-[#2D5A27] dark:text-[#42a83a]">{728 + user.points}m</span>
+                      </div>
+  
+                      <select 
+                        value={user.role} 
+                        onChange={(e) => updateUserRole(user.uid, e.target.value)}
+                        disabled={(profile?.role !== 'Root' && profile?.role !== 'Admin') || user.uid === profile?.uid || (profile?.role === 'Admin' && user.role !== 'Guest')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider outline-none border transition-colors cursor-pointer ${
+                          user.role === 'Root' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400' :
+                          user.role === 'Admin' ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400' :
+                          'bg-white dark:bg-[#151e18] border-slate-300 dark:border-[#24352b] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1a261f]'
+                        }`}
+                      >
+                        <option value="Guest">Guest</option>
+                        <option value="Admin">Admin</option>
+                        {(user.role === 'Root' || profile?.role === 'Root') && <option value="Root" disabled={user.role === 'Root' && profile?.role !== 'Root'}>Root</option>}
+                      </select>
+  
+                      {user.role === 'Root' && (
+                         <div className="p-1.5 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded flex-shrink-0" title="Utente Intoccabile">
+                           <Shield size={16} />
+                         </div>
+                      )}
                     </div>
-
-                    <select 
-                      value={user.role} 
-                      onChange={(e) => updateUserRole(user.uid, e.target.value)}
-                      disabled={(profile?.role !== 'Root' && profile?.role !== 'Admin') || user.uid === profile?.uid || (profile?.role === 'Admin' && user.role !== 'Guest')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider outline-none border transition-colors cursor-pointer ${
-                        user.role === 'Root' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400' :
-                        user.role === 'Admin' ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400' :
-                        'bg-white dark:bg-[#151e18] border-slate-300 dark:border-[#24352b] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1a261f]'
-                      }`}
-                    >
-                      <option value="Guest">Guest</option>
-                      <option value="Admin">Admin</option>
-                      {(user.role === 'Root' || profile?.role === 'Root') && <option value="Root" disabled={user.role === 'Root' && profile?.role !== 'Root'}>Root</option>}
-                    </select>
-
-                    {user.role === 'Root' && (
-                       <div className="p-1.5 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded flex-shrink-0" title="Utente Intoccabile">
-                         <Shield size={16} />
-                       </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+                </AnimatePresence>
+              </div>
           )}
         </div>
       </div>

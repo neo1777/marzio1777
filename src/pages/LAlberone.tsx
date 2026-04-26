@@ -3,7 +3,11 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Send, TreeDeciduous, Users, Smile, Image as ImageIcon, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+
+const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
+const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 import { it } from 'date-fns/locale';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 
@@ -120,10 +124,17 @@ export default function LAlberone() {
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide bg-[#F8F9FA] dark:bg-[#0d1310] background-pattern transition-colors relative">
              {messages.length === 0 ? <div className="text-center mt-10"><p className="text-sm text-slate-400 font-sans italic">Nessuno si è ancora seduto sulla panchina. Sii il primo.</p></div> : null}
+             <AnimatePresence initial={false}>
              {messages.map(msg => {
                 const isMe = msg.authorId === user?.uid;
                 return (
-                  <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                  <motion.div 
+                     key={msg.id} 
+                     initial={{ opacity: 0, y: 16 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
+                     className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                  >
                     <span className="text-[10px] text-[#8C928D] dark:text-slate-500 font-bold font-sans mb-1 px-1">{isMe ? 'TU' : (msg.authorName || 'ANONIMO').toUpperCase()}</span>
                     <div className={`px-4 py-2.5 text-sm rounded-2xl max-w-[80%] shadow-sm flex flex-col gap-2 ${isMe ? 'bg-[#2D5A27] text-white rounded-tr-sm' : 'bg-white dark:bg-[#151e18] text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-[#24352b] rounded-tl-sm'}`}>
                       {msg.imageUrl && (
@@ -136,9 +147,10 @@ export default function LAlberone() {
                       {msg.text && <span>{msg.text}</span>}
                     </div>
                     {msg.timestamp && <span className="text-[10px] text-slate-400 dark:text-slate-500 font-sans mt-1 px-1">{formatDistanceToNow(msg.timestamp.toDate(), { locale: it })} fa</span>}
-                  </div>
+                  </motion.div>
                 );
              })}
+             </AnimatePresence>
              <div ref={bottomRef} />
           </div>
 
@@ -207,9 +219,14 @@ export default function LAlberone() {
                />
              </div>
              
-             <button type="submit" disabled={(!newMessage.trim() && !selectedImage) || isUploading} className="bg-[#F5A623] text-white hover:bg-[#d6901e] px-4 py-3 rounded-xl flex items-center justify-center disabled:opacity-50 transition-all shadow-md shrink-0 h-[46px]">
+             <motion.button 
+                type="submit" 
+                whileTap={{ scale: 0.95 }}
+                disabled={(!newMessage.trim() && !selectedImage) || isUploading} 
+                className="bg-[#F5A623] text-white hover:bg-[#d6901e] px-4 py-3 rounded-xl flex items-center justify-center disabled:opacity-50 transition-colors shadow-md shrink-0 h-[46px]"
+             >
                 <Send size={18} className="translate-x-[-1px] translate-y-[1px] sm:translate-none sm:mr-1" /> <span className="hidden sm:inline font-bold text-sm">Invia</span>
-             </button>
+             </motion.button>
           </form>
        </div>
     </div>

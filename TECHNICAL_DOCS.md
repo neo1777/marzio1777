@@ -19,6 +19,16 @@ This document provides a highly detailed, professional overview of the architect
 
 ---
 
+## 1.5 🎨 UI/UX & Animations (Framer Motion)
+
+The application integrates fluid, enterprise-grade animations using **Framer Motion**:
+- **Page Transitions (`Layout.tsx`)**: Leveraging `<AnimatePresence mode="wait">` across routes to achieve smooth cross-fades and 'slide up' staging.
+- **Micro-interaction Feedback**: The "Like" button heart employs a multi-step keyframe feedback loop (`scale: [1, 1.15, 1]`) for immediate tactile response, combined with contextual particle effects (e.g. "🍃").
+- **Gamification and Count-Ups**: Inside the Personal Profile, progression stats utilize `mode="popLayout"` for numerical transitions fueled by `spring` physics and momentary color shifts to draw attention to value updates seamlessly.
+- **Asynchronous Feedback (The Trunk)**: During 'Magic Scan' AI operations, a repeating loading animation (`rotate: 360`, *infinite linear loop*) mitigates wait-time frustration by replacing frozen states with lively, relevant visual feedback.
+
+---
+
 ## 2. 💾 Firestore Data Schema
 
 The database uses a NoSQL document-based structure with normalized global documents and nested subcollections for specific relational features.

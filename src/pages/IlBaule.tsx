@@ -482,9 +482,29 @@ export default function IlBaule() {
 
         {step === 'edit' && imagePreview && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-300">
-            <div className="polaroid-frame max-w-sm mx-auto polaroid-loading transition-colors rounded-xl">
-              <div className="border border-slate-200 dark:border-[#24352b] rounded-sm overflow-hidden bg-slate-100 dark:bg-[#080d0a] flex items-center justify-center">
+            <div className="polaroid-frame max-w-sm mx-auto transition-colors rounded-xl relative">
+              <div className="border border-slate-200 dark:border-[#24352b] rounded-sm overflow-hidden bg-slate-100 dark:bg-[#080d0a] flex items-center justify-center relative">
                  <img src={imagePreview} className="w-full max-h-[60vh] object-contain" alt="Preview" />
+                 
+                 {/* Scintille AI Animation */}
+                 <AnimatePresence>
+                    {isAiLoading && (
+                       <motion.div 
+                          className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                       >
+                          <motion.div
+                             animate={{ rotate: 360 }}
+                             transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                             className="text-white drop-shadow-lg text-4xl"
+                          >
+                             ✨
+                          </motion.div>
+                       </motion.div>
+                    )}
+                 </AnimatePresence>
               </div>
               <button title="Annulla Caricamento" onClick={cancelBatch} className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white dark:bg-[#151e18] text-slate-500 dark:text-slate-400 shadow-md border border-slate-200 dark:border-[#24352b] flex items-center justify-center hover:text-red-500 transition-colors z-10">
                  ✕ 

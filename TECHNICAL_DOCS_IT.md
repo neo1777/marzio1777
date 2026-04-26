@@ -14,8 +14,18 @@ Questo documento fornisce una panoramica professionale e altamente dettagliata d
 - **Gestione dello Stato:** React Context API (`AuthContext`) per gli stati globali, potenziato da hook locali `useState`, `useRef`, e `useEffect` che si affidano ad `onSnapshot` di Firebase per reattività in tempo reale senza dover usare librerie esterne come Redux.
 - **Styling Engine:** Tailwind CSS gestisce la composizione utility-first. Stati complessi sono mappati a CSS standard in `index.css`.
 - **Animazioni:** Framer Motion (`AnimatePresence` per transizioni tra rotte e componenti).
-- **Icone:** Lucide React.
+- **Icons:** Lucide React.
 - **Integrazione AI:** Google Gemini API usata per la generazione descrizioni immagini del `Magic Scan`.
+
+---
+
+## 1.5 🎨 Animazioni e UI/UX (Framer Motion)
+
+L'applicazione integra animazioni fluide di livello enterprise utilizzando **Framer Motion**:
+- **Transizioni di Pagina (`Layout.tsx`)**: Utilizzo di `<AnimatePresence mode="wait">` su rotta con effetti dissolvenza incrociata e 'slide up'.
+- **Micro-interazioni Feedback**: Il pulsante "Mi Piace" (cuore) applica un feedback multi-step (`scale: [1, 1.15, 1]`) per una risposta tattile immediata, oltre ad effetti particellari specifici ("🍃" in LaPiazza).
+- **Gamification e Count-Ups**: All'interno del Profilo Personale le statistiche utilizzano `mode="popLayout"` per le transizioni numeriche supportando il CountUp con `spring` physics e variazioni momentanee esteriche della colorazione per attrarre l'occhio sui progressi.
+- **Gestione Asincrona (Il Baule)**: Durante la 'Magic Scan' AI, feedback visivi a caricamento ciclico (`rotate: 360`, *infinite linear loop*) migliorano la UX sui tempi d'attesa invisibili, evitando frustrazioni da "schermo bloccato".
 
 ---
 

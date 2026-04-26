@@ -6,9 +6,11 @@ import { Heart, MessageCircle, MapPin, Send, Leaf } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
-import confetti from 'canvas-confetti';
 
 import { useNavigate } from 'react-router-dom';
+
+const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
+const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 
 export default function LaPiazza() {
   const { user, profile } = useAuth();
@@ -17,6 +19,7 @@ export default function LaPiazza() {
   const [loading, setLoading] = useState(true);
   const [activeDecade, setActiveDecade] = useState('Tutti');
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [likedAnimId, setLikedAnimId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -61,30 +64,9 @@ export default function LaPiazza() {
   }, [user]);
 
   const handleLike = async (postId: string) => {
-    // Custom Snow/Leaf Confetti explosion on Like
-    const duration = 2000;
-    const end = Date.now() + duration;
-
-    (function frame() {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors: ['#F5A623', '#2D5A27', '#ffffff'] // Oro scoiattolo, Verde, Neve
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors: ['#F5A623', '#2D5A27', '#ffffff']
-      });
-
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    }());
+    // Micro-interazione invece di coriandoli globali
+    setLikedAnimId(postId);
+    setTimeout(() => setLikedAnimId(null), 300);
 
     try {
       await updateDoc(doc(db, 'posts', postId), { likesCount: increment(1) });
@@ -140,8 +122,16 @@ export default function LaPiazza() {
           </div>
         ) : (
           <div className="space-y-10">
-            {filteredPosts.map(post => (
-              <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} key={post.id} className="polaroid-frame max-w-xl mx-auto rounded-xl transition-colors">
+            <AnimatePresence>
+            {filteredPosts.map((post, i) => (
+              <motion.div 
+                 initial={{ opacity: 0, y: 16 }} 
+                 animate={{ opacity: 1, y: 0 }} 
+                 exit={{ opacity: 0, y: -16 }}
+                 transition={{ duration: MOTION_DURATION.medium, ease: MOTION_EASING.out, delay: i * 0.05 }}
+                 key={post.id} 
+                 className="polaroid-frame max-w-xl mx-auto rounded-xl transition-colors"
+              >
                 
                 {post.type === 'event' ? (
                    <div className="p-8 bg-gradient-to-br from-[#f56a23]/10 to-[#f56a23]/5 dark:from-[#f56a23]/20 dark:to-[#f56a23]/5 border-b border-slate-200 dark:border-[#24352b] text-center rounded-t-sm flex flex-col items-center justify-center">
@@ -195,20 +185,42 @@ export default function LaPiazza() {
                       <p className="text-xs text-[#8C928D] dark:text-slate-500 font-sans">{post.timestamp ? formatDistanceToNow(post.timestamp.toDate(), { locale: it, addSuffix: true }) : 'In caricamento...'}</p>
                     </div>
                     
-                    <div className="ml-auto flex gap-3">
-                       <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-colors ${expandedPostId === post.id ? 'bg-[#4A90E2]/10 text-[#4A90E2]' : 'bg-slate-50 dark:bg-[#1a261f] text-slate-500 hover:bg-slate-100 dark:hover:bg-[#24352b]'}`}>
-                         <MessageCircle size={16} />
-                         {post.commentsCount || 0}
-                       </button>
+                     <div className="ml-auto flex gap-3">
+                        <motion.button 
+                           whileTap={{ scale: 0.95 }}
+                           transition={{ duration: MOTION_DURATION.instant, ease: MOTION_EASING.inOut }}
+                           onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} 
+                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-colors ${expandedPostId === post.id ? 'bg-[#4A90E2]/10 text-[#4A90E2]' : 'bg-slate-50 dark:bg-[#1a261f] text-slate-500 hover:bg-slate-100 dark:hover:bg-[#24352b]'}`}
+                        >
+                          <MessageCircle size={16} />
+                          <span>{post.commentsCount || 0}</span>
+                        </motion.button>
 
                        {/* Button held for interaction */}
-                       <button 
+                       <motion.button 
+                         animate={likedAnimId === post.id ? { scale: [1, 1.15, 1], backgroundColor: ['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.4)', 'rgba(239, 68, 68, 0)'] } : {}}
+                         transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
                          onClick={() => handleLike(post.id)} 
-                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                         className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                        >
-                         <Heart size={16} />
-                         {post.likesCount || 0}
-                       </button>
+                         {/* Particelle foglie stile locale */}
+                         <AnimatePresence>
+                            {likedAnimId === post.id && (
+                               <motion.div 
+                                  initial={{ opacity: 1, scale: 0.6, y: 0 }} 
+                                  animate={{ opacity: 0, scale: 1, y: -16 }} 
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
+                                  className="absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none"
+                               >
+                                  🍃
+                               </motion.div>
+                            )}
+                         </AnimatePresence>
+
+                         <Heart size={16} className={likedAnimId === post.id ? "fill-current" : ""} />
+                         <span>{post.likesCount || 0}</span>
+                       </motion.button>
                     </div>
                   </div>
 
@@ -221,6 +233,7 @@ export default function LaPiazza() {
                 </div>
               </motion.div>
             ))}
+            </AnimatePresence>
           </div>
         )}
       </div>

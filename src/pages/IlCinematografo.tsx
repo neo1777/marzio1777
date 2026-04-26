@@ -7,7 +7,9 @@ import { format, isAfter } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import EventDetailModal from '../components/EventDetailModal';
-import confetti from 'canvas-confetti';
+
+const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
+const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 
 export default function IlCinematografo() {
   const { user, profile } = useAuth();
@@ -212,32 +214,7 @@ export default function IlCinematografo() {
      setLikedAnimId(currentPost.id);
      setTimeout(() => {
         setLikedAnimId(null);
-     }, 400); // Reset animation state after 400ms
-
-     // Confetti explosion
-     const duration = 2000;
-     const end = Date.now() + duration;
-
-     (function frame() {
-        confetti({
-           particleCount: 3,
-           angle: 60,
-           spread: 55,
-           origin: { x: 0 },
-           colors: ['#F5A623', '#2D5A27', '#ffffff'] // Oro scoiattolo, Verde, Neve
-        });
-        confetti({
-           particleCount: 3,
-           angle: 120,
-           spread: 55,
-           origin: { x: 1 },
-           colors: ['#F5A623', '#2D5A27', '#ffffff']
-        });
-
-        if (Date.now() < end) {
-           requestAnimationFrame(frame);
-        }
-     }());
+     }, 300); // Reset animation state after short duration
 
      try {
         await updateDoc(doc(db, 'posts', currentPost.id), { likesCount: increment(1) });
@@ -401,14 +378,29 @@ export default function IlCinematografo() {
                                                   <span className="text-slate-300 font-sans text-sm">Caricata da:</span>
                                                   <span className="text-[#f56a23] font-bold font-sans text-lg">{currentPost.authorName || 'Anonimo'}</span>
                                                </div>
-                                               <button 
+                                               <motion.button 
+                                                  animate={likedAnimId === currentPost.id ? { scale: [1, 1.15, 1], backgroundColor: ['rgba(239, 68, 68, 0.4)', 'rgba(239, 68, 68, 0.6)', 'rgba(239, 68, 68, 0.2)'] } : {}}
+                                                  transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
                                                   onClick={handleLike}
-                                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-500/20 hover:bg-red-500/40 text-red-100 transition-colors border border-red-500/50"
+                                                  className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-500/20 hover:bg-red-500/40 text-red-100 transition-colors border border-red-500/50"
                                                   title="Mi Piace"
                                                >
+                                                  <AnimatePresence>
+                                                     {likedAnimId === currentPost.id && (
+                                                        <motion.div 
+                                                           initial={{ opacity: 1, scale: 0.6, y: 0 }} 
+                                                           animate={{ opacity: 0, scale: 1.5, y: -20 }} 
+                                                           exit={{ opacity: 0 }}
+                                                           transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
+                                                           className="absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none text-xl"
+                                                        >
+                                                           ❄️
+                                                        </motion.div>
+                                                     )}
+                                                  </AnimatePresence>
                                                   <Heart size={16} className={likedAnimId === currentPost.id ? "fill-current text-white" : ""} />
                                                   <span>{currentPost.likesCount || 0}</span>
-                                               </button>
+                                               </motion.button>
                                             </div>
                                          </motion.div>
                                       )}

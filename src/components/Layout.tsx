@@ -202,8 +202,8 @@ export default function Layout() {
            </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-0 md:p-6 scrollbar-hide">
-          <Outlet />
+        <div className="flex-1 overflow-y-auto p-0 md:p-6 scrollbar-hide relative min-h-0">
+           <Outlet />
         </div>
       </main>
 

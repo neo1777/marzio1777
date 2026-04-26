@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, MapPin, Users, ShoppingBag, Wallet, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { doc, updateDoc, collection, query, onSnapshot, addDoc, deleteDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -201,24 +201,57 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
 
          <div className="space-y-2">
             {items.length === 0 && <p className="text-slate-400 text-center py-6 text-sm">Cosa manca? Aggiungi qualcosa alla lista!</p>}
+            <AnimatePresence>
             {items.map(item => (
-               <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#1a261f] border border-slate-100 dark:border-[#24352b] rounded-xl">
+               <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  key={item.id} 
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#1a261f] border border-slate-100 dark:border-[#24352b] rounded-xl"
+               >
                   <div className="flex items-center gap-3">
-                     <button onClick={() => toggleAssign(item)} disabled={profile?.role === 'Guest'} className={`${item.assignedTo ? 'text-[#2D5A27] dark:text-[#42a83a]' : 'text-slate-300 dark:text-slate-600'} hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed`}>
-                        {item.assignedTo ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                     </button>
-                     <div className={item.assignedTo ? 'line-through opacity-60 text-sm font-medium' : 'text-sm font-medium text-slate-700 dark:text-slate-200'}>
+                     <motion.button 
+                        onClick={() => toggleAssign(item)} 
+                        disabled={profile?.role === 'Guest'} 
+                        className={`${item.assignedTo ? 'text-[#2D5A27] dark:text-[#42a83a]' : 'text-slate-300 dark:text-slate-600'} transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative`}
+                     >
+                        {item.assignedTo ? (
+                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400 }}>
+                              <CheckCircle2 size={24} />
+                           </motion.div>
+                        ) : (
+                           <Circle size={24} />
+                        )}
+                     </motion.button>
+                     <motion.div 
+                        animate={{ opacity: item.assignedTo ? 0.6 : 1 }}
+                        className={item.assignedTo ? 'line-through text-sm font-medium' : 'text-sm font-medium text-slate-700 dark:text-slate-200'}
+                     >
                         {item.name}
-                     </div>
+                     </motion.div>
                   </div>
                   <div className="flex items-center gap-3">
-                     {item.assignedTo && <span className="text-[10px] font-bold uppercase bg-white dark:bg-black px-2 py-1 rounded text-[#2D5A27] shadow-sm">{item.assignedName} lo porta!</span>}
+                     <AnimatePresence>
+                     {item.assignedTo && (
+                        <motion.span 
+                           initial={{ opacity: 0, x: -10 }}
+                           animate={{ opacity: 1, x: 0 }}
+                           exit={{ opacity: 0 }}
+                           className="text-[10px] font-bold uppercase bg-white dark:bg-black px-2 py-1 rounded text-[#2D5A27] shadow-sm"
+                        >
+                           {item.assignedName} lo porta!
+                        </motion.span>
+                     )}
+                     </AnimatePresence>
                      {item.addedBy === user.uid && !item.assignedTo && (
                         <button onClick={() => deleteItem(item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
                      )}
                   </div>
-               </div>
+               </motion.div>
             ))}
+            </AnimatePresence>
          </div>
       </div>
    );
@@ -304,8 +337,15 @@ function WalletSection({ eventId, user, attendees }: { eventId: string, user: an
          )}
 
          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            <AnimatePresence>
             {expenses.map(exp => (
-               <div key={exp.id} className="flex justify-between items-center p-3 border-b border-slate-100 dark:border-[#24352b]">
+               <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  key={exp.id} 
+                  className="flex justify-between items-center p-3 border-b border-slate-100 dark:border-[#24352b]"
+               >
                   <div>
                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{exp.description}</p>
                      <p className="text-[10px] text-slate-500 font-medium">Anticipato da {exp.paidByName}</p>
@@ -313,8 +353,9 @@ function WalletSection({ eventId, user, attendees }: { eventId: string, user: an
                   <div className="font-mono font-bold text-slate-700 dark:text-slate-200">
                      € {exp.amount.toFixed(2)}
                   </div>
-               </div>
+               </motion.div>
             ))}
+            </AnimatePresence>
          </div>
 
       </div>
