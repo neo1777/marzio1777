@@ -12,7 +12,7 @@ This is not a simple "photo site". It is a **digital Town Square**, a memory bin
 ### 📸 1. The Square (The Social Feed)
 The virtual hangout spot. No toxic algorithms, just square polaroids from the past and updates on our gatherings.
 - **Time Filters:** Time travel by viewing only photos from the "70s", "80s", etc.
-- **Heart Explosion:** Like a photo and enjoy an explosion of leaf and snowflake shaped confetti (because in Marzio it's either snowing or there are dry leaves).
+- **Micro-interactions:** Like a photo and enjoy a rich particle explosion. From your Profile, you can completely customize this reaction, choosing your favorite icon (🌿, ❄️, 🔥), solid vector colors, and tuning the animation duration and distance to match your vibe.
 - **Comments and Discussions:** Chat, comment, and earn "Altitude Points".
 
 ### 🏕️ 2. The Bivouac (Events and Barbecues)
@@ -39,6 +39,7 @@ Not a simple upload form, but a real artisan workshop.
 All memories don't fly in the wind but land pinned on the local map!
 - Search for the kiosk or the street where you loaded the photos and the map will group them showing the classic interactive numeric pointers. Click on the stickers and dive straight into the starting post!
 - **Real-Time Sharing:** Turn on the check in your profile and your friends will be able to see your "live" location on the map when you are exploring the town.
+- **Overlay Filter Panel:** Explore the map by actively filtering in real time by Author and Decade (e.g., "I only want to see map pins from the '50s").
 
 ### 🌳 6. The Big Tree (Live Bulletin Board)
 The bench under the tree. It's an authentic little room with a synchronized real-time chat ("On the benches under the tree") to write four super quick jokes telegram-style at a glance without having to open your phone!

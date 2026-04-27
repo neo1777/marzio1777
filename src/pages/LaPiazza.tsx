@@ -21,6 +21,22 @@ export default function LaPiazza() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [likedAnimId, setLikedAnimId] = useState<string | null>(null);
 
+  const animIcon = profile?.animIcon || '🍃';
+  const animSpeed = profile?.animSpeed || 0.5;
+  const animDistance = profile?.animDistance || -30;
+  const animColor = profile?.animColor || 'red';
+
+  const getColorTheme = (name: string) => {
+     switch(name) {
+       case 'blue': return ['rgba(59,130,246,0.2)', 'rgba(59,130,246,0.4)', 'rgba(59,130,246,0)'];
+       case 'emerald': return ['rgba(16,185,129,0.2)', 'rgba(16,185,129,0.4)', 'rgba(16,185,129,0)'];
+       case 'amber': return ['rgba(245,158,11,0.2)', 'rgba(245,158,11,0.4)', 'rgba(245,158,11,0)'];
+       case 'purple': return ['rgba(168,85,247,0.2)', 'rgba(168,85,247,0.4)', 'rgba(168,85,247,0)'];
+       case 'slate': return ['rgba(100,116,139,0.2)', 'rgba(100,116,139,0.4)', 'rgba(100,116,139,0)'];
+       default: return ['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.4)', 'rgba(239, 68, 68, 0)'];
+     }
+  }
+
   useEffect(() => {
     if (!user) return;
     if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
@@ -198,8 +214,8 @@ export default function LaPiazza() {
 
                        {/* Button held for interaction */}
                        <motion.button 
-                         animate={likedAnimId === post.id ? { scale: [1, 1.15, 1], backgroundColor: ['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.4)', 'rgba(239, 68, 68, 0)'] } : {}}
-                         transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
+                         animate={likedAnimId === post.id ? { scale: [1, 1.15, 1], backgroundColor: getColorTheme(animColor) } : {}}
+                         transition={{ duration: animSpeed / 2, ease: "easeOut" }}
                          onClick={() => handleLike(post.id)} 
                          className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                        >
@@ -208,12 +224,12 @@ export default function LaPiazza() {
                             {likedAnimId === post.id && (
                                <motion.div 
                                   initial={{ opacity: 1, scale: 0.6, y: 0 }} 
-                                  animate={{ opacity: 0, scale: 1, y: -16 }} 
+                                  animate={{ opacity: 0, scale: 1, y: animDistance }} 
                                   exit={{ opacity: 0 }}
-                                  transition={{ duration: MOTION_DURATION.short, ease: MOTION_EASING.out }}
-                                  className="absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none"
+                                  transition={{ duration: animSpeed, ease: "easeOut" }}
+                                  className="absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none text-base"
                                >
-                                  🍃
+                                  {animIcon}
                                </motion.div>
                             )}
                          </AnimatePresence>

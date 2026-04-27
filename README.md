@@ -12,7 +12,7 @@ Questo non è un semplice "sito di foto". È una **Piazza Comunale digitale**, u
 ### 📸 1. La Piazza (Il Feed Social)
 Il luogo di ritrovo virtuale. Niente algoritmi tossici, solo polaroid quadrate del passato e aggiornamenti sui nostri ritrovi.
 - **Filtri Temporali:** Viaggia nel tempo visualizzando solo foto degli "Anni 70", "Anni 80" ecc.
-- **Esplosione di Cuori:** Metti mi piace a una foto e goditi un'esplosione di coriandoli a forma di foglie e fiocchi di neve (perché a Marzio o nevica o ci sono le foglie secche).
+- **Micro-interazioni Magiche:** Metti mi piace a una foto e goditi esplosioni particellari. Tramite il Profilo, puoi personalizzare queste particelle rimpiazzando la forma (🌿, ❄️, 🔥), i colori vettoriali e decidere la reattività e velocità della tua reazione a seconda della tua aura.
 - **Commenti e Discussioni:** Chiacchiera, commenta, e guadagna "Punti Altitudine".
 
 ### 🏕️ 2. Il Bivacco (Eventi e Grigliate)
@@ -39,6 +39,7 @@ Non un semplice modulo di upload, ma un vero e proprio laboratorio artigianale.
 Tutte le memorie non volano nel vento ma atterrano spidate su mappa locale!
 - Cerca il chiosco o la via dove hai caricato le foto e la mappa le raggrupperà mostrando i classici pointer numerici interattivi. Clicca sui bollini e tuffati dritti nel post di partenza!
 - **Condivisione in Tempo Reale:** Accendi la spunta nel tuo profilo e i tuoi amici potranno vedere la tua posizione "live" sulla mappa quando sei in giro per il paese ad esplorare.
+- **Pannello Filtri Sovrapposto:** Esplora la mappa filtrando attivamente in tempo reale per Autore e per Decennio (es. "Voglio vedere solo i pin sulla mappa degli Anni '50").
 
 ### 🌳 6. L'Alberone (Bacheca In Diretta)
 La banchisa sotto l'albero. Si tratta di un'autentica stanzetta con chat real-time sincronizzata ("Sulle panchine sotto l'albero") per scrivere quattro scemenze super rapide in stile telegram a colpo d'occhio senza dover aprire il cellulare!  

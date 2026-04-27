@@ -65,8 +65,11 @@ export default function LaMappa() {
   const [posts, setPosts] = useState<any[]>([]);
   const marzioCenter: [number, number] = [45.9238, 8.8655];
   const [isDark, setIsDark] = useState(false);
-
   const [liveUsers, setLiveUsers] = useState<any[]>([]);
+  
+  const [selectedDecade, setSelectedDecade] = useState<string>('all');
+  const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -149,6 +152,15 @@ export default function LaMappa() {
     };
   }, [user]);
 
+  const decades = Array.from(new Set(posts.map(p => p.decade).filter(Boolean))).sort() as string[];
+  const authors = Array.from(new Set(posts.map(p => p.authorName || 'Anonimo'))).sort() as string[];
+
+  const filteredPosts = posts.filter(post => {
+      const matchDecade = selectedDecade === 'all' || post.decade === selectedDecade;
+      const matchAuthor = selectedAuthor === 'all' || (post.authorName || 'Anonimo') === selectedAuthor;
+      return matchDecade && matchAuthor;
+  });
+
   return (
     <div className="max-w-4xl mx-auto w-full h-[calc(100vh-8rem)] md:h-full flex flex-col gap-4 p-4 md:p-0">
        <header className="flex flex-col border-b border-slate-200 dark:border-[#24352b] pb-2 md:pb-4 transition-colors shrink-0">
@@ -159,12 +171,45 @@ export default function LaMappa() {
        </header>
 
        <div className="flex-1 bg-white dark:bg-[#151e18] p-2 md:p-4 rounded-2xl shadow-lg border border-slate-200 dark:border-[#24352b] relative z-0 flex flex-col transition-colors">
-          <div className="absolute top-6 left-6 z-[400] bg-white/90 dark:bg-[#111814]/90 backdrop-blur border border-slate-200 dark:border-[#24352b] p-4 rounded-xl shadow-md hidden md:block transition-colors">
-             <div className="flex items-center gap-2 mb-1">
-                 <h2 className="text-sm font-bold font-sans uppercase tracking-widest text-slate-700 dark:text-slate-200">Mappa Ricordi</h2>
-                 <MapPin size={16} className="text-[#8B5A2B]" />
+          <div className="absolute top-6 left-6 z-[400] bg-white/90 dark:bg-[#111814]/90 backdrop-blur border border-slate-200 dark:border-[#24352b] p-4 rounded-xl shadow-md transition-colors">
+             <div 
+               className="flex items-center justify-between gap-4 cursor-pointer" 
+               onClick={() => setIsFilterOpen(!isFilterOpen)}
+             >
+                 <div className="flex items-center gap-2 mb-1">
+                     <h2 className="text-sm font-bold font-sans uppercase tracking-widest text-slate-700 dark:text-slate-200">Mappa Ricordi</h2>
+                     <MapPin size={16} className="text-[#8B5A2B]" />
+                 </div>
+                 <div className="text-xs font-bold text-slate-500">{isFilterOpen ? 'Nascondi Filtri' : 'Filtra'}</div>
              </div>
-             <p className="text-[10px] font-sans text-slate-500 dark:text-slate-400 uppercase">Luoghi Esplorati: {posts.length}</p>
+             <p className="text-[10px] font-sans text-slate-500 dark:text-slate-400 uppercase">Luoghi Mostrati: {filteredPosts.length} / {posts.length}</p>
+             
+             {isFilterOpen && (
+               <div className="mt-4 flex flex-col gap-3 pt-3 border-t border-slate-200 dark:border-[#24352b]">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Decennio</label>
+                    <select 
+                       value={selectedDecade} 
+                       onChange={e => setSelectedDecade(e.target.value)}
+                       className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded p-1 text-xs outline-none text-slate-700 dark:text-slate-300"
+                    >
+                       <option value="all">Tutti i decenni</option>
+                       {decades.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Autore</label>
+                    <select 
+                       value={selectedAuthor} 
+                       onChange={e => setSelectedAuthor(e.target.value)}
+                       className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded p-1 text-xs outline-none text-slate-700 dark:text-slate-300"
+                    >
+                       <option value="all">Tutti gli autori</option>
+                       {authors.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
+               </div>
+             )}
           </div>
           
           <div className="flex-1 min-h-[300px] md:min-h-0 rounded-xl overflow-hidden shadow-inner border border-slate-200 dark:border-[#24352b] bg-[#F4F1E1] dark:bg-[#0d1310] transition-colors relative">
@@ -204,7 +249,7 @@ export default function LaMappa() {
                  </LayersControl.BaseLayer>
                </LayersControl>
 
-               {posts.map(post => (
+               {filteredPosts.map(post => (
                   <Marker key={post.id} position={[post.location.lat, post.location.lng]}>
                     <Popup className={`vintage-popup ${isDark ? 'dark-mode-popup' : ''}`}>
                       <div className="w-56 overflow-hidden bg-slate-50 dark:bg-[#151e18] border border-slate-200 dark:border-[#24352b] rounded-lg p-1 m-0 shadow-xl transition-colors">

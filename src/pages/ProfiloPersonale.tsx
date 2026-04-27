@@ -22,6 +22,12 @@ export default function ProfiloPersonale() {
   const [shareLiveLocation, setShareLiveLocation] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
 
+  // Animation Settings
+  const [animIcon, setAnimIcon] = useState('❄️');
+  const [animColor, setAnimColor] = useState('red');
+  const [animSpeed, setAnimSpeed] = useState(0.5); // duration
+  const [animDistance, setAnimDistance] = useState(-30);
+
   useEffect(() => {
     if (profile?.bio) {
        setBio(profile.bio);
@@ -29,7 +35,12 @@ export default function ProfiloPersonale() {
     if (profile?.shareLiveLocation !== undefined) {
        setShareLiveLocation(profile.shareLiveLocation);
     }
+    if (profile?.animIcon) setAnimIcon(profile.animIcon);
+    if (profile?.animColor) setAnimColor(profile.animColor);
+    if (profile?.animSpeed) setAnimSpeed(profile.animSpeed);
+    if (profile?.animDistance) setAnimDistance(profile.animDistance);
   }, [profile]);
+
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -206,6 +217,72 @@ export default function ProfiloPersonale() {
                          >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLiveLocation ? 'translate-x-6' : 'translate-x-1'}`} />
                          </button>
+                      </div>
+
+                      {/* Animation Preferences */}
+                      <div className="p-4 border border-slate-200 dark:border-[#24352b] rounded-xl bg-white dark:bg-[#1a261f]">
+                         <h5 className="text-sm font-bold text-[#1a2e16] dark:text-[#e2e8f0] mb-3">Personalizzazione Animazioni Feedback (Like)</h5>
+                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-sm">Scegli come visualizzare le micro-interazioni quando metti "Mi Piace" (Es. fiocchi di neve, foglie).</p>
+                         
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Particella (Icona)</label>
+                             <select value={animIcon} onChange={async (e) => {
+                                setAnimIcon(e.target.value);
+                                if (user) await updateDoc(doc(db, 'users', user.uid), { animIcon: e.target.value });
+                             }} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg px-3 py-2 text-sm outline-none">
+                                <option value="❄️">❄️ Fiocco di neve</option>
+                                <option value="🍃">🍃 Foglia</option>
+                                <option value="🔥">🔥 Fuoco</option>
+                                <option value="💫">💫 Scintille</option>
+                                <option value="💖">💖 Cuore Scintillante</option>
+                                <option value="🍄">🍄 Fungo</option>
+                                <option value="🌲">🌲 Pino</option>
+                                <option value="🍺">🍺 Birra</option>
+                             </select>
+                           </div>
+                           
+                           <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Colore Tinta Unita</label>
+                             <select value={animColor} onChange={async (e) => {
+                                setAnimColor(e.target.value);
+                                if (user) await updateDoc(doc(db, 'users', user.uid), { animColor: e.target.value });
+                             }} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg px-3 py-2 text-sm outline-none">
+                                <option value="red">Rosso</option>
+                                <option value="blue">Blu</option>
+                                <option value="emerald">Smeraldo</option>
+                                <option value="amber">Ambra</option>
+                                <option value="purple">Viola</option>
+                                <option value="slate">Ardesia (Grigio scuro)</option>
+                             </select>
+                           </div>
+
+                           <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Durata / Lentezza (Secondi)</label>
+                             <input type="range" min="0.2" max="2" step="0.1" value={animSpeed} onChange={async (e) => {
+                               const val = parseFloat(e.target.value);
+                               setAnimSpeed(val);
+                               if (user) await updateDoc(doc(db, 'users', user.uid), { animSpeed: val });
+                             }} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                             <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                                <span>Veloce ({animSpeed}s)</span>
+                                <span>Lento</span>
+                             </div>
+                           </div>
+
+                           <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Distanza (Altezza)</label>
+                             <input type="range" min="-80" max="-10" step="5" value={animDistance} onChange={async (e) => {
+                               const val = parseInt(e.target.value);
+                               setAnimDistance(val);
+                               if (user) await updateDoc(doc(db, 'users', user.uid), { animDistance: val });
+                             }} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                             <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                                <span>Corta</span>
+                                <span>Lunga ({Math.abs(animDistance)}px)</span>
+                             </div>
+                           </div>
+                         </div>
                       </div>
 
                       {/* API Key */}

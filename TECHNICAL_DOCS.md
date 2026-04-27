@@ -141,6 +141,8 @@ The geographic data relies on dual implementations of Leaflet.
 - **Dark Mode Context Injection:** Reacts to the global DOM `classList` for `dark`. When active, it switches the Leaflet tile layer to `CartoDB dark_all`.
 - **Location Modal (`IlBaule`):** Taps `navigator.geolocation` async API, uses OpenStreetMap's Nominatim Reverse Geocoding (`search?format=json&q=Query`), and employs manual pinning via `useMapEvents`.
 - **Live User Tracking:** Leverages `navigator.geolocation.watchPosition` inside `AuthContext` to broadcast user coordinates to Firestore if `shareLiveLocation` is enabled. `LaMappa` renders these as custom animated pulsing avatars. Stale user locations (older than 15 minutes) are hidden to maintain accuracy.
+- **Dynamic Filtering Engine:** An absolute positioned overlay panel processes arrays of active documents to construct unique Decades and Authors sets (`Array.from(new Set(...))`). Array `filter` logic selectively masks Map Markers while persisting `react-leaflet` instances, ensuring minimal redraw overhead.
+
 
 ### 4.6 Privacy, Post Visibility & Gestione Archivio
 `marzio1777` features a granular privacy engine running natively across component lists.
@@ -155,7 +157,7 @@ The geographic data relies on dual implementations of Leaflet.
 - **Viewport Locking:** The `Layout.tsx` operates on dynamic viewport constraints (`h-[100dvh]`, `min-h-0`). This ensures the `Outlet` correctly establishes its own scrollable context without distending the parent Flexbox container, effectively locking the Sidebar and native viewport for a professional "app-like" feel.
 - **Polaroid Aesthetic:** Box shadows and margins form the primary visual identity. In Dark Mode, polaroid variables transition dynamically (e.g., `bg-white` -> `bg-[#111814]`, borders invert to `border-[#24352b]`).
 - **Dark Mode Paradigm:** Modifies the global `<html>` class. Tailwind utilizes the `dark:` prefix. The application leverages a curated palette (`#151e18`, `#1a261f`, `#2D5A27`) to evoke a forest aesthetic rather than generic grays.
-- **Micro-interactions:** Canvas-based Confetti (`canvas-confetti`) is mathematically spanned over a custom `requestAnimationFrame` loop on interactions like Liking to ensure 60fps performance without locking React's main thread.
+- **Customizable Micro-interactions:** Reaction animations (likes) are completely modular. Parameters like Icon (`❄️`, `🍃`), Color interpolation schemas (`rgba`), distance vectors (`y`), and velocity (`duration`) are bound directly to user profile payload inside `Firestore`, synced in real-time across runtime contexts (`LaPiazza`, `IlCinematografo`) to reflect personal interaction paradigms dynamically managed from `ProfiloPersonale`.
 
 ---
 

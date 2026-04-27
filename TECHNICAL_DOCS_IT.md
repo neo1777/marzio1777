@@ -115,7 +115,7 @@ Usa `useRef` stabili, animazioni pesate, e gamification mechanics togliendo cred
 Il Wallet System calcola bilanci su snapshot read live del conto per stabilire i debiti e crediti per evento.
 
 ### 4.5 Geolocalizzazione (`LaMappa`)
-Doble implementazione react-leaflet. Passaggio dark/light tile automatizzato su observer di classList e aggiornamenti GPS continui ma filtrati e resi obsoleti lato observer dopo time decay precisi.
+Doble implementazione react-leaflet. Passaggio dark/light tile automatizzato su observer di classList e aggiornamenti GPS continui ma filtrati e resi obsoleti lato observer dopo time decay precisi. È presente un pannello Floating per filtrare dinamicamente i pin sulla cartina tramite filtri decostruiti live su array decenni e autori.
 
 ### 4.6 Privacy, Post Visibility & Gestione Archivio
 I frontend di fetch saltano documenti senza timestamp congrui, privacy toggle o switch cinematografo.
@@ -124,7 +124,7 @@ I frontend di fetch saltano documenti senza timestamp congrui, privacy toggle o 
 
 ## 5. 🎨 Theming, UI, & Strategia Viewport
 Blocco custom delle overflow a livello flex parent CSS e gestione reattanza mobile/tablet standard Tailwind ma mirata a simulare PWA pura chiusa a "sandbox".
-Canvas rendering di particelle legati fuori scope render loop React nativo (confetti like reaction).
+**Micro-interazioni Modulari:** Le animazioni di interaction (like) sono completamente customizzabili lato persistenza. Le variabili fisiche (icona, colore tint, gravità/distanza vettoriale Y e velocità/durata temporale) sono vincolate al payload Firestore utente e coordinate contestualmente nelle view.
 
 ---
 
