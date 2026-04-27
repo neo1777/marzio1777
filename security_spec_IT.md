@@ -10,7 +10,7 @@
   - Solo Root forza un downgrade o promuove un pending direttamente ad `Admin` o manipola altri Admin.
 - **Proprietà del Post:** Una memoria (`posts/{postId}`) non può esistere senza un `authorId` valido che coincida con l'utente creatore del doc. `authorId` è immutabile.
 - **Integrità Relazionale Commenti:** Un commento (`posts/{postId}/comments/{commentId}`) appartiene al Post madre. Se il Post è oscurato o privato, previene i fetch su autorizzazioni commentare.
-- **Updates Mappati:** Azioni specifiche. Un utente agisce solo ed esclusivamente e singolarmente su `caption`, `visibilityStatus`, `visibilityTime`, `showInCinematografo`, o `location`. Non altera magicamente ad esempio un `likesCount`.
+- **Updates Mappati:** Azioni specifiche. Un utente agisce solo ed esclusivamente e singolarmente su `caption`, `visibilityStatus`, `visibilityTime`, `showInCinematografo`, o `location`. L'aggiornamento dei "Mi Piace" (cuori) incorpora una doppia validazione con tracking tramite array (`likedBy`) legando matematicamente l'update all'accoppiata di logiche su `likesCount`, prevenendo loop, falsificazioni dei conteggi ed upvotes infiniti per singolo post.
 - **Isolamento PII:** `users` possiede `email`. Non consultabile in array o collection read ad utenze normali.
 
 ## 2. Le "Dodici Sporche" Intercettazioni (Dirty Dozen)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, or, and } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, or, and, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, MapPin, Send, Leaf } from 'lucide-react';
@@ -79,13 +79,28 @@ export default function LaPiazza() {
     }
   }, [user]);
 
-  const handleLike = async (postId: string) => {
-    // Micro-interazione invece di coriandoli globali
-    setLikedAnimId(postId);
-    setTimeout(() => setLikedAnimId(null), 300);
+  const handleLike = async (post: any) => {
+    if (!user) return;
+    
+    const isLiked = post.likedBy?.includes(user.uid);
+    
+    if (!isLiked) {
+       setLikedAnimId(post.id);
+       setTimeout(() => setLikedAnimId(null), 300);
+    }
 
     try {
-      await updateDoc(doc(db, 'posts', postId), { likesCount: increment(1) });
+      if (isLiked) {
+         await updateDoc(doc(db, 'posts', post.id), { 
+            likesCount: increment(-1),
+            likedBy: arrayRemove(user.uid)
+         });
+      } else {
+         await updateDoc(doc(db, 'posts', post.id), { 
+            likesCount: increment(1),
+            likedBy: arrayUnion(user.uid)
+         });
+      }
     } catch(err) {
       console.error(err);
     }
@@ -216,12 +231,12 @@ export default function LaPiazza() {
                        <motion.button 
                          animate={likedAnimId === post.id ? { scale: [1, 1.15, 1], backgroundColor: getColorTheme(animColor) } : {}}
                          transition={{ duration: animSpeed / 2, ease: "easeOut" }}
-                         onClick={() => handleLike(post.id)} 
+                         onClick={() => handleLike(post)} 
                          className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                        >
                          {/* Particelle foglie stile locale */}
                          <AnimatePresence>
-                            {likedAnimId === post.id && (
+                            {(likedAnimId === post.id && animIcon !== 'none') && (
                                <motion.div 
                                   initial={{ opacity: 1, scale: 0.6, y: 0 }} 
                                   animate={{ opacity: 0, scale: 1, y: animDistance }} 
@@ -234,7 +249,9 @@ export default function LaPiazza() {
                             )}
                          </AnimatePresence>
 
-                         <Heart size={16} className={likedAnimId === post.id ? "fill-current" : ""} />
+                         <motion.div animate={(likedAnimId === post.id && animIcon === 'none') ? { scale: [1, 1.5, 1] } : {}} transition={{ duration: 0.3 }}>
+                            <Heart size={16} className={(likedAnimId === post.id || post.likedBy?.includes(user?.uid)) ? "fill-current" : ""} />
+                         </motion.div>
                          <span>{post.likesCount || 0}</span>
                        </motion.button>
                     </div>

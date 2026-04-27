@@ -12,7 +12,7 @@ Questo non è un semplice "sito di foto". È una **Piazza Comunale digitale**, u
 ### 📸 1. La Piazza (Il Feed Social)
 Il luogo di ritrovo virtuale. Niente algoritmi tossici, solo polaroid quadrate del passato e aggiornamenti sui nostri ritrovi.
 - **Filtri Temporali:** Viaggia nel tempo visualizzando solo foto degli "Anni 70", "Anni 80" ecc.
-- **Micro-interazioni Magiche:** Metti mi piace a una foto e goditi esplosioni particellari. Tramite il Profilo, puoi personalizzare queste particelle rimpiazzando la forma (🌿, ❄️, 🔥), i colori vettoriali e decidere la reattività e velocità della tua reazione a seconda della tua aura.
+- **Micro-interazioni Magiche:** Metti mi piace a una foto e goditi esplosioni particellari. Tramite il Profilo, puoi personalizzare queste particelle rimpiazzando la forma (🌿, ❄️, 🔥), i colori vettoriali e decidere la reattività della tua reazione. Preferisci la sobrietà? Scegli il puro e iconico "Battito Cuore" senza particelle! Inoltre, niente like infiniti: puoi lasciare una sola reazione e ritirarla quando vuoi (toggle).
 - **Commenti e Discussioni:** Chiacchiera, commenta, e guadagna "Punti Altitudine".
 
 ### 🏕️ 2. Il Bivacco (Eventi e Grigliate)

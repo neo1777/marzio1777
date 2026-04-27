@@ -124,7 +124,7 @@ I frontend di fetch saltano documenti senza timestamp congrui, privacy toggle o 
 
 ## 5. 🎨 Theming, UI, & Strategia Viewport
 Blocco custom delle overflow a livello flex parent CSS e gestione reattanza mobile/tablet standard Tailwind ma mirata a simulare PWA pura chiusa a "sandbox".
-**Micro-interazioni Modulari:** Le animazioni di interaction (like) sono completamente customizzabili lato persistenza. Le variabili fisiche (icona, colore tint, gravità/distanza vettoriale Y e velocità/durata temporale) sono vincolate al payload Firestore utente e coordinate contestualmente nelle view.
+**Micro-interazioni Modulari:** Le animazioni di interaction (like) sono completamente customizzabili lato persistenza. Le variabili fisiche (icona - tramite l'opzione "none" attivabile un puro e semplice `scale` del battito cardiaco senza particelle -, colore tint, gravità/distanza vettoriale Y e velocità/durata temporale) sono vincolate al payload Firestore utente. A livello di Database, per i like vi è un vincolo Zero-Trust tramite il meccanismo di aggiunta/sottrazione uid usando l'array `likedBy` con i metodi `arrayUnion` e `arrayRemove`, permettendo ad un singolo utente di poter mettere solo un like esatto (stile toggle) e prevenendo aggiornamenti compulsivi asincroni ad `increment(1)`.
 
 ---
 

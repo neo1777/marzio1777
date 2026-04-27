@@ -14,10 +14,9 @@ service cloud.firestore {
     
     function isRoot() { return isSignedIn() && request.auth.token.email == 'nicolainformatica@gmail.com'; }
     function isAdminOrRoot() { 
-        if (isRoot()) { return true; }
-        return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        return isRoot() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved' &&
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Root']; 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Root']); 
     }
     function isOwner(authorId) { return isSignedIn() && request.auth.uid == authorId; }
 
@@ -42,6 +41,7 @@ service cloud.firestore {
               data.authorId == request.auth.uid && 
               data.authorName is string && data.authorName.size() <= 100 &&
               data.likesCount is number && data.commentsCount is number &&
+              data.get('likedBy', []) is list && data.get('likedBy', []).size() <= 5000 &&
               data.visibilityStatus in ['public', 'private', 'scheduled'];
     }
 
@@ -130,16 +130,20 @@ service cloud.firestore {
          resource.data.visibilityStatus in ['public', 'scheduled'] || 
          resource.data.authorId == request.auth.uid
       );
-      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0;
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0 && incoming().get('likedBy', []).size() == 0;
       allow update: if isSignedIn() && isAdminOrRoot() && isValidPost(incoming()) && (
          isAdminOrRoot() || (
             request.auth.uid == existing().authorId &&
             incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'location', 'decade', 'visibilityStatus', 'visibilityTime', 'showInCinematografo'])
          ) || (
             // Anyone can like/comment - granular update
-            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount']) &&
-            (incoming().likesCount == existing().likesCount + 1 || incoming().likesCount == existing().likesCount - 1 || 
-             incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'likedBy']) &&
+             (((incoming().likesCount == existing().likesCount + 1) && (incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() + 1)) ||
+              ((incoming().likesCount == existing().likesCount - 1) && (incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() - 1)))
+            ) ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount']) &&
+             (incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
+            )
          )
       );
       allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());

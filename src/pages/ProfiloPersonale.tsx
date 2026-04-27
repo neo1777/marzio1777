@@ -144,8 +144,8 @@ export default function ProfiloPersonale() {
                       <h4 className="text-sm font-bold uppercase tracking-widest text-[#8C928D] dark:text-slate-500 mb-4">La tua Altitudine</h4>
                       <div className="flex items-center justify-between mb-2">
                             <motion.span 
-                               initial={{ scale: 1.1, color: '#f56a23', filter: 'brightness(1.2)' }}
-                               animate={{ scale: 1, color: 'inherit', filter: 'brightness(1)' }}
+                               initial={{ scale: 1.1, filter: 'brightness(1.2)' }}
+                               animate={{ scale: 1, filter: 'brightness(1)' }}
                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                className="text-4xl font-black font-serif text-[#2D5A27] dark:text-[#42a83a] flex items-center"
                             >
@@ -158,8 +158,8 @@ export default function ProfiloPersonale() {
                          <div className="mt-4">
                            <div className="flex justify-between text-xs font-bold font-sans mb-1 text-slate-600 dark:text-slate-400">
                                  <motion.span
-                                    initial={{ scale: 1.2, color: '#f56a23' }}
-                                    animate={{ scale: 1, color: 'inherit' }}
+                                    initial={{ scale: 1.2 }}
+                                    animate={{ scale: 1 }}
                                     transition={{ duration: 0.2 }}
                                  >
                                     Punti esp: {points}
@@ -230,7 +230,8 @@ export default function ProfiloPersonale() {
                              <select value={animIcon} onChange={async (e) => {
                                 setAnimIcon(e.target.value);
                                 if (user) await updateDoc(doc(db, 'users', user.uid), { animIcon: e.target.value });
-                             }} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg px-3 py-2 text-sm outline-none">
+                             }} className="w-full bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-lg px-3 py-2 text-sm outline-none text-slate-700 dark:text-slate-300">
+                                <option value="none">Senza Particelle (Battito Cuore)</option>
                                 <option value="❄️">❄️ Fiocco di neve</option>
                                 <option value="🍃">🍃 Foglia</option>
                                 <option value="🔥">🔥 Fuoco</option>

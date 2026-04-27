@@ -10,7 +10,7 @@
   - Only Root forces downgrade or promotes pending directly to `Admin` or manipulates other Admins.
 - **Post Ownership:** A memory (`posts/{postId}`) cannot exist without a valid `authorId` that matches the user creating the document. The `authorId` is immutable.
 - **Relational Integrity for Comments:** A comment (`posts/{postId}/comments/{commentId}`) belongs to a Post. If the Post is hidden, unauthorized users cannot fetch its comments.
-- **Granular Updates (Tiered Actions):** Updates to posts are split into actions. A standard user can only update `caption`, `visibilityStatus`, `visibilityTime`, `showInCinematografo`, and `location`. They cannot fraudulently alter `likesCount` or `commentsCount` via raw update.
+- **Granular Updates (Tiered Actions):** Updates to posts are split into actions. A standard user can update `caption`, `visibilityStatus`, `visibilityTime`, `showInCinematografo`, and `location`. They cannot fraudulently alter `commentsCount` via raw update. Additionally, updating `likesCount` is strictly paired with a toggle constraint over a `likedBy` array. Utilizing array tracking explicitly blocks infinite/fractional likes while tying database state mathematically to user interactions.
 - **PII Isolation (Split Collection):** The `users` collection contains `email` and `apiKey`, which is sensitive. Therefore, non-owners cannot read `users` array. Data required for map sharing must reside in `user_locations/{userId}`, which is fully public.
 
 ## 2. The "Dirty Dozen" Payloads

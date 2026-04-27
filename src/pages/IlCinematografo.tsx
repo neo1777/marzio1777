@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, where, or, and, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, or, and, doc, updateDoc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle, Heart } from 'lucide-react';
@@ -225,15 +225,29 @@ export default function IlCinematografo() {
   };
 
   const handleLike = async () => {
-     if (!currentPost) return;
+     if (!currentPost || !user) return;
+     
+     const isLiked = currentPost.likedBy?.includes(user.uid);
 
-     setLikedAnimId(currentPost.id);
-     setTimeout(() => {
-        setLikedAnimId(null);
-     }, 300); // Reset animation state after short duration
+     if (!isLiked) {
+        setLikedAnimId(currentPost.id);
+        setTimeout(() => {
+           setLikedAnimId(null);
+        }, 300); // Reset animation state after short duration
+     }
 
      try {
-        await updateDoc(doc(db, 'posts', currentPost.id), { likesCount: increment(1) });
+        if (isLiked) {
+           await updateDoc(doc(db, 'posts', currentPost.id), { 
+              likesCount: increment(-1),
+              likedBy: arrayRemove(user.uid)
+           });
+        } else {
+           await updateDoc(doc(db, 'posts', currentPost.id), { 
+              likesCount: increment(1),
+              likedBy: arrayUnion(user.uid)
+           });
+        }
      } catch(err) {
         console.error(err);
      }
@@ -402,7 +416,7 @@ export default function IlCinematografo() {
                                                   title="Mi Piace"
                                                >
                                                   <AnimatePresence>
-                                                     {likedAnimId === currentPost.id && (
+                                                     {(likedAnimId === currentPost.id && animIcon !== 'none') && (
                                                         <motion.div 
                                                            initial={{ opacity: 1, scale: 0.6, y: 0 }} 
                                                            animate={{ opacity: 0, scale: 1.5, y: animDistance }} 
@@ -414,7 +428,9 @@ export default function IlCinematografo() {
                                                         </motion.div>
                                                      )}
                                                   </AnimatePresence>
-                                                  <Heart size={16} className={likedAnimId === currentPost.id ? "fill-current text-white" : ""} />
+                                                  <motion.div animate={(likedAnimId === currentPost.id && animIcon === 'none') ? { scale: [1, 1.5, 1] } : {}} transition={{ duration: 0.3 }}>
+                                                     <Heart size={16} className={(likedAnimId === currentPost.id || currentPost.likedBy?.includes(user?.uid)) ? "fill-current text-white" : ""} />
+                                                  </motion.div>
                                                   <span>{currentPost.likesCount || 0}</span>
                                                </motion.button>
                                             </div>

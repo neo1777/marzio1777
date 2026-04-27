@@ -12,7 +12,7 @@ This is not a simple "photo site". It is a **digital Town Square**, a memory bin
 ### 📸 1. The Square (The Social Feed)
 The virtual hangout spot. No toxic algorithms, just square polaroids from the past and updates on our gatherings.
 - **Time Filters:** Time travel by viewing only photos from the "70s", "80s", etc.
-- **Micro-interactions:** Like a photo and enjoy a rich particle explosion. From your Profile, you can completely customize this reaction, choosing your favorite icon (🌿, ❄️, 🔥), solid vector colors, and tuning the animation duration and distance to match your vibe.
+- **Micro-interactions:** Like a photo and enjoy a rich particle explosion. From your Profile, you can completely customize this reaction, choosing your favorite icon (🌿, ❄️, 🔥), solid vector colors, and tuning the animation duration and distance to match your vibe. Prefer something subtle? Choose the clean and iconic "Heartbeat" with no particles! Additionally, there are no infinite likes: you can leave a single reaction and retract it whenever you want (toggle).
 - **Comments and Discussions:** Chat, comment, and earn "Altitude Points".
 
 ### 🏕️ 2. The Bivouac (Events and Barbecues)
