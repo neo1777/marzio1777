@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Code, FileText, Shield, Globe } from 'lucide-react';
+import { BookOpen, Code, FileText, Shield, Globe, Gamepad2 } from 'lucide-react';
 import readmeContentIT from '../../README.md?raw';
 import readmeContentEN from '../../README_EN.md?raw';
 import techDocsContentEN from '../../TECHNICAL_DOCS.md?raw';
 import techDocsContentIT from '../../TECHNICAL_DOCS_IT.md?raw';
 import securityDocsContentEN from '../../security_spec.md?raw';
 import securityDocsContentIT from '../../security_spec_IT.md?raw';
+import gameDesignContent from '../../GAME_DESIGN.md?raw';
 
 export default function Istruzioni() {
-  const [activeTab, setActiveTab] = useState<'readme' | 'tech' | 'security'>('readme');
+  const [activeTab, setActiveTab] = useState<'readme' | 'tech' | 'security' | 'game'>('readme');
   const [lang, setLang] = useState<'it' | 'en'>('it');
 
   const contentMap = {
      readme: { it: readmeContentIT, en: readmeContentEN },
      tech: { it: techDocsContentIT, en: techDocsContentEN },
-     security: { it: securityDocsContentIT, en: securityDocsContentEN }
+     security: { it: securityDocsContentIT, en: securityDocsContentEN },
+     game: { it: gameDesignContent, en: gameDesignContent } // GAME_DESIGN is in IT right now
   };
 
   return (
@@ -69,6 +71,12 @@ export default function Istruzioni() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'security' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
                >
                   <Shield size={16} /> Security
+               </button>
+               <button 
+                  onClick={() => setActiveTab('game')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'game' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
+               >
+                  <Gamepad2 size={16} /> Game Design
                </button>
             </div>
          </div>
