@@ -372,6 +372,15 @@ service cloud.firestore {
     function isValidQueueItem(data) {
       return data.keys().hasAll(['proposedBy', 'trackTitle', 'trackDurationMs', 'status']);
     }
+    // Mirror of getMaxQueuedFor() in src/hooks/useAudioQueue.ts. Returns the
+    // server-computed bonus cap for the calling user. Caller-side document count
+    // is enforced by the client; per-user count enforcement requires Cloud
+    // Functions (Phase 2 — see MIGRATION.md).
+    function effectiveMaxQueued(sessionId) {
+      let session = get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data;
+      let userPoints = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('points', 0);
+      return session.rules.maxQueuedPerUser + (int(userPoints / 100) * session.rules.bonusPerHundredPoints);
+    }
 
     // --- AINULINDALE RULES ---
     match /audio_sessions/{sessionId} {
@@ -389,7 +398,9 @@ service cloud.firestore {
                       incoming().proposedBy == request.auth.uid &&
                       isValidQueueItem(incoming()) &&
                       incoming().status == 'queued' &&
-                      get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data.status == 'open';
+                      get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data.status == 'open' &&
+                      incoming().effectiveMaxAtCreate is int &&
+                      incoming().effectiveMaxAtCreate == effectiveMaxQueued(sessionId);
                       
         allow update: if isSessionDJ(sessionId) && 
                       validQueueStatusTransition(existing().status, incoming().status) &&
@@ -407,14 +418,28 @@ service cloud.firestore {
       }
     }
 
+    // Mitigates Sporca #30 (Signaling Spammer). create/update/delete are limited to
+    // the doc owner (proposer) or the DJ of the session referenced by the doc.
+    // sessionId is required at create-time and immutable afterwards.
     match /signaling/{userId} {
-      allow read: if isApprovedUser() && (userId == request.auth.uid || (existing() != null && existing().sessionId != null && get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid));
-      allow create: if isApprovedUser(); 
-      allow update: if isApprovedUser() && (
+      allow read: if isApprovedUser() && (
+         userId == request.auth.uid ||
+         (existing() != null && existing().sessionId is string &&
+          get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid)
+      );
+      allow create: if isApprovedUser() && incoming().sessionId is string && (
+         userId == request.auth.uid ||
+         get(/databases/$(database)/documents/audio_sessions/$(incoming().sessionId)).data.djId == request.auth.uid
+      );
+      allow update: if isApprovedUser() &&
+                    incoming().sessionId == existing().sessionId && (
          (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['proposerAnswer', 'proposerCandidates'])) ||
          (get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['djOffer', 'djCandidates']))
       );
-      allow delete: if isApprovedUser() && (userId == request.auth.uid || get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid);
+      allow delete: if isApprovedUser() && (
+         userId == request.auth.uid ||
+         get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid
+      );
     }
   }
 }

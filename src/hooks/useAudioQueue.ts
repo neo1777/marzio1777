@@ -59,7 +59,8 @@ export function useAudioQueue(sessionId: string) {
     
     const itemId = doc(collection(db, 'audio_sessions', sessionId, 'queue')).id;
     const maxPos = queue.length > 0 ? Math.max(...queue.map(q => q.position)) : 0;
-    
+    const effectiveMaxAtCreate = getMaxQueuedFor(userData.points, session.rules);
+
     const newItem: Partial<QueueItem> = {
        proposedBy: user.uid,
        proposedByName: user.displayName || 'Unknown',
@@ -71,7 +72,8 @@ export function useAudioQueue(sessionId: string) {
        trackDurationMs: track.durationMs,
        localTrackId: track.id,
        status: 'queued',
-       position: maxPos + 1
+       position: maxPos + 1,
+       effectiveMaxAtCreate,
     };
     
     if (track.coverDataUrl) {

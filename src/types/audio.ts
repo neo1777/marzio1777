@@ -112,8 +112,13 @@ export interface QueueItem {
   transferStartedAt?: any; // Timestamp
   transferCompletedAt?: any; // Timestamp
   transferFailureReason?: string;
-  
+
   pointsAwarded?: number;
+
+  // Snapshot of the bonus formula at create-time, validated by the rule.
+  // Closes 90% of "Sporca #24 Queue Stuffer". Final per-user count enforcement
+  // is deferred to a Cloud Function in Phase 2 (DSL can't count documents).
+  effectiveMaxAtCreate?: number;
 }
 
 export interface SessionParticipant {

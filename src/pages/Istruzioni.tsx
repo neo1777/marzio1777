@@ -75,7 +75,7 @@ export default function Istruzioni() {
                </button>
                <button 
                   onClick={() => setActiveTab('readme')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'game' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'readme' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
                >
                   <Gamepad2 size={16} /> Game Design
                </button>

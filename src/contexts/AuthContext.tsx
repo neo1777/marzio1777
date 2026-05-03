@@ -1,50 +1,64 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import type { UserProfile } from '../types';
 
 interface AuthContextType {
   user: User | null;
-  profile: any | null;
+  profile: UserProfile | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({ user: null, profile: null, loading: true });
 
+const ROOT_EMAIL = 'nicolainformatica@gmail.com';
+// Cut-off for the historical "approve users without accountStatus" migration.
+// Profiles created before this date are pre-RBAC and grandfathered into 'approved';
+// any newer doc missing accountStatus is an anomaly and stays 'pending'.
+const LEGACY_CUTOFF = Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'));
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser && firebaseUser.emailVerified) {
-        
-        const isRoot = firebaseUser.email === 'nicolainformatica@gmail.com';
+
+        const isRoot = firebaseUser.email === ROOT_EMAIL;
         const userRef = doc(db, 'users', firebaseUser.uid);
-        
+
         try {
            const userDoc = await getDoc(userRef);
            if (!userDoc.exists()) {
-             // Create initial profile
-             await setDoc(userRef, { 
-                uid: firebaseUser.uid, 
-                email: firebaseUser.email, 
+             await setDoc(userRef, {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
                 role: isRoot ? 'Root' : 'Guest',
                 accountStatus: isRoot ? 'approved' : 'pending',
                 displayName: firebaseUser.displayName || 'Nuovo Utente',
                 photoURL: firebaseUser.photoURL || '',
                 createdAt: serverTimestamp(),
                 points: 0,
-                shareLiveLocation: false
+                shareLiveLocation: false,
              });
            } else {
              const data = userDoc.data();
-             const updates: any = {};
+             const updates: Record<string, unknown> = {};
              if (isRoot && data.role !== 'Root') updates.role = 'Root';
              if (isRoot && data.accountStatus !== 'approved') updates.accountStatus = 'approved';
-             if (!data.accountStatus) updates.accountStatus = 'approved'; // Migrate legacy users automatically to approved
+             if (!data.accountStatus) {
+               const isLegacy = data.createdAt instanceof Timestamp && data.createdAt < LEGACY_CUTOFF;
+               if (isLegacy) {
+                 updates.accountStatus = 'approved';
+               } else {
+                 console.warn('[AuthContext] Profile without accountStatus past legacy cutoff — defaulting to pending', { uid: firebaseUser.uid });
+                 updates.accountStatus = 'pending';
+               }
+             }
              if (Object.keys(updates).length > 0) {
                  await updateDoc(userRef, updates);
              }
@@ -55,7 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const unsubscribeProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
           if (docSnap.exists()) {
-             setProfile(docSnap.data());
+             setProfile(docSnap.data() as UserProfile);
           }
           setLoading(false);
         });
