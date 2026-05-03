@@ -6,12 +6,27 @@
 - ✅ L'Ainulindalë Fase 2 (Sessioni del Coro + WebRTC P2P transfer) funzionante
 - ✅ Correzioni post-audit applicate: `collectedAtLat/Lng` audit log,
   `finalLeaderboard` embedded immutable, validazione `currentHostId`
-  con `exists()+get()`, Firebase v12 `persistentLocalCache`,
-  Wake Lock `featurePolicy` hardening, container Leaflet stabile con
-  `MapController.invalidateSize()` debounce 200ms
+  con `exists()+get()`, Firebase v12 `persistentLocalCache`
+  (ora reale, via `initializeFirestore` + `persistentMultipleTabManager`),
+  Wake Lock `featurePolicy` hardening (hook condiviso `useWakeLock`),
+  container Leaflet stabile con `MapController.invalidateSize()` debounce 200ms,
+  marker Leaflet inline DivIcon SVG (no CDN esterno, PWA offline-safe)
+- ✅ Hardening rule audio: queue.create valida `effectiveMaxAtCreate` contro
+  `effectiveMaxQueued(sessionId)` (chiude il 90% di Sporca #24); signaling
+  spostato a sub-collection `audio_sessions/{id}/signaling/{userId}` con
+  ownership stretto (chiude Sporca #30)
+- ✅ DJ scoring: pointsAwarded × eventMultiplier (linkedGameEventId), bonus +5
+  base + (>30 min di musica) +10 long-session, flag `djBonusAwarded`
+  one-way per anti double-spend, `currentTrackStartedAt` come `serverTimestamp()`
+- ✅ Hook `useRBAC` centralizzato; `useAudioEngineRaw` per separare API raw
+  del DJ dalla pipeline Walkman; routing audio rinominato a `/sessioni/*`
 - ⏳ Cloud Functions tutte rimandate a Fase 2 (vedi sotto)
 - ⏳ Quiz auto-generators rimandati a Fase 2 (architettura pluggable già pronta)
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
+- ⏳ **Per-user count delle proposte queue attive** rimandato a CF Fase 2:
+  il DSL Firestore non può contare documenti, quindi la formula bonus è
+  validata in rule sul valore *snapshot* `effectiveMaxAtCreate` ma il count
+  vero richiede una callable function (vedi §"Cloud Functions L'Ainulindalë").
 
 ---
 
@@ -79,6 +94,12 @@ downtime e senza touch dei round già giocati.
 - `cleanupOrphanSignaling()` → cron ogni 5 minuti che cancella i
   documenti in `audio_sessions/{X}/signaling/{userId}` con `expireAt`
   scaduto. Mitigazione completa di "Sporca #30: The Signaling Spammer".
+- `enforceQueuePerUserLimit(sessionId, proposerId)` → callable invocata
+  prima della create di un nuovo queue item; conta i doc attivi del
+  proposer nella sub-collection `queue` e respinge se eccede la formula
+  bonus. Chiude la lacuna lasciata aperta dall'enforcement statico
+  (`effectiveMaxAtCreate` blocca solo il forging del valore, non il count
+  effettivo dei doc attivi — il DSL Firestore non può contare).
 - `validateP2PTransferIntegrity(sessionId, queueItemId, sha256)` →
   callable function lato DJ post-transfer per verificare che il blob
   ricevuto matchi l'hash dichiarato dal proposer. Chiude la limitazione

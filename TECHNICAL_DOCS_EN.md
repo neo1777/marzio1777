@@ -7,7 +7,7 @@ This document provides a professional, highly detailed overview of the architect
 ## 1. 🏗️ Architecture & Tech Stack
 
 `marzio1777` is built as a highly reactive Single Page Application (SPA).
-- **Frontend Framework:** React 18 (Functional Components, Hooks), developed via Vite for HMR and optimized builds.
+- **Frontend Framework:** React 19 (Functional Components, Hooks, `use()` API), developed via Vite for HMR and optimized builds.
 - **Language:** TypeScript explicitly used for rigorous type-checking on external payloads and DOM references.
 - **Backend as a Service (BaaS):** Firebase ecosystem:
   - **Firestore:** NoSQL state and relations management. Offline persistence via `persistentLocalCache` (modern Firebase v12+ API, replacing the deprecated `enableIndexedDbPersistence`).

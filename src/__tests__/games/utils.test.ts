@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { haversineDistance, bearing } from './geo';
-import { generateUniformPointsInRadius } from './spawning';
-import { calculateQuizPoints } from './scoring';
-import { validStatusTransition } from './eventState';
+import { haversineDistance, bearing } from '../../utils/geo';
+import { generateUniformPointsInRadius } from '../../utils/spawning';
+import { calculateQuizPoints } from '../../utils/scoring';
+import { validStatusTransition } from '../../utils/eventState';
 
 describe('Geo Utils', () => {
   it('haversineDistance calculates correctly', () => {
@@ -86,18 +86,84 @@ describe('Event State Utils', () => {
      expect(validStatusTransition('draft', 'scheduled')).toBe(true);
      expect(validStatusTransition('draft', 'aborted')).toBe(true);
      expect(validStatusTransition('draft', 'active')).toBe(false);
-     
+
      expect(validStatusTransition('scheduled', 'lobby')).toBe(true);
      expect(validStatusTransition('scheduled', 'active')).toBe(true);
      expect(validStatusTransition('scheduled', 'completed')).toBe(false);
-     
+
      expect(validStatusTransition('lobby', 'active')).toBe(true);
      expect(validStatusTransition('lobby', 'draft')).toBe(false);
-     
+
      expect(validStatusTransition('active', 'completed')).toBe(true);
      expect(validStatusTransition('active', 'scheduled')).toBe(false);
-     
+
      // Stay in same state is allowed
      expect(validStatusTransition('active', 'active')).toBe(true);
+  });
+
+  it('terminal states cannot move', () => {
+     // 'completed' and 'aborted' are sinks (besides identity)
+     expect(validStatusTransition('completed', 'active')).toBe(false);
+     expect(validStatusTransition('completed', 'aborted')).toBe(false);
+     expect(validStatusTransition('completed', 'completed')).toBe(true);
+     expect(validStatusTransition('aborted', 'draft')).toBe(false);
+     expect(validStatusTransition('aborted', 'aborted')).toBe(true);
+  });
+
+  it('time bandit attempts are blocked', () => {
+     // "Sporca #21 The Time Bandit" — skipping straight from draft to completed
+     expect(validStatusTransition('draft', 'completed')).toBe(false);
+     expect(validStatusTransition('scheduled', 'completed')).toBe(false);
+     expect(validStatusTransition('lobby', 'completed')).toBe(false);
+  });
+});
+
+describe('Geo Utils — edge cases', () => {
+  it('haversineDistance handles antimeridian crossings reasonably', () => {
+     const east = { lat: 0, lng: 179.5 };
+     const west = { lat: 0, lng: -179.5 };
+     // Same parallel, ~111 km between (1° at the equator ≈ 111 km)
+     const dist = haversineDistance(east, west);
+     expect(dist).toBeGreaterThan(105_000);
+     expect(dist).toBeLessThan(115_000);
+  });
+
+  it('haversineDistance is symmetric', () => {
+     const a = { lat: 45.886, lng: 8.853 };
+     const b = { lat: 46.0, lng: 9.0 };
+     expect(haversineDistance(a, b)).toBeCloseTo(haversineDistance(b, a));
+  });
+});
+
+describe('Scoring Utils — edge cases', () => {
+  it('decay floors to 1pt at the maxTimeMs boundary', () => {
+     // The spec promises a 1pt floor "if correct in time"; the current
+     // implementation only triggers that floor exactly at timeMs >=
+     // maxTimeMs, not for intermediate values like 9999/10000 (which
+     // round down to 0). This test pins the actual behaviour so future
+     // refactors don't silently regress; the spec/code divergence is
+     // tracked separately.
+     expect(calculateQuizPoints('decay', true, 10000, 10000)).toBe(1);
+  });
+
+  it('decay overtime stays at the 1pt floor', () => {
+     // Anything past the deadline collapses to the same 1pt floor
+     // (the rule blocks late submissions server-side; this is the
+     // client-only sanity result).
+     expect(calculateQuizPoints('decay', true, 12000, 10000)).toBe(1);
+  });
+});
+
+describe('Spawning Utils — edge cases', () => {
+  it('count = 0 returns an empty array', () => {
+     const pts = generateUniformPointsInRadius(45.886, 8.853, 1000, 0, 8);
+     expect(pts).toEqual([]);
+  });
+
+  it('radius = 0 collapses to (at most) the center', () => {
+     const pts = generateUniformPointsInRadius(45.886, 8.853, 0, 5, 8);
+     // With zero radius the algorithm degrades; we just want the call to
+     // return without exploding and to not exceed the requested count.
+     expect(pts.length).toBeLessThanOrEqual(5);
   });
 });

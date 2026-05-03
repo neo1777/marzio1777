@@ -7,7 +7,7 @@ Questo documento fornisce una panoramica professionale e altamente dettagliata d
 ## 1. 🏗️ Architettura & Tech Stack
 
 `marzio1777` è costruita come una Single Page Application (SPA) altamente reattiva.
-- **Frontend Framework:** React 18 (Functional Components, Hooks), sviluppato via Vite per HMR e build ottimizzate.
+- **Frontend Framework:** React 19 (Functional Components, Hooks, `use()` API), sviluppato via Vite per HMR e build ottimizzate.
 - **Linguaggio:** TypeScript esplicitamente per un type-checking rigoroso su payload esterni e riferimenti al DOM.
 - **Backend as a Service (BaaS):** Ecosistema Firebase:
   - **Firestore:** Gestione di stato NoSQL e relazioni. Persistenza offline tramite `persistentLocalCache` (API moderna Firebase v12+, sostituisce `enableIndexedDbPersistence` deprecata).
