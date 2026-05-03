@@ -47,7 +47,7 @@ export function AudioSessionListener() {
          <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold">Il Coro è concluso</h2>
             <p className="text-muted-foreground">Grazie per aver partecipato a questa sessione.</p>
-            <Button onClick={() => navigate('/ainulindale/live')} variant="outline">Torna alla lista</Button>
+            <Button onClick={() => navigate('/dashboard/ainulindale/sessioni')} variant="outline">Torna alla lista</Button>
          </div>
       );
    }
@@ -66,7 +66,7 @@ export function AudioSessionListener() {
       <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8 pt-20 max-w-4xl mx-auto gap-6 bg-background">
          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
             <div className="flex items-center space-x-4">
-               <Button variant="ghost" size="icon" onClick={() => navigate('/ainulindale/live')} className="rounded-full hover:bg-secondary">
+               <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/ainulindale/sessioni')} className="rounded-full hover:bg-secondary">
                   <ArrowLeft className="w-5 h-5" />
                </Button>
                <div>

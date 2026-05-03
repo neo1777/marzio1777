@@ -24,8 +24,8 @@ function IlAinulindaleLayout() {
   };
 
   const getActiveTab = () => {
-     if (location.pathname.includes('/live/create')) return 'nuova';
-     if (location.pathname.includes('/live')) return 'sessioni';
+     if (location.pathname.includes('/sessioni/nuova')) return 'nuova';
+     if (location.pathname.includes('/sessioni')) return 'sessioni';
      return 'biblioteca';
   };
   const activeTab = getActiveTab();
@@ -59,18 +59,18 @@ function IlAinulindaleLayout() {
       {/* Tabs */}
       <div className="flex bg-[#16161D] border-b border-[#24352b] shrink-0">
          <TabButton id="biblioteca" label="Biblioteca" icon={Disc3} path="/dashboard/ainulindale" />
-         <TabButton id="sessioni" label="Sessioni" icon={Radio} path="/dashboard/ainulindale/live" />
-         <TabButton id="nuova" label="Apri Sessione" icon={PlusCircle} path="/dashboard/ainulindale/live/create" />
+         <TabButton id="sessioni" label="Sessioni" icon={Radio} path="/dashboard/ainulindale/sessioni" />
+         <TabButton id="nuova" label="Apri Sessione" icon={PlusCircle} path="/dashboard/ainulindale/sessioni/nuova" />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
          <Routes>
             <Route index element={<PersonalLibrary onPlayTrack={handlePlayTrack} />} />
-            <Route path="live" element={<AudioSessionsList />} />
-            <Route path="live/create" element={<AudioSessionCreate />} />
-            <Route path="live/:id/dj" element={<AudioSessionDJ />} />
-            <Route path="live/:id" element={<AudioSessionWrapper />} />
+            <Route path="sessioni" element={<AudioSessionsList />} />
+            <Route path="sessioni/nuova" element={<AudioSessionCreate />} />
+            <Route path="sessioni/:id/dj" element={<AudioSessionDJ />} />
+            <Route path="sessioni/:id" element={<AudioSessionWrapper />} />
          </Routes>
       </div>
 

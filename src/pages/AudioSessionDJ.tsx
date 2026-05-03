@@ -149,7 +149,7 @@ export function AudioSessionDJ() {
          topProposers,
       }, eventMultiplier);
 
-      navigate('/ainulindale');
+      navigate('/dashboard/ainulindale/sessioni');
    };
 
    const toggleMode = () => {

@@ -68,7 +68,9 @@ export function AudioSessionCreate() {
          });
          
          await batch.commit();
-         navigate(`/ainulindale/live/${sessionId}`);
+         // AudioSessionWrapper at /sessioni/:id will route the creator to the
+         // DJ panel automatically (session.djId === user.uid).
+         navigate(`/dashboard/ainulindale/sessioni/${sessionId}`);
       } catch (e) {
          console.error(e);
          setLoading(false);

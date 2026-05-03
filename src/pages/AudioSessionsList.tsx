@@ -26,7 +26,7 @@ export function AudioSessionsList() {
                <p className="text-muted-foreground text-lg mt-2 font-medium">Sessioni di ascolto condivise in Tempo Reale</p>
             </div>
             {canCreateSession && (
-               <Button onClick={() => navigate('/ainulindale/live/create')} size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+               <Button onClick={() => navigate('/dashboard/ainulindale/sessioni/nuova')} size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
                   <PlusCircle className="mr-2 h-5 w-5" /> Nuovo Coro
                </Button>
             )}
@@ -63,7 +63,7 @@ function SessionCard({ session, idx }: { session: AudioSession, idx: number }) {
       >
          <Card 
             className="cursor-pointer hover:border-primary/50 transition-colors h-full flex flex-col overflow-hidden bg-card/60 backdrop-blur-md shadow-xl"
-            onClick={() => navigate(`/ainulindale/live/${session.id}`)}
+            onClick={() => navigate(`/dashboard/ainulindale/sessioni/${session.id}`)}
          >
             <div className="h-2 bg-gradient-to-r from-primary to-primary/50 w-full" />
             <CardHeader className="pb-4">
