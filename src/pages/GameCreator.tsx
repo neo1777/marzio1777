@@ -4,10 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { createGameEvent, createGameItem, advanceGameEventStatus } from '../hooks/useGameEvents';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Loader2, Save, MapPin, Trophy, Wand2, HelpCircle, Compass, ChevronRight } from 'lucide-react';
 import { serverTimestamp, collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { generateUniformPointsInRadius } from '../lib/geoUtils';
+import { useHighAccuracyPosition } from '../hooks/useHighAccuracyPosition';
 
 interface ItemDraft {
   lat: number;
@@ -76,6 +78,7 @@ const customIcon = new L.Icon({
 export default function GameCreator() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { position: userPosition } = useHighAccuracyPosition();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<0 | 1 | 2>(0);
 
@@ -88,12 +91,20 @@ export default function GameCreator() {
 
   // Treasure Hunt Specific
   const [spawnMode, setSpawnMode] = useState<'manual' | 'auto' | 'hybrid' | 'legacy_posts'>('manual');
+  const [isSettingCenter, setIsSettingCenter] = useState(false); // New state to track setting center mode
   const [radius, setRadius] = useState<number>(500);
   const [autoCount, setAutoCount] = useState<number>(10);
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(PRESETS[0].id);
   const [itemTemplates, setItemTemplates] = useState<GameItemTemplate[]>(PRESETS[0].templates);
-  const center: [number, number] = [41.9028, 12.4964];
+  const [center, setCenter] = useState<[number, number]>([41.9028, 12.4964]); 
+
+  // Initialize center to user position
+  useEffect(() => {
+    if (userPosition && !isSettingCenter && items.length === 0) {
+      setCenter([userPosition.lat, userPosition.lng]);
+    }
+  }, [userPosition]);
 
   // Photo Quiz Specific
   const [totalRounds, setTotalRounds] = useState(10);
@@ -110,6 +121,11 @@ export default function GameCreator() {
   };
 
   const handleMapClick = (latlng: L.LatLng) => {
+    if (isSettingCenter) {
+      setCenter([latlng.lat, latlng.lng]);
+      setIsSettingCenter(false);
+      return;
+    }
     if (spawnMode !== 'manual' && spawnMode !== 'hybrid') return;
     const tmpl = pickTemplate();
     setItems((prev) => [
@@ -117,6 +133,21 @@ export default function GameCreator() {
       { lat: latlng.lat, lng: latlng.lng, points: tmpl.points, templateId: tmpl.id, emoji: tmpl.emoji, label: tmpl.label }
     ]);
   };
+
+  function SetView({ center }: { center: [number, number] }) {
+    const map = useMap();
+    useEffect(() => {
+      map.setView(center, map.getZoom());
+    }, [center, map]);
+
+    useEffect(() => {
+       const timer = setTimeout(() => {
+          map.invalidateSize();
+       }, 250);
+       return () => clearTimeout(timer);
+    }, [map]);
+    return null;
+  }
 
   const handleGenerateAuto = () => {
      const points = generateUniformPointsInRadius(center[0], center[1], radius, autoCount);
@@ -416,20 +447,32 @@ export default function GameCreator() {
          </div>
       )}
 
-      <div className="flex-1 rounded-t-2xl overflow-hidden relative border-t-2 border-[#2D5A27]">
-         <MapContainer center={center} zoom={15} className="w-full h-full z-0 font-sans">
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-            <MapClickHandler onClick={handleMapClick} enabled={spawnMode === 'manual' || spawnMode === 'hybrid'} />
-            {items.map((item, i) => (
-               <Marker key={i} position={[item.lat, item.lng]} icon={customIcon} />
-            ))}
-         </MapContainer>
+      <div className="flex-1 rounded-t-2xl overflow-hidden relative border-t-2 border-[#2D5A27] min-h-[400px] w-full flex flex-col">
+         <div className="flex-1 relative w-full h-full">
+            <MapContainer center={center} zoom={15} className="w-full h-full absolute inset-0 z-0 font-sans" style={{ width: '100%', height: '100%', minHeight: '400px' }}>
+               <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+               <MapClickHandler onClick={handleMapClick} enabled={isSettingCenter || spawnMode === 'manual' || spawnMode === 'hybrid'} />
+               <SetView center={center} />
+               {items.map((item, i) => (
+                  <Marker key={i} position={[item.lat, item.lng]} icon={customIcon} />
+               ))}
+            </MapContainer>
+         </div>
+         
+         {/* Overlays */}
+         <div className="absolute top-4 left-4 z-[400] flex flex-col gap-2">
+            <button onClick={() => { if(userPosition) setCenter([userPosition.lat, userPosition.lng]) }} className="p-3 bg-white rounded-full shadow-lg text-slate-700 pointer-events-auto"><Compass size={20} /></button>
+            <button onClick={() => setIsSettingCenter(!isSettingCenter)} className={`p-3 rounded-full shadow-lg pointer-events-auto ${isSettingCenter ? 'bg-[#2D5A27] text-white' : 'bg-white text-slate-700'}`}><MapPin size={20} /></button>
+         </div>
+
          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 text-sm font-bold text-slate-700 pointer-events-none flex items-center gap-2">
-            {(spawnMode === 'manual' || spawnMode === 'hybrid') ? (
+            {isSettingCenter ? (
+                <><MapPin size={16} className="text-red-500" /> Tocca la mappa per impostare il centro</>
+            ) : ( (spawnMode === 'manual' || spawnMode === 'hybrid') ? (
                <><MapPin size={16} className="text-[#2D5A27]" /> Tocca mappa per spawn manuale</>
             ) : (
                <><Wand2 size={16} className="text-[#2D5A27]" /> Clicca Genera per {autoCount} oggetti</>
-            )}
+            ))}
          </div>
       </div>
     </div>

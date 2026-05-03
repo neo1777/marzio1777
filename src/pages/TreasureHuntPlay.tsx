@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameEvent, captureItemTransaction } from '../hooks/useGameEvents';
 import { useHighAccuracyPosition, calculateDistance } from '../hooks/useHighAccuracyPosition';
@@ -196,10 +197,10 @@ export default function TreasureHuntPlay() {
         )}
 
         {/* Map */}
-        <div className="flex-1 w-full bg-slate-200 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-0 relative min-h-[300px]">
+        <div className="flex-1 w-full bg-slate-200 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-0 relative min-h-[300px] flex flex-col">
            {position ? (
-              <div className="absolute inset-0">
-                 <MapContainer center={[position.lat, position.lng]} zoom={18} zoomControl={false} className="w-full h-full font-sans">
+              <div className="flex-1 relative w-full h-full">
+                 <MapContainer center={[position.lat, position.lng]} zoom={18} zoomControl={false} className="w-full h-full absolute inset-0 font-sans" style={{ width: '100%', height: '100%', minHeight: '300px' }}>
                     <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                     
                     <MapController lat={position.lat} lng={position.lng} itemsCount={activeItems.length} arOpen={activeArItem !== null} status={event?.status} />
