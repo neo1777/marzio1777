@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, query, collection, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, query, collection, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, deleteDoc, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -15,6 +15,19 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+try {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.warn("Multiple tabs open, offline persistence disabled.");
+    } else if (err.code == 'unimplemented') {
+      console.warn("Browser doesn't support offline persistence.");
+    }
+  });
+} catch (e) {
+  // Ignored in SSR
+}
+
 export const storage = getStorage(app);
 
 export const loginWithGoogle = async () => {

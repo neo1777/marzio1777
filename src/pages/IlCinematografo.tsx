@@ -171,7 +171,7 @@ export default function IlCinematografo() {
 
   const toggleFullscreen = () => {
      if (!document.fullscreenElement) {
-        containerRef.current?.requestFullscreen().catch(err => console.log(err));
+        containerRef.current?.requestFullscreen().catch(err => console.error(err));
      } else {
         document.exitFullscreen();
      }

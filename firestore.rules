@@ -20,6 +20,33 @@ service cloud.firestore {
     }
     function isOwner(authorId) { return isSignedIn() && request.auth.uid == authorId; }
 
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isApprovedUser() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserDoc().accountStatus == 'approved';
+    }
+    function getEventDoc(eventId) {
+      return get(/databases/$(database)/documents/game_events/$(eventId)).data;
+    }
+    function isEventOrganizer(eventId) {
+      return isSignedIn() && getEventDoc(eventId).organizerId == request.auth.uid;
+    }
+    function isCurrentHost(eventId) {
+      return isSignedIn() && getEventDoc(eventId).get('photoQuizConfig', {}).get('currentHostId', null) == request.auth.uid;
+    }
+    function isEventActive(eventId) {
+      return getEventDoc(eventId).status == 'active';
+    }
+    function isEventParticipant(eventId) {
+      return exists(/databases/$(database)/documents/game_events/$(eventId)/participants/$(request.auth.uid))
+        && get(/databases/$(database)/documents/game_events/$(eventId)/participants/$(request.auth.uid)).data.status == 'joined';
+    }
+    function isWithinTimeWindow(eventId) {
+      let ev = getEventDoc(eventId);
+      return request.time >= ev.scheduledKickoff && request.time <= (ev.endTime != null ? ev.endTime : timestamp.date(2099, 1, 1));
+    }
+
     // --- VALIDATORS ---
     function isValidUser(data) {
        return data.keys().hasAll(['uid', 'email', 'role', 'accountStatus']) &&
@@ -195,6 +222,130 @@ service cloud.firestore {
         allow create: if isSignedIn() && isAdminOrRoot() && isValidId(messageId) && isValidChatMessage(incoming());
         allow update: if false; // Messages are immutable
         allow delete: if isAdminOrRoot() || (isSignedIn() && isAdminOrRoot() && request.auth.uid == resource.data.authorId);
+      }
+    }
+
+    match /game_events/{eventId} {
+      allow read: if isAdminOrRoot() || isEventParticipant(eventId) || isApprovedUser();
+
+      allow create: if isAdminOrRoot()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.type in ['treasure_hunt', 'photo_quiz']
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.pointsMultiplier >= 0.5
+        && request.resource.data.pointsMultiplier <= 5.0
+        && request.resource.data.invitedUserIds.size() <= 100
+        && request.resource.data.scheduledKickoff > request.time;
+
+      allow update: if (
+          (isEventOrganizer(eventId) || isRoot()) 
+          || (
+            isSignedIn() && resource.data.get('photoQuizConfig', {}).get('currentHostId', null) == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoQuizConfig'])
+            && request.resource.data.photoQuizConfig.diff(resource.data.photoQuizConfig).affectedKeys().hasOnly(['currentHostId'])
+            && exists(/databases/$(database)/documents/game_events/$(eventId)/participants/$(request.resource.data.photoQuizConfig.currentHostId))
+            && get(/databases/$(database)/documents/game_events/$(eventId)/participants/$(request.resource.data.photoQuizConfig.currentHostId)).data.status == 'joined'
+          )
+        )
+        && validStatusTransition(resource.data.status, request.resource.data.status)
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (resource.data.status != 'completed' || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['finalLeaderboard']));
+
+      allow delete: if isRoot() && resource.data.status != 'active';
+
+      function validStatusTransition(oldStatus, newStatus) {
+        return (oldStatus == 'draft' && newStatus in ['draft', 'scheduled', 'aborted'])
+          || (oldStatus == 'scheduled' && newStatus in ['scheduled', 'lobby', 'active', 'aborted'])
+          || (oldStatus == 'lobby' && newStatus in ['lobby', 'active', 'aborted'])
+          || (oldStatus == 'active' && newStatus in ['active', 'completed', 'aborted'])
+          || oldStatus == newStatus;
+      }
+
+      match /items/{itemId} {
+        allow read: if isAdminOrRoot() || isEventParticipant(eventId) || isApprovedUser();
+        allow create: if (isEventOrganizer(eventId) || isAdminOrRoot())
+          && getEventDoc(eventId).status in ['draft', 'scheduled']
+          && request.resource.data.status == 'spawned'
+          && request.resource.data.collectedBy == null;
+
+        allow update: if isEventParticipant(eventId)
+          && isEventActive(eventId)
+          && isWithinTimeWindow(eventId)
+          && resource.data.status == 'spawned'
+          && request.resource.data.status == 'collected'
+          && request.resource.data.collectedBy == request.auth.uid
+          && request.resource.data.lat == resource.data.lat
+          && request.resource.data.lng == resource.data.lng
+          && request.resource.data.points == resource.data.points
+          && request.resource.data.templateId == resource.data.templateId
+          && (request.resource.data.get('collectedAtLat', null) == null || request.resource.data.collectedAtLat is number)
+          && (request.resource.data.get('collectedAtLng', null) == null || request.resource.data.collectedAtLng is number)
+          && request.resource.data.collectedAt == request.time;
+
+        allow delete: if (isEventOrganizer(eventId) || isRoot())
+          && getEventDoc(eventId).status in ['draft', 'scheduled', 'aborted'];
+      }
+
+      match /participants/{userId} {
+        allow read: if isApprovedUser();
+
+        allow create: if isApprovedUser()
+          && userId == request.auth.uid;
+
+        allow update: if userId == request.auth.uid
+          && request.resource.data.userId == userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'respondedAt', 'shareLocationDuringEvent', 'leftAt']);
+
+        allow delete: if isApprovedUser();
+      }
+
+      match /leaderboard/{userId} {
+        allow read: if isApprovedUser();
+        allow write: if isApprovedUser() 
+          && getEventDoc(eventId).status != 'completed'
+          && (isEventParticipant(eventId) || isEventOrganizer(eventId) || isAdminOrRoot());
+      }
+
+      match /quizRounds/{roundId} {
+        allow read: if isEventParticipant(eventId);
+        allow create: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot()) && isEventActive(eventId);
+        allow update: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot())
+          && resource.data.revealedAt == null
+          && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revealedAt', 'correctIndex', 'status', 'winnerId']));
+
+        match /secret/{docId} {
+          allow read: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot());
+          allow create, update: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot()) && docId == 'correctness';
+        }
+
+        match /answers/{answerUserId} {
+          allow read: if isEventParticipant(eventId)
+            && get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.revealedAt != null;
+            
+          allow create: if answerUserId == request.auth.uid
+            && isEventParticipant(eventId)
+            && request.resource.data.userId == answerUserId
+            && request.time < get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.endsAt
+            && request.resource.data.selectedIndex >= 0
+            && request.resource.data.selectedIndex <= 3;
+            
+          allow update: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot()) 
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pointsAwarded'])
+            && request.resource.data.pointsAwarded >= 0
+            && request.resource.data.pointsAwarded <= (getEventDoc(eventId).get('pointsMultiplier', 1) * 100)
+            && (
+              request.resource.data.pointsAwarded == 0 
+              || 
+              (resource.data.selectedIndex == get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.correctIndex)
+            )
+            && resource.data.timestamp <= get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.endsAt;
+          allow delete: if false;
+        }
       }
     }
   }

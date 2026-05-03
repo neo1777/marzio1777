@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
@@ -112,6 +112,7 @@ export default function Layout() {
           <NavItem to="/dashboard/piazza" icon={<Home size={18} />} label="La Piazza" />
           <NavItem to="/dashboard/bivacco" icon={<Flame size={18} />} label="Il Bivacco" />
           <NavItem to="/dashboard/cinematografo" icon={<Film size={18} />} label="Il Cinematografo" />
+          <NavItem to="/dashboard/giochi" icon={<Trophy size={18} />} label="Il Campo dei Giochi" />
           <NavItem to="/dashboard/baule" icon={<Camera size={18} />} label="Il Baule" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
           <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" badge={alberoneUnread} />
@@ -211,6 +212,7 @@ export default function Layout() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#151e18] border-t border-slate-100 dark:border-[#24352b] text-slate-400 flex justify-around items-center h-16 pb-safe z-40 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_15px_rgba(0,0,0,0.5)] transition-colors duration-300">
         <MobileNavItem to="/dashboard/piazza" icon={<Home size={22} />} />
         <MobileNavItem to="/dashboard/bivacco" icon={<Flame size={22} />} />
+        <MobileNavItem to="/dashboard/giochi" icon={<Trophy size={22} />} />
         <MobileNavItem to="/dashboard/baule" icon={<Camera size={22} />} />
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
         <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} badge={alberoneUnread} />

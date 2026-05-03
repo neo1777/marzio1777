@@ -201,7 +201,7 @@ export default function IlBaule() {
       setImagePreview(croppedImageBase64);
       setStep('edit');
     } catch(err) {
-      console.log(err);
+      console.error(err);
       alert("Errore durante l'elaborazione dell'immagine.");
     }
     setLoading(false);
