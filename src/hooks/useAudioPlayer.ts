@@ -1,24 +1,27 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { getAudioEngine } from '../utils/audioEngine';
 import { LocalTrack } from '../types/audio';
 import * as db from '../utils/indexedDB';
+import { useWakeLock } from './useWakeLock';
 
 export function useAudioPlayer() {
   const engine = getAudioEngine();
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<LocalTrack | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [queue, setQueue] = useState<LocalTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
-  
+
   const [volume, setVolumeState] = useState(() => parseFloat(localStorage.getItem('ainulindale_volume') || '1'));
   const [shuffleMode, setShuffleMode] = useState(() => localStorage.getItem('ainulindale_shuffle') === 'true');
   const [repeatMode, setRepeatMode] = useState<'off'|'one'|'all'>(() => (localStorage.getItem('ainulindale_repeat') as any) || 'off');
   const [bgPlayback, setBgPlayback] = useState(() => localStorage.getItem('ainulindale_bg_playback') === 'true');
 
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  // Wake lock during background playback. Hook handles permissions policy
+  // guard, visibilitychange re-acquire and cleanup.
+  useWakeLock(bgPlayback && isPlaying);
 
   // Re-apply saved values to engine on mount
   useEffect(() => {
@@ -37,38 +40,15 @@ export function useAudioPlayer() {
      };
   }, []);
 
-  const requestWakeLock = async () => {
-    if (bgPlayback && 'wakeLock' in navigator && isPlaying) {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-      } catch (err) {
-        console.warn('Wake Lock error', err);
-      }
-    }
-  };
-
-  const releaseWakeLock = async () => {
-    if (wakeLockRef.current) {
-      await wakeLockRef.current.release();
-      wakeLockRef.current = null;
-    }
-  };
-
-  // Sync state from engine and Wakelock
+  // Sync state from engine
   useEffect(() => {
-    const onPlay = () => {
-       setIsPlaying(true);
-       requestWakeLock();
-    };
-    const onPause = () => {
-       setIsPlaying(false);
-       releaseWakeLock();
-    };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
     const onTimeUpdate = () => {
       setCurrentTime(engine.getCurrentTime());
       if(engine.getDuration() !== duration && engine.getDuration() > 0) setDuration(engine.getDuration());
     };
-    
+
     const onEnded = () => {
        if (repeatMode === 'one') {
           engine.seek(0);
@@ -90,11 +70,6 @@ export function useAudioPlayer() {
       engine.off('ended', onEnded);
     };
   }, [repeatMode]);
-
-  useEffect(() => {
-     if(isPlaying) requestWakeLock();
-     else releaseWakeLock();
-  }, [bgPlayback, isPlaying]);
 
   const updateMediaSession = (track: LocalTrack) => {
     if ('mediaSession' in navigator) {

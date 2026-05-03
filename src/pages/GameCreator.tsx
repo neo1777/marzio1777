@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createGameEvent, createGameItem, advanceGameEventStatus } from '../hooks/useGameEvents';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createMarkerIcon } from '../lib/leafletIcons';
 import { Loader2, Save, MapPin, Trophy, Wand2, HelpCircle, Compass, ChevronRight } from 'lucide-react';
 import { serverTimestamp, collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -68,12 +68,7 @@ const PRESETS = [
    ]}
 ] as { id: string, name: string, templates: GameItemTemplate[] }[];
 
-const customIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
+const customIcon = createMarkerIcon('gold');
 
 export default function GameCreator() {
   const { user } = useAuth();

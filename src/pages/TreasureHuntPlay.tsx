@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameEvent, captureItemTransaction } from '../hooks/useGameEvents';
@@ -12,20 +11,11 @@ import { db } from '../lib/firebase';
 import { Trophy, Compass, Crosshair, Radar } from 'lucide-react';
 import ARCaptureLayer from '../components/ARCaptureLayer';
 import CompassArrow from '../components/CompassArrow';
+import { useWakeLock } from '../hooks/useWakeLock';
+import { createMarkerIcon } from '../lib/leafletIcons';
 
-const userIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
-const spawnedIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
+const userIcon = createMarkerIcon('blue');
+const spawnedIcon = createMarkerIcon('gold');
 
 // A component to recenter map and fix sizing
 function MapController({ lat, lng, itemsCount, arOpen, status }: { lat: number, lng: number, itemsCount: number, arOpen: boolean, status?: string }) {
@@ -54,24 +44,10 @@ export default function TreasureHuntPlay() {
   const [loadingItems, setLoadingItems] = useState(true);
   const [activeArItem, setActiveArItem] = useState<GameItem | null>(null);
 
-  useEffect(() => {
-     let wakeLock: any = null;
-     const requestWakeLock = async () => {
-       try {
-         wakeLock = await (navigator as any).wakeLock?.request('screen');
-       } catch (err) {
-         console.warn('Wake Lock error:', err);
-       }
-     };
-     if (event?.status === 'active') {
-        requestWakeLock();
-     }
-     return () => {
-        if (wakeLock) {
-           wakeLock.release().catch(() => {});
-        }
-     };
-  }, [event?.status]);
+  // Keeps the screen awake during an active hunt; auto re-acquires after
+  // visibilitychange and degrades cleanly under restrictive permissions policy
+  // (e.g. iframe previews). See useWakeLock for the feature-policy guard.
+  useWakeLock(event?.status === 'active');
 
   useEffect(() => {
      if (!eventId) return;
