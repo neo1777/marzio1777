@@ -1,4 +1,5 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import { serverTimestamp } from 'firebase/firestore';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -40,12 +41,21 @@ describe('Marzio Memories Framework Rules', () => {
 
   describe('3. The Privilege Escalator', () => {
     it('denies user updating their own role', async () => {
-      const db = testEnv.authenticatedContext('userA', { email_verified: true }).firestore();
+      // Auth context must carry an email matching the doc, otherwise
+      // isValidUser() fails on the user.create path.
+      const db = testEnv.authenticatedContext('userA', {
+        email: 'test@test.com', email_verified: true,
+      }).firestore();
+      // Initial profile must satisfy isValidUser(): uid+email+role+accountStatus
+      // are all required by the rule (firestore.rules:119).
       await assertSucceeds(db.collection('users').doc('userA').set({
-        uid: 'userA', email: 'test@test.com', role: 'Guest'
+        uid: 'userA', email: 'test@test.com', role: 'Guest', accountStatus: 'pending',
       }));
+      // The actual privilege-escalation attempt: a non-root owner cannot
+      // promote themselves. The own-update branch only allows displayName,
+      // photoURL, bio, apiKey, shareLiveLocation, anim* — role isn't there.
       await assertFails(db.collection('users').doc('userA').update({
-        role: 'Admin'
+        role: 'Admin',
       }));
     });
   });
@@ -160,12 +170,18 @@ describe('Marzio Memories Framework Rules', () => {
       const dbA = testEnv.authenticatedContext('userA', { email_verified: true }).firestore();
       const dbB = testEnv.authenticatedContext('userB', { email_verified: true }).firestore();
 
+      // Rule requires collectedAt == request.time; serverTimestamp() satisfies that.
+      // lat/lng/points/templateId must equal the existing values (immutability).
       await assertSucceeds(dbA.collection('game_events').doc('event1').collection('items').doc('item1').update({
-        status: 'collected', collectedBy: 'userA', lat: 10, lng: 10, points: 10, templateId: 't1'
+        status: 'collected', collectedBy: 'userA', collectedAt: serverTimestamp(),
+        lat: 10, lng: 10, points: 10, templateId: 't1',
       }));
 
+      // Second client races on the same item; it now finds status='collected'
+      // and the rule blocks the transition (resource.data.status == 'spawned' fails).
       await assertFails(dbB.collection('game_events').doc('event1').collection('items').doc('item1').update({
-        status: 'collected', collectedBy: 'userB', lat: 10, lng: 10, points: 10, templateId: 't1'
+        status: 'collected', collectedBy: 'userB', collectedAt: serverTimestamp(),
+        lat: 10, lng: 10, points: 10, templateId: 't1',
       }));
     });
 
