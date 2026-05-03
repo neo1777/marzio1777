@@ -190,7 +190,12 @@ interface AudioSession {
   playedCount: number;
   
   linkedGameEventId?: string | null;  // collegamento opzionale a un game_event
-  
+
+  // Flag one-way (false → true, mai revertibile via rule). Settato nel batch
+  // di chiusura sessione quando totalDurationMs > 30 min, per accreditare il
+  // +10 long-session bonus al DJ una sola volta. Anti double-spend.
+  djBonusAwarded?: boolean;
+
   finalStats?: {
     totalDurationMs: number;
     totalTracksPlayed: number;
@@ -234,12 +239,18 @@ interface QueueItem {
   
   position: number;                  // FIFO order, riordinabile dal DJ
   
-  // Audit P2P
+  // Audit P2P (server-stamped via serverTimestamp, non Date.now())
   transferStartedAt?: Timestamp;
   transferCompletedAt?: Timestamp;
   transferFailureReason?: string;
-  
-  pointsAwarded?: number;            // assegnati a 'played'
+
+  pointsAwarded?: number;            // assegnati a 'played' (= round(2 × eventMultiplier))
+
+  // Snapshot della formula bonus al create-time, validato dalla rule
+  // contro `effectiveMaxQueued(sessionId)` per chiudere il vettore
+  // "Sporca #24 Queue Stuffer" (90% — il count effettivo dei doc attivi
+  // resta CF Fase 2: il DSL non può contare documenti).
+  effectiveMaxAtCreate?: number;
 }
 ```
 
@@ -574,23 +585,24 @@ Pattern **Firestore-as-signaling**: niente WebSocket dedicato, niente backend ag
 ## 5. 🛣️ Routing & Componenti — Modulo Giochi & L'Ainulindalë
 
 ### Route aggiunte
-```
-# Campo dei Giochi
-/giochi                          → IlCampoDeiGiochi (hub eventi attivi/in arrivo)
-/giochi/dashboard                → GameDashboard (admin only)
-/giochi/dashboard/nuovo          → GameCreator (wizard)
-/giochi/:eventId/lobby           → GameLobby
-/giochi/:eventId/play            → GamePlayRouter (smista A/B in base a type)
-/giochi/:eventId/risultati       → GameResults
-/giochi/archivio                 → GameArchive
+Tutto sotto `/dashboard/*` (BrowserRouter `basename={import.meta.env.BASE_URL}`,
+`<Layout />` come parent route protetto).
 
-# L'Ainulindalë
-/ainulindale                     → IlAinulindale (hub 3 tab)
-/ainulindale/biblioteca          → PersonalLibrary (Walkman)
-/ainulindale/sessioni            → AudioSessionsList
-/ainulindale/sessioni/nuova      → AudioSessionCreate (Admin/Root only, wizard)
-/ainulindale/sessioni/:sessionId → AudioSessionDJ | AudioSessionListener
-                                   (smista in base a djId === currentUser.uid)
+```
+# Campo dei Giochi (route piatte)
+/dashboard/giochi                          → IlCampoDeiGiochi (hub eventi attivi/in arrivo)
+/dashboard/giochi/nuovo                    → GameCreator (wizard, Admin/Root)
+/dashboard/giochi/:eventId/lobby           → GameLobby
+/dashboard/giochi/:eventId/play            → GamePlayRouter (smista A/B su event.type)
+/dashboard/giochi/:eventId/results         → GameResults
+
+# L'Ainulindalë (router nidificato in IlAinulindale.tsx)
+/dashboard/ainulindale                     → PersonalLibrary (Biblioteca, default)
+/dashboard/ainulindale/sessioni            → AudioSessionsList
+/dashboard/ainulindale/sessioni/nuova      → AudioSessionCreate (Admin/Root only)
+/dashboard/ainulindale/sessioni/:id        → AudioSessionWrapper
+                                             (smista DJ vs Listener su djId === user.uid)
+/dashboard/ainulindale/sessioni/:id/dj     → AudioSessionDJ (accesso diretto)
 ```
 
 ### Componenti chiave
@@ -602,7 +614,8 @@ Pattern **Firestore-as-signaling**: niente WebSocket dedicato, niente backend ag
 
 ### Hooks custom
 - **Giochi:** `useGameEvent`, `useGameItems`, `useGameParticipants`, `useGameLeaderboard`, `useQuizRound`, `useQuizAnswers`, `useHighAccuracyPosition`, `useDeviceOrientation`, `useCameraStream`, `useHaversineDistance`, `useNearestItem`, `useCaptureItem`, `useSubmitQuizAnswer`, `useAdvanceQuizRound`
-- **L'Ainulindalë:** `useLocalLibrary`, `useAudioPlayer`, `useAudioSession`, `useAudioQueue`, `useSessionParticipants`, `useWebRTCTransfer`, `useMediaSession`, `useStorageQuota`
+- **L'Ainulindalë:** `useLocalLibrary`, `useAudioPlayer` (Walkman state-level: queue, shuffle, repeat, MediaSession), `useAudioEngineRaw` (DJ flow: engine, playBlob, getCurrentTime, getDuration, isPlaying — separato da `useAudioPlayer` per pulizia), `useAudioSession`, `useAudioQueue`, `useSessionParticipants`, `useWebRTCTransfer` (esporta `useWebRTCTransferDJ` e `useWebRTCTransferProposer`), `useMediaSession`, `useStorageQuota`
+- **Trasversali:** `useRBAC` (wrapper di `useAuth` con flag derivati `isRoot`/`isAdmin`/`isGuest`/`isAdminOrRoot`/`isApproved`/`isPending`); `useWakeLock(active)` (acquisisce/rilascia `screen` wake-lock con guard su `permissionsPolicy`/`featurePolicy` e re-acquire automatico su `visibilitychange === 'visible'`).
 
 ---
 
@@ -672,9 +685,21 @@ Nessuna dipendenza npm aggiunta — il delta è puro codice React + utility Type
 
 **Firebase v12 migration (Maggio 2026):** sostituzione di `enableIndexedDbPersistence(db)` deprecato con la nuova API `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. Sostituzione transparent, nessun cambiamento API esposta. Console pulita dal warning di deprecation.
 
-**Wake Lock feature-policy hardening:** wrappato `navigator.wakeLock.request()` in check `document.featurePolicy?.allowsFeature?.('screen-wake-lock')` per evitare warning in iframe (AI Studio preview, Stackblitz, embed di terze parti). Comportamento runtime invariato in PWA installata.
+**Wake Lock feature-policy hardening:** wrappato `navigator.wakeLock.request()` in un hook condiviso `useWakeLock(active)` (`src/hooks/useWakeLock.ts`) che fa feature-detection 2026-style (preferisce `document.permissionsPolicy.allowsFeature('screen-wake-lock')`, fallback a `document.featurePolicy.allowsFeature(...)`, degrada se nessuno dei due è esposto) e re-acquisisce automaticamente il lock su `visibilitychange === 'visible'`. Sostituisce i blocchi inline in `TreasureHuntPlay` e `useAudioPlayer`. Evita warning in iframe (AI Studio preview, Stackblitz, embed di terze parti). Comportamento runtime invariato in PWA installata.
 
 **TreasureHuntMap rendering pattern:** identificato e fixato bug Leaflet di tile flickering durante una caccia, dovuto a `flex-1` instabile + assenza di `invalidateSize()` su cambi layout (HUD, AR Layer, items dinamici, transizione status). Pattern stabile documentato in §4.5, applicato anche a future mappe.
+
+**Leaflet markers offline-safe (Maggio 2026):** sostituiti tutti i `new L.Icon({ iconUrl: 'https://...' })` (caricati da `raw.githubusercontent.com`, `cdnjs`, `unpkg`) con `L.divIcon` SVG inline tramite la utility `src/lib/leafletIcons.ts` (`createMarkerIcon('blue'|'gold'|'green'|'crimson')`). PWA offline ora ha i marker; nessun nuovo asset binario in `public/`; bundle delta trascurabile (~600 byte per marker SVG inline).
+
+**Hardening rule audio (Maggio 2026):** nuovo helper rule `effectiveMaxQueued(sessionId)` che riproduce in DSL la formula bonus client-side `getMaxQueuedFor`. La rule `queue.create` ora valida il campo derivato `effectiveMaxAtCreate` snap del valore al doc, chiudendo il vettore di forge della "Sporca #24 Queue Stuffer" (count effettivo dei doc attivi resta CF Fase 2). La rule `signaling/{userId}` è stata spostata da collezione root a sub-collection di `audio_sessions/{sessionId}` con ownership stretto (proposer-or-DJ), chiudendo "Sporca #30 Signaling Spammer".
+
+**DJ scoring runtime (Maggio 2026):** `DJEngine` ora riceve `eventMultiplier: number` in `updateState()` e `getServerTimestamp: () => unknown` in DI. `pointsAwarded` su tracce played = `Math.round(2 × eventMultiplier)` (era hardcoded `2`). `currentTrackStartedAt`, `transferStartedAt`, `transferCompletedAt` sono server-stamped. `closeSession` accredita `+5` base + (se `totalDurationMs > 30 min`) `+10` long-session bonus, scalati × `eventMultiplier` in batch atomico, e marca `djBonusAwarded: true` (immutabile a `true` via rule) per impedire double-spend.
+
+**Hook split `useAudioPlayer` / `useAudioEngineRaw` (Maggio 2026):** API raw del singleton `AudioEngine` (engine, playBlob, pause, resume, stop, getCurrentTime, getDuration, isPlaying) estratte in un hook dedicato `useAudioEngineRaw`, consumato dal pannello DJ. `useAudioPlayer` resta limitato allo state-level del Walkman (queue, shuffle, repeat, MediaSession, wake-lock di background).
+
+**Hook RBAC centralizzato (Maggio 2026):** ~40 occorrenze di `profile?.role === 'X'` migrate al nuovo `src/hooks/useRBAC.ts` che espone `isRoot`/`isAdmin`/`isGuest`/`isAdminOrRoot`/`isApproved`/`isPending`. `useAuth()` resta per i caller che vogliono solo `user`/`profile` raw.
+
+**AuthContext race fixed (Maggio 2026):** `loginWithGoogle()` in `src/lib/firebase.ts` ridotto a thin wrapper su `signInWithPopup`; tutta la creazione del profilo è ora di proprietà esclusiva di `AuthContext.onAuthStateChanged`. Il branch legacy "auto-approva docs senza accountStatus" è ora ristretto ai soli doc con `createdAt < 2024-01-01`; ogni anomalia successiva al cutoff resta `pending` con `console.warn`.
 
 ---
 

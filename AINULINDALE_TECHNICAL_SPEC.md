@@ -100,7 +100,7 @@ L'estetica è coerente: dark-flame (nero ardesia + ambra + crimson), vinile che 
 - **Media Session API** nativo (lock screen integration)
 - **Wake Lock API** nativo (già in uso per la Caccia)
 - **Firestore + Firestore real-time listeners** (già nello stack)
-- **React 18 + Tailwind + Framer Motion + Lucide** (già nello stack)
+- **React 19 + Tailwind + Framer Motion + Lucide** (già nello stack)
 
 Bundle delta stimato: **~40KB minified+gzipped**.
 
@@ -148,6 +148,11 @@ interface AudioSession {
   
   // Integrazione opzionale con un game_event
   linkedGameEventId?: string | null;  // se la sessione è "musica di Ferragosto"
+
+  // Flag one-way (false → true via rule, mai revertibile). Settato nel batch
+  // di chiusura quando totalDurationMs > 30 min, per accreditare il +10
+  // long-session bonus al DJ una sola volta. Vedi §11 (Gamification).
+  djBonusAwarded?: boolean;
 }
 ```
 
@@ -187,13 +192,20 @@ interface QueueItem {
   
   position: number;                  // FIFO order, può essere riordinato dal DJ
   
-  // Audit P2P
+  // Audit P2P (server-stamped via serverTimestamp)
   transferStartedAt?: Timestamp;
   transferCompletedAt?: Timestamp;
   transferFailureReason?: string;    // 'timeout' | 'proposer_offline' | 'rejected' | ecc.
-  
+
   // Gamification
-  pointsAwarded?: number;            // assegnati al played
+  pointsAwarded?: number;            // assegnati al played: round(2 × eventMultiplier)
+
+  // Snapshot della formula bonus al create-time. La rule queue.create lo
+  // valida contro `effectiveMaxQueued(sessionId)` ricostruita in DSL: chiude
+  // il forge della "Sporca #24 Queue Stuffer" (90% del vettore). Il count
+  // effettivo dei doc attivi del proposer resta CF Fase 2: il DSL Firestore
+  // non può contare documenti.
+  effectiveMaxAtCreate?: number;
 }
 ```
 
@@ -873,12 +885,12 @@ function validQueueStatusTransition(oldStatus, newStatus, isDJ) {
 ### Le Sporche di L'Ainulindalë (Le 7 di Sauron)
 
 23. **The Phantom DJ** — partecipante che cerca di scrivere su `audio_sessions` con `djId == self.uid` ma non è Admin/Root. Bloccato.
-24. **The Queue Stuffer** — utente che cerca di mettere 100 tracce in coda bypassando il limite. Bloccato dalla rule che conta gli item attivi del proposer.
+24. **The Queue Stuffer** — utente che cerca di mettere 100 tracce in coda bypassando il limite. **Bloccato a livello formula**: la rule `queue.create` valida che `incoming().effectiveMaxAtCreate == effectiveMaxQueued(sessionId)`, dove l'helper rule riproduce in DSL `rules.maxQueuedPerUser + int(getUserDoc().points / 100) * rules.bonusPerHundredPoints`. Chiude il forge del valore. **Il count effettivo dei doc attivi resta CF Fase 2** (il DSL Firestore non può contare documenti — vedi `MIGRATION.md`, callable `enforceQueuePerUserLimit`).
 25. **The Theme Hijacker** — utente che cerca di modificare `proposedBy` o `localTrackId` di un item creato da altri. Bloccato.
 26. **The Player Ghost** — partecipante che modifica `currentQueueItemId` o `currentTrackStartedAt` su `audio_sessions`. Bloccato (solo DJ).
 27. **The Resurrectionist (audio variant)** — write su `audio_sessions/{closed}` o sui suoi `queue/*` post-close. Bloccato.
 28. **The Mass Skipper** — DJ malizioso che skippa tutte le tracce di un partecipante per dispetto. *Tollerato per design* (community-level trust); il proposer vede `skipped` con timestamp e può segnalare al Root.
-29. **The Signaling Spammer** — utente che scrive falsi offer/answer in `signaling/*` di altri per disturbare. Bloccato dalla rule che limita la write su `signaling/{userId}` solo al DJ (per `djOffer`/`djCandidates`) e all'utente target (per `proposerAnswer`/`proposerCandidates`).
+29. **The Signaling Spammer** — utente che scrive falsi offer/answer in `signaling/*` di altri per disturbare. **Bloccato dalla rule sub-collection** `match /audio_sessions/{sessionId}/signaling/{userId}`: solo il proposer (`userId == request.auth.uid`) o il DJ della sessione (`isSessionDJ(sessionId)`) possono fare read/create/update/delete. `sessionId` è ora implicito nel path (era top-level prima del Maggio 2026). Test rule in `firestore.rules.audio.test.ts`.
 
 ### Test runner (estensione delle rule tests)
 
@@ -907,9 +919,9 @@ Suite `firestore.rules.audio.test.ts`:
 |---|---|---|
 | Caricare una traccia in Biblioteca | +1 | Una tantum per traccia (non per ri-upload) |
 | Proporre una traccia in sessione | +1 | Indipendente dal play |
-| Una propria traccia viene **suonata** | +2 | × moltiplicatore della sessione (se linked a game_event) |
-| Fare il DJ in una sessione (almeno 1 traccia suonata) | +5 | Una tantum a fine sessione |
-| Sessione DJ con > 30 min di musica | +10 | Bonus completion |
+| Una propria traccia viene **suonata** | +2 | × `eventMultiplier` (se sessione linked a game_event); calcolato `Math.round(2 × eventMultiplier)` in `DJEngine.markCurrentPlayed` |
+| Fare il DJ in una sessione (almeno 1 traccia suonata) | +5 | Una tantum a fine sessione, accreditato in batch atomico da `closeSession` × `eventMultiplier` |
+| Sessione DJ con > 30 min di musica | +10 | Long-session bonus protetto dal flag `audio_sessions.djBonusAwarded` (one-way, immutabile a `true` via rule). Anti double-spend: la rule respinge ogni tentativo di rimettere `false` o di ri-incrementare. × `eventMultiplier` |
 
 ### Bonus alla coda (regola dinamica)
 

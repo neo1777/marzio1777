@@ -10,16 +10,23 @@
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "role": { "type": "string", "enum": ["Root", "Admin", "Guest"] },
+        "accountStatus": { "type": "string", "enum": ["pending", "approved"] },
         "points": { "type": "number" },
+        "bio": { "type": "string" },
         "shareLiveLocation": { "type": "boolean" },
         "apiKey": { "type": "string" },
-        "createdAt": { "type": "number", "description": "Timestamp" }
+        "animIcon": { "type": "string", "description": "Like-particle emoji/symbol; 'none' for plain heart" },
+        "animSpeed": { "type": "number", "description": "Like animation duration in seconds" },
+        "animDistance": { "type": "number", "description": "Vertical distance in pixels for the like particle" },
+        "animColor": { "type": "string", "description": "Tint hex/rgb for the like particle" },
+        "createdAt": { "type": "object", "description": "Firestore Timestamp" },
+        "updatedAt": { "type": "object", "description": "Firestore Timestamp" }
       },
-      "required": ["uid", "email", "role"]
+      "required": ["uid", "email", "role", "accountStatus"]
     },
     "UserLocation": {
       "title": "UserLocation",
-      "description": "Public volatile location data for map",
+      "description": "Public volatile location data for map (split-collection PII isolation)",
       "type": "object",
       "properties": {
          "userId": { "type": "string" },
@@ -51,11 +58,13 @@
            "properties": {
              "lat": { "type": "number" },
              "lng": { "type": "number" }
-           }
+           },
+           "description": "Optional geotag in {lat, lng}; type widened from string to object in May 2026"
         },
         "decade": { "type": "string" },
         "timestamp": { "type": "object" },
         "likesCount": { "type": "number" },
+        "likedBy": { "type": "array", "items": { "type": "string" } },
         "commentsCount": { "type": "number" },
         "visibilityStatus": { "type": "string", "enum": ["public", "private", "scheduled"] },
         "visibilityTime": { "type": "number" },
@@ -98,7 +107,8 @@
       "properties": {
          "text": { "type": "string" },
          "assignedTo": { "type": "string" },
-         "assignedName": { "type": "string" }
+         "assignedName": { "type": "string" },
+         "checked": { "type": "boolean" }
       },
       "required": ["text"]
     },
@@ -137,6 +147,249 @@
         "timestamp": { "type": "object" }
       },
       "required": ["authorId", "authorName", "text", "timestamp"]
+    },
+    "GameEvent": {
+      "title": "GameEvent",
+      "description": "Il Campo dei Giochi event (treasure_hunt or photo_quiz)",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["treasure_hunt", "photo_quiz"], "description": "Immutable after create" },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "lobby", "active", "completed", "aborted"] },
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "organizerId": { "type": "string", "description": "users.uid; immutable after create" },
+        "createdAt": { "type": "object" },
+        "startTime": { "type": "object", "description": "Lobby opening" },
+        "scheduledKickoff": { "type": "object", "description": "active transition" },
+        "endTime": { "type": "object" },
+        "completedAt": { "type": "object" },
+        "pointsMultiplier": { "type": "number", "minimum": 0.5, "maximum": 5.0 },
+        "visibilityOfOthers": { "type": "boolean" },
+        "invitedUserIds": { "type": "array", "items": { "type": "string" }, "maxItems": 100 },
+        "treasureHuntConfig": { "type": "object", "description": "Populated only if type=='treasure_hunt'" },
+        "photoQuizConfig": {
+          "type": "object",
+          "description": "Populated only if type=='photo_quiz'; carries currentHostId for the rotating-host system",
+          "properties": {
+            "currentHostId": { "type": "string" },
+            "rotateHost": { "type": "boolean" }
+          }
+        },
+        "currentParticipantsCount": { "type": "number" },
+        "totalItemsCount": { "type": "number" },
+        "itemsCollectedCount": { "type": "number" },
+        "currentRound": { "type": "number", "description": "Numeric round counter (1-indexed) for photo_quiz" },
+        "roundsPlayed": { "type": "number" },
+        "finalLeaderboard": {
+          "type": "array",
+          "description": "Embedded immutable snapshot populated at active→completed",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["type", "status", "title", "organizerId", "createdAt"]
+    },
+    "GameItem": {
+      "title": "GameItem",
+      "description": "Treasure-hunt virtual object scattered on the map",
+      "type": "object",
+      "properties": {
+        "templateId": { "type": "string" },
+        "emoji": { "type": "string" },
+        "label": { "type": "string" },
+        "points": { "type": "number" },
+        "captureRadius": { "type": "number", "description": "meters" },
+        "lat": { "type": "number", "description": "Immutable after create" },
+        "lng": { "type": "number", "description": "Immutable after create" },
+        "status": { "type": "string", "enum": ["spawned", "collected", "expired"] },
+        "spawnedAt": { "type": "object" },
+        "collectedBy": { "type": "string" },
+        "collectedAt": { "type": "object" },
+        "collectedAtLat": { "type": "number", "description": "Audit log: player-claimed coordinates at capture time" },
+        "collectedAtLng": { "type": "number", "description": "Audit log: player-claimed coordinates at capture time" },
+        "legacyPostId": { "type": "string", "description": "Optional, for the Post-Legacy hunt mode" }
+      },
+      "required": ["status", "lat", "lng", "points"]
+    },
+    "GameParticipant": {
+      "title": "GameParticipant",
+      "description": "Per-user RSVP and presence in a game event",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "status": { "type": "string", "enum": ["invited", "joined", "declined", "kicked"] },
+        "invitedAt": { "type": "object" },
+        "respondedAt": { "type": "object" },
+        "joinedAt": { "type": "object" },
+        "leftAt": { "type": "object" },
+        "shareLocationDuringEvent": { "type": "boolean" }
+      },
+      "required": ["userId", "status"]
+    },
+    "QuizRound": {
+      "title": "QuizRound",
+      "description": "Single round of a photo_quiz game",
+      "type": "object",
+      "properties": {
+        "roundNumber": { "type": "number" },
+        "sourcePostId": { "type": "string", "description": "Post used to derive the question (manual selection in MVP)" },
+        "questionType": { "type": "string", "enum": ["guess_who", "guess_year", "guess_place", "guess_caption", "chronology"] },
+        "questionText": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" }, "minItems": 4, "maxItems": 4 },
+        "correctIndex": { "type": "number", "description": "Filled at reveal-time only; pre-reveal lives in /secret/correctness" },
+        "startedAt": { "type": "object" },
+        "endsAt": { "type": "object" },
+        "revealedAt": { "type": "object" },
+        "hostId": { "type": "string" }
+      },
+      "required": ["roundNumber", "startedAt", "endsAt", "hostId"]
+    },
+    "QuizSecret": {
+      "title": "QuizSecret",
+      "description": "Pre-reveal vault for the correct index — readable only by host triad (currentHostId, organizer, Root)",
+      "type": "object",
+      "properties": {
+        "correctIndex": { "type": "number", "minimum": 0, "maximum": 3 }
+      },
+      "required": ["correctIndex"]
+    },
+    "QuizAnswer": {
+      "title": "QuizAnswer",
+      "description": "One answer per participant per round",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "selectedIndex": { "type": "number", "minimum": 0, "maximum": 3 },
+        "submittedAt": { "type": "object" },
+        "pointsAwarded": { "type": "number", "description": "Validated by rule: in [0, maxPointsPerRound]; >0 only if selectedIndex == correctIndex" }
+      },
+      "required": ["userId", "selectedIndex", "submittedAt"]
+    },
+    "GameLeaderboardEntry": {
+      "title": "GameLeaderboardEntry",
+      "description": "Real-time leaderboard during an active event; the final snapshot is embedded as `finalLeaderboard` on the parent game_event doc",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "points": { "type": "number" },
+        "captures": { "type": "number" },
+        "correctAnswers": { "type": "number" },
+        "totalAnswers": { "type": "number" },
+        "averageResponseMs": { "type": "number" }
+      },
+      "required": ["userId", "points"]
+    },
+    "AudioSession": {
+      "title": "AudioSession",
+      "description": "L'Ainulindalë DJ session (Sessione del Coro)",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["audio_session"] },
+        "djId": { "type": "string", "description": "users.uid (Admin/Root); immutable after create" },
+        "djName": { "type": "string" },
+        "djPhotoURL": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "closed"], "description": "Mono-directional; closed is terminal" },
+        "mode": { "type": "string", "enum": ["auto", "manual"] },
+        "createdAt": { "type": "object", "description": "Immutable" },
+        "closedAt": { "type": "object" },
+        "currentQueueItemId": { "type": "string" },
+        "currentTrackTitle": { "type": "string" },
+        "currentTrackArtist": { "type": "string" },
+        "currentTrackDurationMs": { "type": "number" },
+        "currentTrackStartedAt": { "type": "object", "description": "Server-stamped via serverTimestamp()" },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "maxQueuedPerUser": { "type": "number" },
+            "bonusPerHundredPoints": { "type": "number" },
+            "allowDuplicates": { "type": "boolean" },
+            "autoSkipOfflineProposers": { "type": "boolean" }
+          }
+        },
+        "participantCount": { "type": "number" },
+        "queuedCount": { "type": "number" },
+        "playedCount": { "type": "number" },
+        "linkedGameEventId": { "type": "string", "description": "Optional link to a game_event; immutable after create. Inherits pointsMultiplier" },
+        "djBonusAwarded": { "type": "boolean", "description": "One-way flag (false→true exactly once at close if totalDurationMs>30min). Anti double-spend of the +10 long-session bonus" },
+        "finalStats": {
+          "type": "object",
+          "description": "Populated atomically at open→closed; immutable",
+          "properties": {
+            "totalDurationMs": { "type": "number" },
+            "totalTracksPlayed": { "type": "number" },
+            "participantsCount": { "type": "number" },
+            "topProposers": { "type": "array", "items": { "type": "object" } },
+            "closedAt": { "type": "object" }
+          }
+        }
+      },
+      "required": ["djId", "title", "status", "mode", "rules", "createdAt"]
+    },
+    "QueueItem": {
+      "title": "QueueItem",
+      "description": "Theme proposed by a user to a session's shared queue",
+      "type": "object",
+      "properties": {
+        "proposedBy": { "type": "string", "description": "users.uid; immutable after create" },
+        "proposedByName": { "type": "string" },
+        "proposedByPhotoURL": { "type": "string" },
+        "proposedAt": { "type": "object" },
+        "trackTitle": { "type": "string", "description": "Immutable after create" },
+        "trackArtist": { "type": "string", "description": "Immutable after create" },
+        "trackAlbum": { "type": "string" },
+        "trackYear": { "type": "number" },
+        "trackDurationMs": { "type": "number", "description": "Immutable after create" },
+        "trackCoverDataUrl": { "type": "string", "description": "base64, ≤ 50KB" },
+        "localTrackId": { "type": "string", "description": "IndexedDB id on the proposer device; immutable" },
+        "status": { "type": "string", "enum": ["queued", "transferring", "ready", "playing", "played", "skipped", "failed"] },
+        "position": { "type": "number" },
+        "transferStartedAt": { "type": "object", "description": "Server-stamped" },
+        "transferCompletedAt": { "type": "object", "description": "Server-stamped" },
+        "transferFailureReason": { "type": "string" },
+        "pointsAwarded": { "type": "number", "description": "Math.round(2 × eventMultiplier) at played" },
+        "effectiveMaxAtCreate": {
+          "type": "number",
+          "description": "Snapshot of the bonus formula at create-time, validated by rule against effectiveMaxQueued(sessionId). Closes 90% of Sporca #24 Queue Stuffer; document-count enforcement deferred to Phase 2 CF (enforceQueuePerUserLimit)."
+        }
+      },
+      "required": ["proposedBy", "trackTitle", "trackDurationMs", "status", "localTrackId", "position", "effectiveMaxAtCreate"]
+    },
+    "SessionParticipant": {
+      "title": "SessionParticipant",
+      "description": "Audio-session participant heartbeat & counters",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "status": { "type": "string", "enum": ["joined", "left", "kicked"] },
+        "joinedAt": { "type": "object" },
+        "leftAt": { "type": "object" },
+        "lastSeenAt": { "type": "object", "description": "Auto-heartbeat every 15s" },
+        "tracksProposed": { "type": "number" },
+        "tracksPlayed": { "type": "number" }
+      },
+      "required": ["userId", "status"]
+    },
+    "SignalingDoc": {
+      "title": "SignalingDoc",
+      "description": "WebRTC signaling channel between proposer and DJ; sub-collection of audio_sessions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Doc ID = proposer's userId" },
+        "sessionId": { "type": "string", "description": "Implicit in path; immutable after create" },
+        "djOffer": { "type": "object" },
+        "proposerAnswer": { "type": "object" },
+        "djCandidates": { "type": "array", "items": { "type": "object" } },
+        "proposerCandidates": { "type": "array", "items": { "type": "object" } },
+        "expireAt": { "type": "object", "description": "~60s from creation; orphans cleaned by Phase 2 CF" }
+      },
+      "required": ["userId", "sessionId"]
     }
   },
   "firestore": {
@@ -146,7 +399,7 @@
     },
     "/user_locations/{userId}": {
       "schema": { "$ref": "#/entities/UserLocation" },
-      "description": "Public location data"
+      "description": "Public location data (split-collection PII isolation)"
     },
     "/posts/{postId}": {
       "schema": { "$ref": "#/entities/Post" },
@@ -158,7 +411,7 @@
     },
     "/events/{eventId}": {
       "schema": { "$ref": "#/entities/Event" },
-      "description": "Events"
+      "description": "Community events (Il Bivacco)"
     },
     "/events/{eventId}/items/{itemId}": {
       "schema": { "$ref": "#/entities/EventItem" },
@@ -170,11 +423,55 @@
     },
     "/chats/{channelId}": {
       "schema": { "$ref": "#/entities/ChatChannel" },
-      "description": "Chat channels"
+      "description": "Chat channels (L'Alberone)"
     },
     "/chats/{channelId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/ChatMessage" },
       "description": "Messages inside a channel"
+    },
+    "/game_events/{eventId}": {
+      "schema": { "$ref": "#/entities/GameEvent" },
+      "description": "Il Campo dei Giochi event (treasure_hunt | photo_quiz)"
+    },
+    "/game_events/{eventId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/GameItem" },
+      "description": "Treasure-hunt items (only when type=='treasure_hunt')"
+    },
+    "/game_events/{eventId}/participants/{userId}": {
+      "schema": { "$ref": "#/entities/GameParticipant" },
+      "description": "Per-user RSVP and presence"
+    },
+    "/game_events/{eventId}/leaderboard/{userId}": {
+      "schema": { "$ref": "#/entities/GameLeaderboardEntry" },
+      "description": "Real-time leaderboard during the event; final snapshot is embedded as game_event.finalLeaderboard"
+    },
+    "/game_events/{eventId}/quizRounds/{roundId}": {
+      "schema": { "$ref": "#/entities/QuizRound" },
+      "description": "Single quiz round (only when type=='photo_quiz')"
+    },
+    "/game_events/{eventId}/quizRounds/{roundId}/secret/correctness": {
+      "schema": { "$ref": "#/entities/QuizSecret" },
+      "description": "Pre-reveal vault — readable only by currentHostId, organizer, Root"
+    },
+    "/game_events/{eventId}/quizRounds/{roundId}/answers/{userId}": {
+      "schema": { "$ref": "#/entities/QuizAnswer" },
+      "description": "One answer per participant per round; one-shot create, host-validated pointsAwarded"
+    },
+    "/audio_sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/AudioSession" },
+      "description": "L'Ainulindalë DJ session"
+    },
+    "/audio_sessions/{sessionId}/queue/{itemId}": {
+      "schema": { "$ref": "#/entities/QueueItem" },
+      "description": "Proposed themes for the session's shared queue"
+    },
+    "/audio_sessions/{sessionId}/participants/{userId}": {
+      "schema": { "$ref": "#/entities/SessionParticipant" },
+      "description": "Audio-session participants (heartbeat, counters)"
+    },
+    "/audio_sessions/{sessionId}/signaling/{userId}": {
+      "schema": { "$ref": "#/entities/SignalingDoc" },
+      "description": "WebRTC signaling sub-collection (May 2026 — was previously a top-level collection). Read/write restricted to the proposer (userId == auth.uid) or the session DJ."
     }
   }
 }

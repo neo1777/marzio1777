@@ -190,7 +190,12 @@ interface AudioSession {
   playedCount: number;
   
   linkedGameEventId?: string | null;  // optional link to a game_event
-  
+
+  // One-way flag (false → true, never reversible via rule). Set in the
+  // session-close batch when totalDurationMs > 30 min, to credit the
+  // +10 long-session bonus to the DJ exactly once. Anti double-spend.
+  djBonusAwarded?: boolean;
+
   finalStats?: {
     totalDurationMs: number;
     totalTracksPlayed: number;
@@ -229,11 +234,18 @@ interface QueueItem {
   
   position: number;                  // FIFO order, reorderable by DJ
   
+  // P2P audit (server-stamped via serverTimestamp, not Date.now())
   transferStartedAt?: Timestamp;
   transferCompletedAt?: Timestamp;
   transferFailureReason?: string;
-  
-  pointsAwarded?: number;            // assigned at 'played'
+
+  pointsAwarded?: number;            // assigned at 'played' (= round(2 × eventMultiplier))
+
+  // Snapshot of the bonus formula at create-time, validated by the rule
+  // against `effectiveMaxQueued(sessionId)` to close "Sporca #24 Queue
+  // Stuffer" at 90% — the actual count of active docs is deferred to a
+  // CF in Phase 2 (DSL cannot count documents).
+  effectiveMaxAtCreate?: number;
 }
 ```
 
@@ -568,23 +580,24 @@ Pattern **Firestore-as-signaling**: no dedicated WebSocket, no additional backen
 ## 5. 🛣️ Routing & Components — Games & L'Ainulindalë Modules
 
 ### Added routes
-```
-# Game Field
-/giochi                          → IlCampoDeiGiochi (active/upcoming events hub)
-/giochi/dashboard                → GameDashboard (admin only)
-/giochi/dashboard/nuovo          → GameCreator (wizard)
-/giochi/:eventId/lobby           → GameLobby
-/giochi/:eventId/play            → GamePlayRouter (dispatches A/B by type)
-/giochi/:eventId/risultati       → GameResults
-/giochi/archivio                 → GameArchive
+All under `/dashboard/*` (BrowserRouter `basename={import.meta.env.BASE_URL}`,
+`<Layout />` as the protected parent route).
 
-# L'Ainulindalë
-/ainulindale                     → IlAinulindale (3-tab hub)
-/ainulindale/biblioteca          → PersonalLibrary (Walkman)
-/ainulindale/sessioni            → AudioSessionsList
-/ainulindale/sessioni/nuova      → AudioSessionCreate (Admin/Root only, wizard)
-/ainulindale/sessioni/:sessionId → AudioSessionDJ | AudioSessionListener
-                                   (dispatches by djId === currentUser.uid)
+```
+# Game Field (flat routes)
+/dashboard/giochi                          → IlCampoDeiGiochi (active/upcoming events hub)
+/dashboard/giochi/nuovo                    → GameCreator (wizard, Admin/Root)
+/dashboard/giochi/:eventId/lobby           → GameLobby
+/dashboard/giochi/:eventId/play            → GamePlayRouter (dispatches A/B by event.type)
+/dashboard/giochi/:eventId/results         → GameResults
+
+# L'Ainulindalë (nested router in IlAinulindale.tsx)
+/dashboard/ainulindale                     → PersonalLibrary (Library, default)
+/dashboard/ainulindale/sessioni            → AudioSessionsList
+/dashboard/ainulindale/sessioni/nuova      → AudioSessionCreate (Admin/Root only)
+/dashboard/ainulindale/sessioni/:id        → AudioSessionWrapper
+                                             (dispatches DJ vs Listener by djId === user.uid)
+/dashboard/ainulindale/sessioni/:id/dj     → AudioSessionDJ (direct access)
 ```
 
 ### Key components
@@ -596,7 +609,8 @@ Pattern **Firestore-as-signaling**: no dedicated WebSocket, no additional backen
 
 ### Custom hooks
 - **Games:** `useGameEvent`, `useGameItems`, `useGameParticipants`, `useGameLeaderboard`, `useQuizRound`, `useQuizAnswers`, `useHighAccuracyPosition`, `useDeviceOrientation`, `useCameraStream`, `useHaversineDistance`, `useNearestItem`, `useCaptureItem`, `useSubmitQuizAnswer`, `useAdvanceQuizRound`
-- **L'Ainulindalë:** `useLocalLibrary`, `useAudioPlayer`, `useAudioSession`, `useAudioQueue`, `useSessionParticipants`, `useWebRTCTransfer`, `useMediaSession`, `useStorageQuota`
+- **L'Ainulindalë:** `useLocalLibrary`, `useAudioPlayer` (Walkman state-level: queue, shuffle, repeat, MediaSession), `useAudioEngineRaw` (DJ flow: engine, playBlob, getCurrentTime, getDuration, isPlaying — split out of `useAudioPlayer` for clarity), `useAudioSession`, `useAudioQueue`, `useSessionParticipants`, `useWebRTCTransfer` (exports `useWebRTCTransferDJ` and `useWebRTCTransferProposer`), `useMediaSession`, `useStorageQuota`
+- **Cross-cutting:** `useRBAC` (wraps `useAuth` and exposes derived flags `isRoot`/`isAdmin`/`isGuest`/`isAdminOrRoot`/`isApproved`/`isPending`); `useWakeLock(active)` (acquires/releases the `screen` wake lock with `permissionsPolicy`/`featurePolicy` guards and automatic re-acquire on `visibilitychange === 'visible'`).
 
 ---
 
@@ -666,9 +680,21 @@ No npm dependency added — the delta is pure React code + local TypeScript util
 
 **Firebase v12 migration (May 2026):** replacement of deprecated `enableIndexedDbPersistence(db)` with new API `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. Transparent replacement, no exposed API changes. Console clean of deprecation warning.
 
-**Wake Lock feature-policy hardening:** `navigator.wakeLock.request()` wrapped in `document.featurePolicy?.allowsFeature?.('screen-wake-lock')` check to avoid warnings in iframes (AI Studio preview, Stackblitz, third-party embed). Runtime behavior unchanged in installed PWA.
+**Wake Lock feature-policy hardening:** `navigator.wakeLock.request()` wrapped in a shared hook `useWakeLock(active)` (`src/hooks/useWakeLock.ts`) doing 2026-style feature-detection (prefers `document.permissionsPolicy.allowsFeature('screen-wake-lock')`, falls back to `document.featurePolicy.allowsFeature(...)`, degrades gracefully if neither is exposed) and re-acquiring the lock automatically on `visibilitychange === 'visible'`. Replaces the inline blocks in `TreasureHuntPlay` and `useAudioPlayer`. Avoids warnings in iframes (AI Studio preview, Stackblitz, third-party embed). Runtime behavior unchanged in installed PWA.
 
 **TreasureHuntMap rendering pattern:** identified and fixed Leaflet tile flickering bug during a hunt, due to unstable `flex-1` + missing `invalidateSize()` on layout changes (HUD, AR Layer, dynamic items, status transition). Stable pattern documented in §4.5, applied to future maps as well.
+
+**Offline-safe Leaflet markers (May 2026):** all `new L.Icon({ iconUrl: 'https://...' })` (loaded from `raw.githubusercontent.com`, `cdnjs`, `unpkg`) replaced with `L.divIcon` inline SVG via the helper `src/lib/leafletIcons.ts` (`createMarkerIcon('blue'|'gold'|'green'|'crimson')`). Offline PWA now renders the markers; no new binary asset in `public/`; bundle delta negligible (~600 bytes per inline-SVG marker).
+
+**Audio rule hardening (May 2026):** new rule helper `effectiveMaxQueued(sessionId)` mirroring the client-side bonus formula `getMaxQueuedFor`. The `queue.create` rule now validates the derived field `effectiveMaxAtCreate` snapshotting the value to the doc, closing the forge vector of "Sporca #24 Queue Stuffer" (the actual count of active docs is deferred to a CF in Phase 2). The `signaling/{userId}` rule was moved from a root collection to a sub-collection of `audio_sessions/{sessionId}` with strict ownership (proposer-or-DJ), closing "Sporca #30 Signaling Spammer".
+
+**DJ scoring runtime (May 2026):** `DJEngine` now receives `eventMultiplier: number` in `updateState()` and `getServerTimestamp: () => unknown` via DI. `pointsAwarded` for played tracks = `Math.round(2 × eventMultiplier)` (was hardcoded `2`). `currentTrackStartedAt`, `transferStartedAt`, `transferCompletedAt` are server-stamped. `closeSession` credits `+5` base + (if `totalDurationMs > 30 min`) `+10` long-session bonus, scaled × `eventMultiplier` in an atomic batch, and flips `djBonusAwarded: true` (immutable to `true` via rule) to prevent double-spend.
+
+**`useAudioPlayer` / `useAudioEngineRaw` split (May 2026):** raw `AudioEngine` singleton API (engine, playBlob, pause, resume, stop, getCurrentTime, getDuration, isPlaying) extracted into a dedicated hook `useAudioEngineRaw`, consumed by the DJ panel. `useAudioPlayer` is now strictly Walkman state-level (queue, shuffle, repeat, MediaSession, background wake-lock).
+
+**Centralized RBAC hook (May 2026):** ~40 occurrences of `profile?.role === 'X'` migrated to the new `src/hooks/useRBAC.ts`, which exposes `isRoot`/`isAdmin`/`isGuest`/`isAdminOrRoot`/`isApproved`/`isPending`. `useAuth()` remains for callers that just need `user`/`profile` raw.
+
+**AuthContext race fixed (May 2026):** `loginWithGoogle()` in `src/lib/firebase.ts` reduced to a thin wrapper around `signInWithPopup`; profile creation is now exclusively owned by `AuthContext.onAuthStateChanged`. The legacy "auto-approve docs without accountStatus" branch is now restricted to docs with `createdAt < 2024-01-01`; any anomaly past that cutoff stays `pending` with a `console.warn`.
 
 ---
 

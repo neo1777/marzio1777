@@ -129,14 +129,14 @@ export class DJEngine {
   }
 
   private startTransfer(item: QueueItem) {
-     this.setItemStatus(item.id, 'transferring', { transferStartedAt: Date.now() });
+     this.setItemStatus(item.id, 'transferring', { transferStartedAt: this.getServerTimestamp() });
      if (this.state !== 'playing') {
         this.setState('transferring');
      }
      
      this.initiateTransfer(item.id, item.proposedBy, (blob) => {
         this.pendingBlobs.set(item.id, blob);
-        this.setItemStatus(item.id, 'ready', { transferCompletedAt: Date.now() });
+        this.setItemStatus(item.id, 'ready', { transferCompletedAt: this.getServerTimestamp() });
         
         // Auto-play if not already playing and mode is auto
         if (this.state === 'transferring' || (this.state === 'idle' && this.session?.mode === 'auto')) {
