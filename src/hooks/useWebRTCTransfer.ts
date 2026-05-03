@@ -53,7 +53,7 @@ export function useWebRTCTransferProposer(sessionId: string) {
    useEffect(() => {
       if (!user || !sessionId) return;
       
-      const unsub = onSnapshot(doc(db, 'signaling', user.uid), async (snap) => {
+      const unsub = onSnapshot(doc(db, 'audio_sessions', sessionId, 'signaling', user.uid), async (snap) => {
          const data = snap.data();
          if (!data || !data.djOffer) return;
          if (data.sessionId !== sessionId) return;

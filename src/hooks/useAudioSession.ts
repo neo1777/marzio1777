@@ -77,31 +77,42 @@ export function useAudioSession(sessionId: string) {
     }
   };
 
-  const closeSession = async (finalStats: any) => {
+  const closeSession = async (finalStats: any, eventMultiplier = 1) => {
     if (!sessionId || !user) return;
     try {
        const batch = writeBatch(db);
        const sRef = doc(db, 'audio_sessions', sessionId);
-       batch.update(sRef, {
+
+       const totalTracksPlayed = finalStats.totalTracksPlayed || 0;
+       const totalDurationMs = finalStats.totalDurationMs || 0;
+       const longSession = totalDurationMs > 30 * 60 * 1000;
+       // djBonusAwarded becomes immutably true the first time the long-session
+       // bonus is granted; rule blocks any further write to it. Skip if the
+       // session already has it (re-close edge case after a refresh).
+       const awardLongBonus = longSession && session?.djBonusAwarded !== true;
+
+       const sessionPatch: Record<string, unknown> = {
           status: 'closed',
           closedAt: serverTimestamp(),
           finalStats: {
              ...finalStats,
-             closedAt: serverTimestamp()
-          }
-       });
-       
-       // Score assignment for DJ
-       if ((finalStats.totalTracksPlayed || 0) > 0) {
+             closedAt: serverTimestamp(),
+          },
+       };
+       if (awardLongBonus) sessionPatch.djBonusAwarded = true;
+       batch.update(sRef, sessionPatch);
+
+       if (totalTracksPlayed > 0) {
           let points = 5;
-          if ((finalStats.totalDurationMs || 0) > 30 * 60 * 1000) {
-             points += 10;
+          if (awardLongBonus) points += 10;
+          const scaled = Math.round(points * eventMultiplier);
+          if (scaled > 0) {
+             batch.update(doc(db, 'users', user.uid), {
+                points: increment(scaled),
+             });
           }
-          batch.update(doc(db, 'users', user.uid), {
-             points: increment(points)
-          });
        }
-       
+
        await batch.commit();
     } catch (e) {
        console.error(e);

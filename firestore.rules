@@ -119,11 +119,20 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && incoming().role == (isRoot() ? 'Root' : 'Guest') && incoming().accountStatus == (isRoot() ? 'approved' : 'pending');
       allow update: if isSignedIn() && isValidUser(incoming()) && (
          (request.auth.uid == userId && (
-            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'apiKey', 'shareLiveLocation']) &&
-            incoming().role == existing().role && 
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'apiKey', 'shareLiveLocation', 'animIcon', 'animSpeed', 'animDistance', 'animColor']) &&
+            incoming().role == existing().role &&
             incoming().accountStatus == existing().accountStatus &&
             incoming().points == existing().points
          )) ||
+         // Monotonic owner-side points increment: lets the client commit
+         // gamification rewards (capture, quiz, +2 audio play, +10 DJ bonus)
+         // bounded to 50/transaction. Real anti-cheat lives in the rules of
+         // the action that earns the points (e.g. items.update, answers.update).
+         (request.auth.uid == userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['points', 'updatedAt']) &&
+          incoming().points is number && existing().points is number &&
+          incoming().points >= existing().points &&
+          incoming().points - existing().points <= 50) ||
          (isRoot() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'accountStatus'])) ||
          (isAdminOrRoot() && !isRoot() && existing().role != 'Root' && incoming().role != 'Root' && (
             // Admin can approve pending to Guest
@@ -387,9 +396,12 @@ service cloud.firestore {
       allow read: if isApprovedUser();
       allow create: if isSignedIn() && isAdminOrRoot() && isValidAudioSession(incoming()) && incoming().djId == request.auth.uid && incoming().status == 'open';
       allow update: if isSessionDJ(sessionId) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'mode', 'currentQueueItemId', 'currentTrackTitle', 'currentTrackArtist', 'currentTrackDurationMs', 'currentTrackStartedAt', 'queuedCount', 'playedCount', 'participantCount', 'finalStats', 'closedAt']) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'mode', 'currentQueueItemId', 'currentTrackTitle', 'currentTrackArtist', 'currentTrackDurationMs', 'currentTrackStartedAt', 'queuedCount', 'playedCount', 'participantCount', 'finalStats', 'closedAt', 'djBonusAwarded']) &&
                     (existing().status == 'open') &&
-                    (!incoming().diff(existing()).affectedKeys().hasAny(['djId', 'rules', 'createdAt']));
+                    (!incoming().diff(existing()).affectedKeys().hasAny(['djId', 'rules', 'createdAt'])) &&
+                    // djBonusAwarded is one-way: false -> true, never revertible.
+                    (!incoming().diff(existing()).affectedKeys().hasAny(['djBonusAwarded']) ||
+                     (existing().get('djBonusAwarded', false) == false && incoming().djBonusAwarded == true));
       allow delete: if isRoot();
 
       match /queue/{itemId} {
@@ -416,30 +428,16 @@ service cloud.firestore {
                       incoming().diff(existing()).affectedKeys().hasOnly(['lastSeenAt', 'status', 'leftAt', 'tracksProposed', 'tracksPlayed']);
         allow delete: if isRoot();
       }
-    }
 
-    // Mitigates Sporca #30 (Signaling Spammer). create/update/delete are limited to
-    // the doc owner (proposer) or the DJ of the session referenced by the doc.
-    // sessionId is required at create-time and immutable afterwards.
-    match /signaling/{userId} {
-      allow read: if isApprovedUser() && (
-         userId == request.auth.uid ||
-         (existing() != null && existing().sessionId is string &&
-          get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid)
-      );
-      allow create: if isApprovedUser() && incoming().sessionId is string && (
-         userId == request.auth.uid ||
-         get(/databases/$(database)/documents/audio_sessions/$(incoming().sessionId)).data.djId == request.auth.uid
-      );
-      allow update: if isApprovedUser() &&
-                    incoming().sessionId == existing().sessionId && (
-         (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['proposerAnswer', 'proposerCandidates'])) ||
-         (get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['djOffer', 'djCandidates']))
-      );
-      allow delete: if isApprovedUser() && (
-         userId == request.auth.uid ||
-         get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid
-      );
+      // Sub-collection: WebRTC signaling between proposer and DJ.
+      // sessionId is implicit in the path; only the doc owner (proposer)
+      // and the session DJ can read/write. Mitigates Sporca #30.
+      match /signaling/{userId} {
+        allow read, create, update, delete: if isApprovedUser() && (
+           userId == request.auth.uid ||
+           isSessionDJ(sessionId)
+        );
+      }
     }
   }
 }

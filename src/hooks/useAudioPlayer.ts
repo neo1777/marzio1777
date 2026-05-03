@@ -126,16 +126,6 @@ export function useAudioPlayer() {
     await playTrack(track);
   };
 
-  // Direct blob play (e.g. for DJ session)
-  const playBlob = async (blob: Blob) => {
-     try {
-        await engine.load(blob);
-        await engine.play();
-     } catch (e) {
-        console.error("Play blob error", e);
-     }
-  };
-
   const playTrack = async(track: LocalTrack) => {
      try {
        await engine.load(track.blob);
@@ -245,14 +235,9 @@ export function useAudioPlayer() {
     toggleRepeat,
     toggleBgPlayback,
     playQueue,
-    
-    // Exposed for DJ direct wrapper:
-    engine,
-    playBlob,
+    // Walkman pause helper (state-level). For raw engine access from the DJ
+    // session, use useAudioEngineRaw() — this hook is reserved for the personal
+    // library/Walkman experience.
     pause: () => engine.pause(),
-    resume: () => engine.play(),
-    stop: () => { engine.pause(); engine.seek(0); setIsPlaying(false); },
-    getCurrentTime: () => engine.getCurrentTime(),
-    getDuration: () => engine.getDuration()
   };
 }

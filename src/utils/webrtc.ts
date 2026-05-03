@@ -72,7 +72,7 @@ export class WebRTCTransfer {
     
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-         updateDoc(doc(db, 'signaling', this.proposerId), {
+         updateDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), {
             djCandidates: arrayUnion({
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
@@ -81,7 +81,7 @@ export class WebRTCTransfer {
             }) 
          }).catch(() => {
             // fallback if doc not exists
-            setDoc(doc(db, 'signaling', this.proposerId), { djCandidates: [{
+            setDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), { djCandidates: [{
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
               sdpMLineIndex: event.candidate.sdpMLineIndex,
@@ -105,7 +105,7 @@ export class WebRTCTransfer {
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
     
-    await setDoc(doc(db, 'signaling', this.proposerId), {
+    await setDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), {
       sessionId: this.sessionId,
       djOffer: {
         sdp: offer.sdp,
@@ -125,7 +125,7 @@ export class WebRTCTransfer {
     
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-         updateDoc(doc(db, 'signaling', this.proposerId), {
+         updateDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), {
             proposerCandidates: arrayUnion({
                candidate: event.candidate.candidate,
                sdpMid: event.candidate.sdpMid,
@@ -133,7 +133,7 @@ export class WebRTCTransfer {
                addedAt: Date.now()
             })
          }).catch(() => {
-            setDoc(doc(db, 'signaling', this.proposerId), { proposerCandidates: [{
+            setDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), { proposerCandidates: [{
                candidate: event.candidate.candidate,
                sdpMid: event.candidate.sdpMid,
                sdpMLineIndex: event.candidate.sdpMLineIndex,
@@ -164,7 +164,7 @@ export class WebRTCTransfer {
     const answer = await this.peerConnection.createAnswer();
     await this.peerConnection.setLocalDescription(answer);
     
-    await setDoc(doc(db, 'signaling', this.proposerId), {
+    await setDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), {
       sessionId: this.sessionId,
       proposerAnswer: {
         sdp: answer.sdp,
@@ -177,7 +177,7 @@ export class WebRTCTransfer {
   }
   
   private subscribeToSignaling() {
-    this.unsubscribeSignaling = onSnapshot(doc(db, 'signaling', this.proposerId), async (snapshot) => {
+    this.unsubscribeSignaling = onSnapshot(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), async (snapshot) => {
        const data = snapshot.data();
        if (!data) return;
        

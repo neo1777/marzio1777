@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAudioSession } from '../hooks/useAudioSession';
 import { useAudioQueue } from '../hooks/useAudioQueue';
@@ -7,7 +9,7 @@ import { useSessionParticipants } from '../hooks/useSessionParticipants';
 import { useWebRTCTransferDJ } from '../hooks/useWebRTCTransfer';
 import { DJEngine } from '../utils/djEngine';
 import { QueueItemCard } from '../components/audio/QueueItemCard';
-import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useAudioEngineRaw } from '../hooks/useAudioEngineRaw';
 import { Button, Switch, Label, ScrollArea } from '../components/ui';
 import { LogOut, Play, SkipForward, Users, Settings } from 'lucide-react';
 
@@ -21,15 +23,31 @@ export function AudioSessionDJ() {
    const { participants } = useSessionParticipants(id!, true);
    const { initiateTransfer, transferringItemId, progress, error: transferError } = useWebRTCTransferDJ(id!);
    
-   const { engine: audioWorker, playBlob: playRemoteBlob, pause, resume, stop, getCurrentTime, getDuration, isPlaying } = useAudioPlayer();
+   const { playBlob: playRemoteBlob, pause, resume, stop, getCurrentTime, getDuration, isPlaying } = useAudioEngineRaw();
    const engineRef = useRef<DJEngine | null>(null);
 
    const [engineState, setEngineState] = useState<'idle' | 'playing' | 'transferring' | 'paused'>('idle');
+   const [eventMultiplier, setEventMultiplier] = useState(1);
+
+   // Resolve the linked game_event multiplier once per session change.
+   useEffect(() => {
+      let cancelled = false;
+      const linkedId = session?.linkedGameEventId;
+      if (!linkedId) {
+         setEventMultiplier(1);
+         return;
+      }
+      getDoc(doc(db, 'game_events', linkedId)).then(snap => {
+         if (cancelled) return;
+         const m = snap.exists() ? Number(snap.data()?.pointsMultiplier ?? 1) : 1;
+         setEventMultiplier(Number.isFinite(m) && m > 0 ? m : 1);
+      }).catch(() => { if (!cancelled) setEventMultiplier(1); });
+      return () => { cancelled = true; };
+   }, [session?.linkedGameEventId]);
 
    useEffect(() => {
       if (!session || !id) return;
-      
-      // Initialize DJ Engine if not done
+
       if (!engineRef.current) {
          engineRef.current = new DJEngine({
             onStateChange: (state) => setEngineState(state),
@@ -50,14 +68,15 @@ export function AudioSessionDJ() {
             },
             getAudioProgress: () => {
                return { currentTime: getCurrentTime(), duration: getDuration() };
-            }
+            },
+            getServerTimestamp: () => serverTimestamp(),
          });
          engineRef.current.startLoop();
       }
-      
-      engineRef.current.updateState(queue, session);
-      
-   }, [session, queue, id]);
+
+      engineRef.current.updateState(queue, session, eventMultiplier);
+
+   }, [session, queue, id, eventMultiplier]);
 
    useEffect(() => {
       // Sync stats
@@ -101,15 +120,14 @@ export function AudioSessionDJ() {
 
    const handleCloseSession = async () => {
       if (!confirm('Vuoi davvero chiudere questa sessione?')) return;
-      
+
       if (engineRef.current) engineRef.current.stopLoop();
       stop();
-      
+
       const played = queue.filter(q => q.status === 'played');
       const totalTracksPlayed = played.length;
       const totalDurationMs = played.reduce((acc, q) => acc + q.trackDurationMs, 0);
-      
-      // Top proposers
+
       const pStats = new Map<string, {name: string, count: number}>();
       played.forEach(q => {
          const cur = pStats.get(q.proposedBy) || { name: q.proposedByName, count: 0 };
@@ -120,13 +138,17 @@ export function AudioSessionDJ() {
          .map(([uid, v]) => ({ userId: uid, displayName: v.name, tracksPlayed: v.count }))
          .sort((a,b) => b.tracksPlayed - a.tracksPlayed);
 
+      // closeSession atomically writes status='closed', finalStats, the +5
+      // base DJ reward and (if totalDurationMs > 30 min) flips djBonusAwarded
+      // and credits the +10 long-session bonus. eventMultiplier comes from the
+      // optional linked game_event.
       await closeSession({
          totalDurationMs,
          totalTracksPlayed,
          participantsCount: participants.length,
-         topProposers
-      });
-      
+         topProposers,
+      }, eventMultiplier);
+
       navigate('/ainulindale');
    };
 

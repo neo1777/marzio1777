@@ -35,7 +35,9 @@ export class AudioEngine {
     this.eqHigh.frequency.value = 3200;
 
     this.analyser = this.ctx.createAnalyser();
-    this.analyser.fftSize = 256;
+    // 128 → 64 frequency bins, fed to the 32-bar visualizer. Lighter than 256
+    // and aligned with TECHNICAL_DOCS_IT §4.13 / AINULINDALE_TECHNICAL_SPEC §9.
+    this.analyser.fftSize = 128;
 
     // Graph connect
     this.sourceNode

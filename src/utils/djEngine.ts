@@ -2,23 +2,27 @@ import { QueueItem, AudioSession } from '../types/audio';
 
 export type DJEngineState = 'idle' | 'playing' | 'transferring' | 'paused';
 
+const BASE_TRACK_POINTS = 2;
+
 export class DJEngine {
   private queue: QueueItem[] = [];
   private session: AudioSession | null = null;
   private state: DJEngineState = 'idle';
   private currentItemId: string | null = null;
-  
+  private eventMultiplier = 1;
+
   private pendingBlobs = new Map<string, Blob>();
   private failedItems = new Set<string>();
-  
+
   private onStateChange: (state: DJEngineState) => void;
   private initiateTransfer: (itemId: string, proposerId: string, onReady: (blob: Blob) => void, onFail: (err: string) => void) => void;
   private updateSession: (patch: Partial<AudioSession>) => void;
   private setItemStatus: (itemId: string, status: QueueItem['status'], data?: any) => void;
   private playBlob: (blob: Blob) => void;
   private stopAudio: () => void;
-  
-  private checkInterval: NodeJS.Timeout | null = null;
+  private getServerTimestamp: () => unknown;
+
+  private checkInterval: ReturnType<typeof setInterval> | null = null;
   private getAudioProgress: () => { currentTime: number, duration: number } | null;
 
   constructor(deps: {
@@ -29,6 +33,9 @@ export class DJEngine {
      playBlob: (blob: Blob) => void;
      stopAudio: () => void;
      getAudioProgress: () => { currentTime: number, duration: number } | null;
+     // Returns a Firestore serverTimestamp() sentinel — injected to keep this
+     // class free of firebase imports (DI for testability).
+     getServerTimestamp: () => unknown;
   }) {
      this.onStateChange = deps.onStateChange;
      this.initiateTransfer = deps.initiateTransfer;
@@ -37,11 +44,13 @@ export class DJEngine {
      this.playBlob = deps.playBlob;
      this.stopAudio = deps.stopAudio;
      this.getAudioProgress = deps.getAudioProgress;
+     this.getServerTimestamp = deps.getServerTimestamp;
   }
 
-  public updateState(queue: QueueItem[], session: AudioSession) {
+  public updateState(queue: QueueItem[], session: AudioSession, eventMultiplier = 1) {
      this.queue = queue;
      this.session = session;
+     this.eventMultiplier = eventMultiplier;
      // DJ Engine loop will react on interval
   }
 
@@ -184,7 +193,7 @@ export class DJEngine {
         currentTrackTitle: item.trackTitle,
         currentTrackArtist: item.trackArtist,
         currentTrackDurationMs: item.trackDurationMs,
-        currentTrackStartedAt: Date.now()
+        currentTrackStartedAt: this.getServerTimestamp() as any,
      });
      
      // Remove old blobs to free memory
@@ -200,8 +209,10 @@ export class DJEngine {
 
   private markCurrentPlayed(skipped = false) {
      if (!this.currentItemId) return;
-     
-     const pts = skipped ? 0 : 2; // For now hardcoded base 2 points
+
+     // Base 2pt per played track, scaled by the linked game_event multiplier
+     // (1.0 if the session is standalone). See AINULINDALE_TECHNICAL_SPEC §11.
+     const pts = skipped ? 0 : Math.round(BASE_TRACK_POINTS * this.eventMultiplier);
      this.setItemStatus(this.currentItemId, skipped ? 'skipped' : 'played', { pointsAwarded: pts });
      this.pendingBlobs.delete(this.currentItemId);
      this.currentItemId = null;

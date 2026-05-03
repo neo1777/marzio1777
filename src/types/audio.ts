@@ -64,22 +64,27 @@ export interface AudioSession {
   description?: string;
   status: 'open' | 'closed';
   mode: 'auto' | 'manual';
-  createdAt: any; // Timestamp
-  closedAt: any | null; // Timestamp
-  
+  createdAt: any; // Firestore Timestamp (mixed any to tolerate FieldValue at create)
+  closedAt: any | null;
+
   currentQueueItemId: string | null;
   currentTrackTitle: string | null;
   currentTrackArtist: string | null;
   currentTrackDurationMs: number | null;
-  currentTrackStartedAt: any | null; // Timestamp
-  
+  // Server-stamped Timestamp at the moment a track is played; listeners use
+  // .toMillis() for the now-playing sync timer.
+  currentTrackStartedAt: any | null;
+
   rules: SessionRules;
-  
+
   participantCount: number;
   queuedCount: number;
   playedCount: number;
-  
+
   linkedGameEventId?: string | null;
+  // True once the +10 long-session DJ bonus has been credited. Immutable after
+  // becoming true (enforced in firestore.rules) — guards against double-spend.
+  djBonusAwarded?: boolean;
   finalStats?: {
      totalDurationMs: number;
      totalTracksPlayed: number;
