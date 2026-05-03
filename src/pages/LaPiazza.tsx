@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, MapPin, Send, Leaf } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +13,7 @@ const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
 const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 
 export default function LaPiazza() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest, isPending } = useRBAC();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,7 @@ export default function LaPiazza() {
 
   useEffect(() => {
     if (!user) return;
-    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+    if (isPending || isGuest) {
         setPosts([]);
         setLoading(false);
         return;
@@ -288,11 +288,11 @@ function CommentsSection({ postId, user }: { postId: string, user: any }) {
     return () => unsubscribe();
   }, [postId]);
 
-  const { profile } = useAuth();
+  const { profile, isGuest } = useRBAC();
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !user || profile?.role === 'Guest') return;
+    if (!text.trim() || !user || isGuest) return;
     try {
       await addDoc(collection(db, `posts/${postId}/comments`), {
         authorId: user.uid,
@@ -329,8 +329,8 @@ function CommentsSection({ postId, user }: { postId: string, user: any }) {
          )}
        </div>
        <form onSubmit={handlePost} className="flex gap-2">
-         <input type="text" value={text} onChange={e => setText(e.target.value)} disabled={profile?.role === 'Guest'} placeholder={profile?.role === 'Guest' ? "I Guest non possono commentare" : "Condividi un aneddoto..."} className="flex-1 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] text-slate-800 dark:text-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-[#0d1310]" />
-         <button type="submit" disabled={!text.trim() || profile?.role === 'Guest'} className="bg-[#4A90E2] text-white hover:bg-blue-600 w-11 h-11 flex items-center justify-center rounded-xl shadow-md transition-all disabled:opacity-50">
+         <input type="text" value={text} onChange={e => setText(e.target.value)} disabled={isGuest} placeholder={isGuest ? "I Guest non possono commentare" : "Condividi un aneddoto..."} className="flex-1 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] text-slate-800 dark:text-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#2D5A27] dark:focus:border-[#42a83a] focus:ring-1 focus:ring-[#2D5A27] dark:focus:ring-[#42a83a] transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-[#0d1310]" />
+         <button type="submit" disabled={!text.trim() || isGuest} className="bg-[#4A90E2] text-white hover:bg-blue-600 w-11 h-11 flex items-center justify-center rounded-xl shadow-md transition-all disabled:opacity-50">
            <Send size={18} className="translate-x-[-1px] translate-y-[1px]" />
          </button>
        </form>

@@ -5,18 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Users, Plus, ShoppingBag, Wallet, Clock, ChevronRight, Check, X, HelpCircle, Flame } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import EventDetailModal from '../components/EventDetailModal';
 
 export default function IlBivacco() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest, isPending } = useRBAC();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   useEffect(() => {
-    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+    if (isPending || isGuest) {
         setEvents([]);
         setLoading(false);
         return;
@@ -57,7 +57,7 @@ export default function IlBivacco() {
               Il Bivacco <Flame size={24} className="text-[#F5A623]" />
            </div>
         </div>
-        {profile?.role !== 'Guest' && (
+        {!isGuest && (
           <button 
              onClick={() => setShowCreateModal(true)}
              className="flex items-center gap-2 bg-[#f56a23] hover:bg-[#e05612] text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-[#f56a23]/20 transition-all text-sm"

@@ -25,6 +25,11 @@ export interface UserProfile {
    animColor?: string;    // hex/rgb tint
 }
 
+export interface PostLocation {
+   lat: number;
+   lng: number;
+}
+
 export interface Post {
    id: string;
    imageUrl?: string;
@@ -33,8 +38,9 @@ export interface Post {
    authorId?: string;
    decade?: string;
    timestamp?: any;
-   location?: string;
-   [key: string]: any;
+   // Optional geotag in {lat, lng} form. The legacy schema described it as a
+   // string but the actual runtime (LaMappa, LaPiazza) treats it as an object.
+   location?: PostLocation | null;
 }
 
 export type { QuestionType, GeneratedQuestion };

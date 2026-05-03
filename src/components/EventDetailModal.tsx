@@ -5,10 +5,10 @@ import { doc, updateDoc, collection, query, onSnapshot, addDoc, deleteDoc, serve
 import { db } from '../lib/firebase';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 
 export default function EventDetailModal({ event, onClose, user }: { event: any, onClose: () => void, user: any }) {
-  const { profile } = useAuth();
+  const { profile, isGuest } = useRBAC();
   const [activeTab, setActiveTab] = useState<'details' | 'shopping' | 'wallet'>('details');
   const [attendees, setAttendees] = useState<any>(event.attendees || {});
   
@@ -92,7 +92,7 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
                  </div>
 
                  {/* Il Tuo RSVP */}
-                 {profile?.role !== 'Guest' && (
+                 {!isGuest && (
                  <div>
                     <h3 className="font-bold text-[#1a2e16] dark:text-[#e2e8f0] mb-3 text-sm uppercase tracking-wider">La tua presenza</h3>
                     <div className="flex flex-wrap gap-2">
@@ -147,7 +147,7 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
 // ------ SOTTO COMPONENTI ------
 
 function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
-   const { profile } = useAuth();
+   const { profile, isGuest } = useRBAC();
    const [items, setItems] = useState<any[]>([]);
    const [newItem, setNewItem] = useState('');
 
@@ -192,7 +192,7 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
 
    return (
       <div className="flex flex-col h-full space-y-4">
-         {profile?.role !== 'Guest' && (
+         {!isGuest && (
          <form onSubmit={addItem} className="flex gap-2">
             <input type="text" value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="Es. 2kg di Costine, Birre, Carbone..." className="flex-1 bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl px-4 py-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none focus:border-[#f56a23]" />
             <button type="submit" disabled={!newItem.trim()} className="bg-[#2D5A27] text-white px-4 rounded-xl disabled:opacity-50"><Plus size={20}/></button>
@@ -214,7 +214,7 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
                   <div className="flex items-center gap-3">
                      <motion.button 
                         onClick={() => toggleAssign(item)} 
-                        disabled={profile?.role === 'Guest'} 
+                        disabled={isGuest}
                         className={`${item.assignedTo ? 'text-[#2D5A27] dark:text-[#42a83a]' : 'text-slate-300 dark:text-slate-600'} transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative`}
                      >
                         {item.assignedTo ? (
@@ -258,7 +258,7 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
 }
 
 function WalletSection({ eventId, user, attendees }: { eventId: string, user: any, attendees: any }) {
-   const { profile } = useAuth();
+   const { profile, isGuest } = useRBAC();
    const [expenses, setExpenses] = useState<any[]>([]);
    const [desc, setDesc] = useState('');
    const [amount, setAmount] = useState('');
@@ -328,7 +328,7 @@ function WalletSection({ eventId, user, attendees }: { eventId: string, user: an
             </div>
          )}
          
-         {profile?.role !== 'Guest' && (
+         {!isGuest && (
          <form onSubmit={addExpense} className="flex gap-2">
             <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Cosa hai comprato?" className="flex-[2] bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl px-4 py-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none" />
             <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00 €" className="flex-1 bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl px-4 py-3 text-sm text-[#1a2e16] dark:text-[#e2e8f0] outline-none font-mono" />

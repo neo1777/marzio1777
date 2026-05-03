@@ -1,6 +1,5 @@
-// (Complete replacement already provided in earlier instructions)
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { Shield, Users, Activity, AlertTriangle, Key, UserCheck, Clock } from 'lucide-react';
@@ -18,14 +17,13 @@ interface UserData {
 }
 
 export default function AdminPanel() {
-  const { profile } = useAuth();
+  const { profile, isRoot, isAdmin, isAdminOrRoot } = useRBAC();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'approved' | 'pending'>('approved');
 
   useEffect(() => {
-    // Solo per Root e Admin
-    if (profile?.role !== 'Root' && profile?.role !== 'Admin') return;
+    if (!isAdminOrRoot) return;
 
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -35,13 +33,13 @@ export default function AdminPanel() {
     });
 
     return () => unsubscribe();
-  }, [profile]);
+  }, [isAdminOrRoot]);
 
   const updateUserRole = async (uid: string, newRole: string) => {
     const userToUpdate = users.find(u => u.uid === uid);
     if (!userToUpdate) return;
 
-    if (profile?.role === 'Admin') {
+    if (isAdmin) {
       if (userToUpdate.role === 'Root') {
         alert("Non puoi modificare il Root.");
         return;
@@ -54,16 +52,16 @@ export default function AdminPanel() {
         alert("Puoi solo promuovere i Guest a Admin.");
         return;
       }
-    } else if (profile?.role !== 'Root') {
+    } else if (!isRoot) {
       alert("Non hai i permessi per modificare i ruoli.");
       return;
     }
-    
-    if (uid === profile.uid) {
+
+    if (uid === profile?.uid) {
       alert("Non puoi modificare il tuo stesso ruolo!");
       return;
     }
-    
+
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRole });
     } catch (error) {
@@ -73,14 +71,14 @@ export default function AdminPanel() {
   };
 
   const approveUser = async (uid: string, asRole: string) => {
-      if (profile?.role !== 'Root' && profile?.role !== 'Admin') return;
-      if (profile?.role === 'Admin' && asRole !== 'Guest') {
+      if (!isAdminOrRoot) return;
+      if (isAdmin && asRole !== 'Guest') {
          alert("Gli Admin possono approvare solo come Guest.");
          return;
       }
 
       try {
-         await updateDoc(doc(db, 'users', uid), { 
+         await updateDoc(doc(db, 'users', uid), {
             accountStatus: 'approved',
             role: asRole,
          });
@@ -90,9 +88,9 @@ export default function AdminPanel() {
       }
   };
 
-  // Protezione Rotta
+  // Route protection
   if (!profile) return null;
-  if (profile.role !== 'Root' && profile.role !== 'Admin') {
+  if (!isAdminOrRoot) {
     return <Navigate to="/dashboard/piazza" />;
   }
 
@@ -181,7 +179,7 @@ export default function AdminPanel() {
                               <button onClick={() => approveUser(user.uid, 'Guest')} className="px-4 py-2 bg-[#2D5A27] hover:bg-[#1a3817] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
                                  Approva come Guest
                               </button>
-                              {profile?.role === 'Root' && (
+                              {isRoot && (
                                  <button onClick={() => approveUser(user.uid, 'Admin')} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">
                                     Approva come Admin
                                  </button>
@@ -220,7 +218,7 @@ export default function AdminPanel() {
                       <select 
                         value={user.role} 
                         onChange={(e) => updateUserRole(user.uid, e.target.value)}
-                        disabled={(profile?.role !== 'Root' && profile?.role !== 'Admin') || user.uid === profile?.uid || (profile?.role === 'Admin' && user.role !== 'Guest')}
+                        disabled={!isAdminOrRoot || user.uid === profile?.uid || (isAdmin && user.role !== 'Guest')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider outline-none border transition-colors cursor-pointer ${
                           user.role === 'Root' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400' :
                           user.role === 'Admin' ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400' :
@@ -229,7 +227,7 @@ export default function AdminPanel() {
                       >
                         <option value="Guest">Guest</option>
                         <option value="Admin">Admin</option>
-                        {(user.role === 'Root' || profile?.role === 'Root') && <option value="Root" disabled={user.role === 'Root' && profile?.role !== 'Root'}>Root</option>}
+                        {(user.role === 'Root' || isRoot) && <option value="Root" disabled={user.role === 'Root' && !isRoot}>Root</option>}
                       </select>
   
                       {user.role === 'Root' && (
@@ -246,7 +244,7 @@ export default function AdminPanel() {
         </div>
       </div>
       
-      {profile?.role === 'Admin' && (
+      {isAdmin && (
          <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-xl flex items-start gap-3 transition-colors">
             <AlertTriangle className="text-orange-500 flex-shrink-0" size={20} />
             <p className="text-sm text-orange-800 dark:text-orange-300 font-sans leading-relaxed">

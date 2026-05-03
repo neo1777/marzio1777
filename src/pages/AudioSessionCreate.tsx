@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import { Button, Input, Label, Textarea, Switch, Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui';
 
 export function AudioSessionCreate() {
-   const { user, profile } = useAuth();
-   const isRoot = profile?.role === 'Root';
-   const isAdmin = profile?.role === 'Admin' || isRoot;
+   const { user, isAdminOrRoot } = useRBAC();
    const navigate = useNavigate();
 
    const [step, setStep] = useState(1);
@@ -24,7 +22,7 @@ export function AudioSessionCreate() {
       autoSkipOfflineProposers: true
    });
 
-   if (!user || (!isRoot && !isAdmin)) {
+   if (!user || !isAdminOrRoot) {
       return <div className="p-8 text-center text-destructive font-semibold">Accesso negato. Solo gli amministratori possono creare sessioni.</div>;
    }
 

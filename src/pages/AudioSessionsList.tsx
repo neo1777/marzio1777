@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudioSessionsList } from '../hooks/useAudioSession';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui';
 import { Music, Users, ListMusic, PlusCircle, HeadphonesIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -9,12 +9,8 @@ import { AudioSession } from '../types/audio';
 
 export function AudioSessionsList() {
    const { sessions, loading } = useAudioSessionsList();
-   const { user, profile } = useAuth();
-   const isRoot = profile?.role === 'Root';
-   const isAdmin = profile?.role === 'Admin' || isRoot;
+   const { user, isAdminOrRoot: canCreateSession } = useRBAC();
    const navigate = useNavigate();
-
-   const canCreateSession = isRoot || isAdmin;
 
    if (loading) {
       return <div className="h-full flex items-center justify-center p-8"><span className="animate-pulse text-xl text-primary/50 text-center">Caricamento delle sessioni live...</span></div>;

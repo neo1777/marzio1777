@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle } from 'lucide-react';
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GestioneArchivio from '../components/GestioneArchivio';
 
 export default function ProfiloPersonale() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdminOrRoot } = useRBAC();
   
   // Tab State
   const [activeTab, setActiveTab] = useState<'profilo' | 'archivio'>('profilo');
@@ -110,7 +110,7 @@ export default function ProfiloPersonale() {
                        <div className="flex-1">
                           <h3 className="text-2xl font-bold font-serif text-[#1a2e16] dark:text-[#e2e8f0] flex items-center gap-2">
                              {profile.displayName}
-                             {(profile.role === 'Root' || profile.role === 'Admin') && (
+                             {isAdminOrRoot && (
                                 <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{profile.role}</span>
                              )}
                           </h3>

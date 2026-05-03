@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Maximize, Minimize, ChevronLeft, ChevronRight, ChevronDown, Eye, Film, Filter, User, HelpCircle, Heart } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import EventDetailModal from '../components/EventDetailModal';
 
 const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
 const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 
 export default function IlCinematografo() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest, isPending } = useRBAC();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -52,7 +52,7 @@ export default function IlCinematografo() {
 
   useEffect(() => {
     if (!user) return;
-    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+    if (isPending || isGuest) {
         setPosts([]);
         setLoading(false);
         return;

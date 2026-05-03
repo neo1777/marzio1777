@@ -3,16 +3,14 @@ import { Trophy, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameEvents } from '../hooks/useGameEvents';
 import GameEventCard from '../components/GameEventCard';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
 
 export default function IlCampoDeiGiochi() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const { events, loading } = useGameEvents(activeTab);
-  const { profile } = useAuth();
+  const { isAdminOrRoot: canOrganize } = useRBAC();
   const navigate = useNavigate();
-  
-  const canOrganize = profile?.role === 'Admin' || profile?.role === 'Root';
 
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col">

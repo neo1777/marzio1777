@@ -7,7 +7,7 @@ import L from 'leaflet';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Map, MapPin } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 
 const customMarkerHtmlLight = `
   <div style="background-color: #2D5A27; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;">
@@ -61,7 +61,7 @@ const createLiveUserIcon = (user: any) => {
 };
 
 export default function LaMappa() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest, isPending } = useRBAC();
   const [posts, setPosts] = useState<any[]>([]);
   const marzioCenter: [number, number] = [45.9238, 8.8655];
   const [isDark, setIsDark] = useState(false);
@@ -90,7 +90,7 @@ export default function LaMappa() {
 
   useEffect(() => {
     if (!user) return;
-    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') {
+    if (isPending || isGuest) {
         setPosts([]);
         setLiveUsers([]);
         return;

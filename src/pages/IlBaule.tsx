@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { db, storage } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
@@ -26,7 +26,7 @@ function LocationPicker({ onSelect }: { onSelect: (ll: {lat: number, lng: number
 }
 
 export default function IlBaule() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest } = useRBAC();
   const navigate = useNavigate();
   
   const [step, setStep] = useState<'upload' | 'crop' | 'edit'>('upload');
@@ -329,7 +329,7 @@ export default function IlBaule() {
       </header>
 
       <div className="bg-white dark:bg-[#151e18] p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-[#24352b] flex-1 overflow-y-auto transition-colors flex flex-col">
-        {profile?.role === 'Guest' ? (
+        {isGuest ? (
            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-slate-100 dark:bg-[#24352b] rounded-full flex items-center justify-center mb-4 border border-slate-200 dark:border-[#1a261f]">
                  <BookOpen size={28} className="text-slate-400" />

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 export default function Layout() {
-  const { user, profile } = useAuth();
+  const { user, profile, isRoot, isAdminOrRoot, isPending, isGuest } = useRBAC();
+  const isLockedOut = isPending || isGuest;
   const navigate = useNavigate();
   const location = useLocation();
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
@@ -26,8 +27,8 @@ export default function Layout() {
 
   useEffect(() => {
     if (!user) return;
-    if (profile?.accountStatus === 'pending' || profile?.role === 'Guest') return;
-    
+    if (isLockedOut) return;
+
     if (location.pathname === '/dashboard/alberone') {
        localStorage.setItem('alberoneLastRead', Date.now().toString());
        setAlberoneUnread(0);
@@ -56,20 +57,20 @@ export default function Layout() {
     }, (err) => console.error("Chat unread hook error:", err));
 
     return () => unsubscribe();
-  }, [user, location.pathname, profile?.role, profile?.accountStatus]);
+  }, [user, location.pathname, isLockedOut]);
 
   const [pendingUsers, setPendingUsers] = useState(0);
 
   useEffect(() => {
      if (!user || !profile) return;
-     if (profile.role === 'Admin' || profile.role === 'Root') {
+     if (isAdminOrRoot) {
         const q = query(collection(db, 'users'), where('accountStatus', '==', 'pending'));
         const unsub = onSnapshot(q, (snap) => {
            setPendingUsers(snap.size);
         });
         return () => unsub();
      }
-  }, [user, profile]);
+  }, [user, profile, isAdminOrRoot]);
 
   const points = profile?.points || 0;
   const baseAltitude = 728; // Marzio altitude
@@ -117,7 +118,7 @@ export default function Layout() {
           <NavItem to="/dashboard/ainulindale/biblioteca" icon={<Disc3 size={18} />} label="L'Ainulindalë" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
           <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" badge={alberoneUnread} />
-          {(profile?.role === 'Root' || profile?.role === 'Admin') && (
+          {isAdminOrRoot && (
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-[#24352b]">
               <NavItem to="/dashboard/admin" icon={<ShieldAlert size={18} />} label="Gestione" admin badge={pendingUsers} />
               <NavItem to="/dashboard/istruzioni" icon={<BookOpen size={18} />} label="Istruzioni (Doc)" admin />
@@ -155,7 +156,7 @@ export default function Layout() {
             <img src={profile?.photoURL || 'https://picsum.photos/seed/avatar/100/100'} className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b]" alt="avatar" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-[#1a2e16] dark:text-[#e2e8f0]">{profile?.displayName}</p>
-              <p className={`text-[10px] font-sans uppercase font-bold truncate ${profile?.role === 'Root' ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>{profile?.role || 'OSPITE'}</p>
+              <p className={`text-[10px] font-sans uppercase font-bold truncate ${isRoot ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>{profile?.role || 'OSPITE'}</p>
             </div>
           </div>
           <button onClick={logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors border border-transparent">
@@ -183,16 +184,16 @@ export default function Layout() {
         </div>
         
         {/* Pending or Guest Overlay */}
-        {(profile?.accountStatus === 'pending' || profile?.role === 'Guest') && location.pathname !== '/dashboard/profilo' && (
+        {isLockedOut && location.pathname !== '/dashboard/profilo' && (
            <div className="absolute inset-0 bg-white/60 dark:bg-[#151e18]/80 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
               <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                  <ShieldAlert size={32} />
               </div>
               <h2 className="text-2xl font-serif font-bold text-[#1a2e16] dark:text-slate-200 mb-2">
-                 {profile?.accountStatus === 'pending' ? 'Accesso in Attesa' : 'Accesso Ospite'}
+                 {isPending ? 'Accesso in Attesa' : 'Accesso Ospite'}
               </h2>
               <p className="max-w-md text-slate-600 dark:text-slate-400 leading-relaxed font-sans mb-6">
-                 {profile?.accountStatus === 'pending' 
+                 {isPending
                    ? "La tua richiesta di registrazione è in attesa di approvazione da parte di un Amministratore o del Sindaco. Sarai ricontattato o potrai accedere presto."
                    : "Hai un account Ospite. L'applicazione è riservata e attualmente non puoi vedere i contenuti della comunità."
                  }
@@ -218,7 +219,7 @@ export default function Layout() {
         <MobileNavItem to="/dashboard/ainulindale/biblioteca" icon={<Disc3 size={22} />} />
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
         <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} badge={alberoneUnread} />
-        {(profile?.role === 'Root' || profile?.role === 'Admin') && (
+        {isAdminOrRoot && (
            <>
               <MobileNavItem to="/dashboard/admin" icon={<ShieldAlert size={22} />} admin badge={pendingUsers} />
               <MobileNavItem to="/dashboard/istruzioni" icon={<BookOpen size={22} />} admin />

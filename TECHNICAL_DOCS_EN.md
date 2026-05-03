@@ -113,7 +113,7 @@ Game-type-agnostic model: the same schema covers both treasure hunt (Concept A) 
 - `currentParticipantsCount` (Number) — denormalized
 - `totalItemsCount` (Number, optional)
 - `itemsCollectedCount` (Number, optional)
-- `currentRoundId` (String, optional)
+- `currentRound` (Number, optional) — current round number (1-indexed). Combines with `roundNumber` on child docs to identify the active round.
 - `roundsPlayed` (Number, optional)
 - `finalLeaderboard` (Array<LeaderboardEntry>, optional) — **immutable embedded** populated at `active → completed` transition. Ordered by `points DESC`. Once written, rule guarantees it cannot be modified. See §10 for rule details.
 

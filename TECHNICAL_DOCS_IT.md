@@ -113,7 +113,7 @@ Modello agnostico rispetto al tipo di gioco: lo stesso schema regge sia il treas
 - `currentParticipantsCount` (Number) — denormalizzato
 - `totalItemsCount` (Number, opzionale)
 - `itemsCollectedCount` (Number, opzionale)
-- `currentRoundId` (String, opzionale)
+- `currentRound` (Number, opzionale) — numero di round corrente (1-indexed). Combina con `roundNumber` sui doc figli per identificare il round attivo.
 - `roundsPlayed` (Number, opzionale)
 - `finalLeaderboard` (Array<LeaderboardEntry>, opzionale) — **embedded immutabile** popolato alla transizione `active → completed`. Ordine per `points DESC`. Una volta scritto, rule garantisce che non possa essere modificato. Vedi §10 per dettaglio rule.
 

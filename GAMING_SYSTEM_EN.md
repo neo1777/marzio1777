@@ -588,7 +588,7 @@ Smart throttling: if position changes by < 2m, no recalculation. Mandatory clean
 - `onSnapshot` with `includeMetadataChanges: false`
 - Explicit detach (`unsubscribe()`) in cleanup
 - For `items` during hunt: 1 listener on the entire sub-collection with `status == 'spawned'` filter, not N individual listeners
-- For `quizRounds`: listen only to `currentRoundId`, target changes at next round
+- For `quizRounds`: query `where('roundNumber', '==', event.currentRound)`, target changes at next round
 
 ### 9.4 Wake Lock
 
