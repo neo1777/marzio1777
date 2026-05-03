@@ -348,5 +348,73 @@ service cloud.firestore {
         }
       }
     }
+
+    // --- AINULINDALE HELPERS ---
+    function isSessionDJ(sessionId) {
+      return isSignedIn() && get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data.djId == request.auth.uid;
+    }
+    function isSessionParticipant(sessionId) {
+      return exists(/databases/$(database)/documents/audio_sessions/$(sessionId)/participants/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/audio_sessions/$(sessionId)/participants/$(request.auth.uid)).data.status == 'joined';
+    }
+    function validQueueStatusTransition(oldStatus, newStatus) {
+      return (oldStatus == 'queued' && newStatus in ['transferring', 'skipped', 'ready', 'failed']) ||
+             (oldStatus == 'transferring' && newStatus in ['ready', 'failed']) ||
+             (oldStatus == 'ready' && newStatus in ['playing', 'failed']) ||
+             (oldStatus == 'playing' && newStatus in ['played', 'skipped']) ||
+             oldStatus == newStatus;
+    }
+    function isValidAudioSession(data) {
+      return data.keys().hasAll(['djId', 'title', 'status', 'mode', 'rules']) &&
+             data.status in ['open', 'closed'] &&
+             data.mode in ['auto', 'manual'];
+    }
+    function isValidQueueItem(data) {
+      return data.keys().hasAll(['proposedBy', 'trackTitle', 'trackDurationMs', 'status']);
+    }
+
+    // --- AINULINDALE RULES ---
+    match /audio_sessions/{sessionId} {
+      allow read: if isApprovedUser();
+      allow create: if isSignedIn() && isAdminOrRoot() && isValidAudioSession(incoming()) && incoming().djId == request.auth.uid && incoming().status == 'open';
+      allow update: if isSessionDJ(sessionId) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'mode', 'currentQueueItemId', 'currentTrackTitle', 'currentTrackArtist', 'currentTrackDurationMs', 'currentTrackStartedAt', 'queuedCount', 'playedCount', 'participantCount', 'finalStats', 'closedAt']) &&
+                    (existing().status == 'open') &&
+                    (!incoming().diff(existing()).affectedKeys().hasAny(['djId', 'rules', 'createdAt']));
+      allow delete: if isRoot();
+
+      match /queue/{itemId} {
+        allow read: if isApprovedUser();
+        allow create: if isApprovedUser() && isSessionParticipant(sessionId) &&
+                      incoming().proposedBy == request.auth.uid &&
+                      isValidQueueItem(incoming()) &&
+                      incoming().status == 'queued' &&
+                      get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data.status == 'open';
+                      
+        allow update: if isSessionDJ(sessionId) && 
+                      validQueueStatusTransition(existing().status, incoming().status) &&
+                      (incoming().status != 'played' || (incoming().pointsAwarded >= 0));
+        allow delete: if (isSessionDJ(sessionId) || (existing().proposedBy == request.auth.uid && existing().status == 'queued'));
+      }
+
+      match /participants/{userId} {
+        allow read: if isApprovedUser();
+        allow create: if isApprovedUser() && userId == request.auth.uid &&
+                      get(/databases/$(database)/documents/audio_sessions/$(sessionId)).data.status == 'open';
+        allow update: if userId == request.auth.uid &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['lastSeenAt', 'status', 'leftAt', 'tracksProposed', 'tracksPlayed']);
+        allow delete: if isRoot();
+      }
+    }
+
+    match /signaling/{userId} {
+      allow read: if isApprovedUser() && (userId == request.auth.uid || (existing() != null && existing().sessionId != null && get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid));
+      allow create: if isApprovedUser(); 
+      allow update: if isApprovedUser() && (
+         (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['proposerAnswer', 'proposerCandidates'])) ||
+         (get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasAny(['djOffer', 'djCandidates']))
+      );
+      allow delete: if isApprovedUser() && (userId == request.auth.uid || get(/databases/$(database)/documents/audio_sessions/$(existing().sessionId)).data.djId == request.auth.uid);
+    }
   }
 }

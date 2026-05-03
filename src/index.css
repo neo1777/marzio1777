@@ -15,6 +15,13 @@
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }
 
+@layer utilities {
+  .spin-slow {
+    animation: spin 6s linear infinite;
+  }
+}
+
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-marzio-seppia);

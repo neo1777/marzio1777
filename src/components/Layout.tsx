@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
@@ -114,6 +114,7 @@ export default function Layout() {
           <NavItem to="/dashboard/cinematografo" icon={<Film size={18} />} label="Il Cinematografo" />
           <NavItem to="/dashboard/giochi" icon={<Trophy size={18} />} label="Il Campo dei Giochi" />
           <NavItem to="/dashboard/baule" icon={<Camera size={18} />} label="Il Baule" />
+          <NavItem to="/dashboard/ainulindale/biblioteca" icon={<Disc3 size={18} />} label="L'Ainulindalë" />
           <NavItem to="/dashboard/mappa" icon={<MapIcon size={18} />} label="Mappa Ricordi" />
           <NavItem to="/dashboard/alberone" icon={<TreeDeciduous size={18} />} label="L'Alberone" badge={alberoneUnread} />
           {(profile?.role === 'Root' || profile?.role === 'Admin') && (
@@ -214,6 +215,7 @@ export default function Layout() {
         <MobileNavItem to="/dashboard/bivacco" icon={<Flame size={22} />} />
         <MobileNavItem to="/dashboard/giochi" icon={<Trophy size={22} />} />
         <MobileNavItem to="/dashboard/baule" icon={<Camera size={22} />} />
+        <MobileNavItem to="/dashboard/ainulindale/biblioteca" icon={<Disc3 size={22} />} />
         <MobileNavItem to="/dashboard/mappa" icon={<MapIcon size={22} />} />
         <MobileNavItem to="/dashboard/alberone" icon={<TreeDeciduous size={22} />} badge={alberoneUnread} />
         {(profile?.role === 'Root' || profile?.role === 'Admin') && (

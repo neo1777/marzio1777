@@ -9,6 +9,7 @@ const LaPiazza = lazy(() => import('./pages/LaPiazza'));
 const IlBaule = lazy(() => import('./pages/IlBaule'));
 const LaMappa = lazy(() => import('./pages/LaMappa'));
 const LAlberone = lazy(() => import('./pages/LAlberone'));
+const IlAinulindale = lazy(() => import('./pages/IlAinulindale'));
 const IlBivacco = lazy(() => import('./pages/IlBivacco'));
 const IlCinematografo = lazy(() => import('./pages/IlCinematografo'));
 const ProfiloPersonale = lazy(() => import('./pages/ProfiloPersonale'));
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="giochi/:eventId/play" element={<GamePlayRouter />} />
               <Route path="giochi/:eventId/results" element={<GameResults />} />
               <Route path="alberone" element={<LAlberone />} />
+              <Route path="ainulindale/*" element={<IlAinulindale />} />
               <Route path="profilo" element={<ProfiloPersonale />} />
               <Route path="admin" element={<AdminPanel />} />
               <Route path="istruzioni" element={<Istruzioni />} />
