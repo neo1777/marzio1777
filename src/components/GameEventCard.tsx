@@ -1,9 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GameEvent, useGameParticipants, setRSVP } from '../hooks/useGameEvents';
-import { Map, Camera, Clock, Users, Check, X, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Map, Camera, Clock, Users, Check, X, ShieldAlert, CheckCircle2, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRBAC } from '../hooks/useRBAC';
 import { motion } from 'framer-motion';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface Props {
   event: GameEvent;
@@ -12,7 +15,24 @@ interface Props {
 export default function GameEventCard({ event }: Props) {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { isRoot } = useRBAC();
   const { participants, currentUserParticipant } = useGameParticipants(event.id);
+
+  // Root-only test cleanup. The rule mirrors this guard: it forbids deleting
+  // events whose status is 'active' (firestore.rules:309). Subcollections
+  // (items/participants/leaderboard/quizRounds/answers) are not auto-pruned —
+  // for now they age out via the existing cleanupStuck* cron functions.
+  const canDelete = isRoot && event.status !== 'active';
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canDelete) return;
+    if (!confirm(`Cancellare definitivamente la partita "${event.title}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'game_events', event.id));
+    } catch (err: any) {
+      alert(`Cancellazione fallita: ${err?.message || 'errore sconosciuto'}`);
+    }
+  };
 
   const isQuiz = event.type === 'photo_quiz';
   const Icon = isQuiz ? Camera : Map;
@@ -30,6 +50,17 @@ export default function GameEventCard({ event }: Props) {
 
   return (
     <div className={`p-5 rounded-2xl border border-slate-100 dark:border-[#24352b] ${bgClass} shadow-md overflow-hidden relative`}>
+      {isRoot && (
+        <button
+          onClick={handleDelete}
+          disabled={!canDelete}
+          aria-label="Elimina partita"
+          title={canDelete ? 'Elimina partita (Root)' : 'Una partita in corso non può essere cancellata'}
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 dark:bg-[#151e18]/80 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/80 disabled:hover:text-red-500 transition-colors shadow-sm"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-[#151e18] shadow-sm`}>

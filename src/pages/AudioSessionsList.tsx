@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAudioSessionsList } from '../hooks/useAudioSession';
 import { useRBAC } from '../hooks/useRBAC';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui';
-import { Music, Users, ListMusic, PlusCircle, HeadphonesIcon } from 'lucide-react';
+import { Music, Users, ListMusic, PlusCircle, HeadphonesIcon, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AudioSession } from '../types/audio';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export function AudioSessionsList() {
    const { sessions, loading } = useAudioSessionsList();
@@ -53,7 +55,20 @@ export function AudioSessionsList() {
 
 function SessionCard({ session, idx }: { session: AudioSession, idx: number }) {
    const navigate = useNavigate();
-   
+   const { isRoot } = useRBAC();
+
+   // Root-only test cleanup. Sub-collections (queue/participants/signaling)
+   // are pruned by the cleanupOrphanSessions cron (functions/src/index.ts).
+   const handleDelete = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!confirm(`Cancellare definitivamente la sessione "${session.title}"?`)) return;
+      try {
+         await deleteDoc(doc(db, 'audio_sessions', session.id));
+      } catch (err: any) {
+         alert(`Cancellazione fallita: ${err?.message || 'errore sconosciuto'}`);
+      }
+   };
+
    return (
       <motion.div
          initial={{ opacity: 0, y: 30 }}
@@ -61,10 +76,20 @@ function SessionCard({ session, idx }: { session: AudioSession, idx: number }) {
          transition={{ delay: idx * 0.1, duration: 0.5, ease: 'easeOut' }}
          whileHover={{ y: -5 }}
       >
-         <Card 
-            className="cursor-pointer hover:border-primary/50 transition-colors h-full flex flex-col overflow-hidden bg-card/60 backdrop-blur-md shadow-xl"
+         <Card
+            className="cursor-pointer hover:border-primary/50 transition-colors h-full flex flex-col overflow-hidden bg-card/60 backdrop-blur-md shadow-xl relative"
             onClick={() => navigate(`/dashboard/ainulindale/sessioni/${session.id}`)}
          >
+            {isRoot && (
+               <button
+                  onClick={handleDelete}
+                  aria-label="Elimina sessione"
+                  title="Elimina sessione (Root)"
+                  className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/80 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors shadow-sm"
+               >
+                  <Trash2 size={14} />
+               </button>
+            )}
             <div className="h-2 bg-gradient-to-r from-primary to-primary/50 w-full" />
             <CardHeader className="pb-4">
                <CardTitle className="text-xl line-clamp-1">{session.title}</CardTitle>
