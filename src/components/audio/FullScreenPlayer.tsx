@@ -4,6 +4,7 @@ import { LocalTrack } from '../../types/audio';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, ChevronDown, ListPlus, Volume2, SlidersHorizontal, Moon, X } from 'lucide-react';
 import Visualizer from './Visualizer';
 import Equalizer from './Equalizer';
+import AddToSessionModal from './AddToSessionModal';
 import { getAudioEngine } from '../../utils/audioEngine';
 
 interface Props {
@@ -37,6 +38,7 @@ function formatTime(s: number) {
 export default function FullScreenPlayer(props: Props) {
   const { track, isPlaying, currentTime, duration, onClose } = props;
   const [showEQ, setShowEQ] = useState(false);
+  const [showAddToSession, setShowAddToSession] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const analyser = getAudioEngine().getAnalyser();
 
@@ -57,11 +59,13 @@ export default function FullScreenPlayer(props: Props) {
         </button>
         <span className="text-xs font-bold tracking-widest text-[#879b8f] uppercase">In Riproduzione</span>
         <div className="flex items-center gap-1">
-          <button className="p-2 text-slate-400 transition-colors opacity-50 cursor-not-allowed group relative">
+          <button
+            onClick={() => setShowAddToSession(true)}
+            className="p-2 text-slate-400 hover:text-[#FFA000] transition-colors"
+            aria-label="Aggiungi alla coda di un Coro"
+            title="Aggiungi questo brano alla coda di un Coro aperto"
+          >
             <ListPlus size={24} />
-            <div className="absolute top-full right-0 mt-2 bg-[#24352b] text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
-              Aggiungi alla coda della Sessione (Disponibile in fase 2)
-            </div>
           </button>
           <button
             onClick={props.onStop}
@@ -73,6 +77,12 @@ export default function FullScreenPlayer(props: Props) {
           </button>
         </div>
       </div>
+
+      <AddToSessionModal
+        isOpen={showAddToSession}
+        onClose={() => setShowAddToSession(false)}
+        track={track}
+      />
 
       <div className="flex-1 flex flex-col max-w-md mx-auto w-full justify-center">
         {/* Cover Art / Vinyl */}

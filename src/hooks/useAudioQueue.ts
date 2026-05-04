@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, functions } from '../lib/firebase';
-import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp, increment, getDocs } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import type { User } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { QueueItem, AudioSession } from '../types/audio';
 import { LocalTrack } from '../types/audio';
+import type { UserProfile } from '../types';
 
 export function getMaxQueuedFor(points: number, rules: AudioSession['rules'] | undefined) {
   // Legacy sessions or partially-loaded snapshots can have a missing `rules`
@@ -154,4 +156,58 @@ export function useAudioQueue(sessionId: string) {
   };
 
   return { queue, loading, proposeTrack, withdrawProposal, setItemStatus, reorderQueue };
+}
+
+// Standalone variant of proposeTrack used by surfaces that aren't already
+// scoped to a session via useAudioQueue (e.g. the Walkman / FullScreenPlayer
+// "Add to session" flow). Mirrors the in-hook proposeTrack body but reads
+// queue state via a one-shot getDocs instead of subscribing. Skips the
+// client-side duplicate check — the rule does not enforce it and the CF
+// enforceQueuePerUserLimit + the effectiveMaxAtCreate guard cover the
+// security-relevant invariants.
+export async function proposeTrackToSession(
+   track: LocalTrack,
+   session: AudioSession,
+   user: User,
+   userData: UserProfile
+): Promise<void> {
+   if (!user || !userData) throw new Error('Not authenticated');
+   const sessionId = session.id;
+
+   try {
+      const enforceLimit = httpsCallable<{ sessionId: string }, { ok: boolean; active: number; limit: number }>(
+         functions, 'enforceQueuePerUserLimit'
+      );
+      await enforceLimit({ sessionId });
+   } catch (e: any) {
+      if (e?.code === 'functions/resource-exhausted') {
+         throw new Error(e?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
+      }
+      console.warn('enforceQueuePerUserLimit unavailable, falling back', e);
+   }
+
+   const queueSnap = await getDocs(collection(db, 'audio_sessions', sessionId, 'queue'));
+   const positions = queueSnap.docs.map(d => (d.data() as QueueItem).position ?? 0);
+   const maxPos = positions.length > 0 ? Math.max(...positions) : 0;
+   const effectiveMaxAtCreate = getMaxQueuedFor(userData.points, session.rules);
+
+   const itemId = doc(collection(db, 'audio_sessions', sessionId, 'queue')).id;
+   const newItem: Partial<QueueItem> = {
+      proposedBy: user.uid,
+      proposedByName: user.displayName || 'Unknown',
+      proposedByPhotoURL: user.photoURL || '',
+      proposedAt: serverTimestamp(),
+      trackTitle: track.title,
+      trackArtist: track.artist,
+      trackAlbum: track.album || '',
+      trackDurationMs: track.durationMs,
+      localTrackId: track.id,
+      status: 'queued',
+      position: maxPos + 1,
+      effectiveMaxAtCreate,
+   };
+   if (track.coverDataUrl) {
+      newItem.trackCoverDataUrl = track.coverDataUrl;
+   }
+   await setDoc(doc(db, 'audio_sessions', sessionId, 'queue', itemId), newItem);
 }
