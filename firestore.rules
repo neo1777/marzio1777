@@ -18,8 +18,6 @@ service cloud.firestore {
                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved' &&
                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Root']); 
     }
-    function isOwner(authorId) { return isSignedIn() && request.auth.uid == authorId; }
-
     function getUserDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
