@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle } from 'lucide-react';
+import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GestioneArchivio from '../components/GestioneArchivio';
 import { Avatar } from '../components/ui';
+import { useUserGagliardetti } from '../hooks/useUserGagliardetti';
+import type { GagliardettoState } from '../lib/gagliardetti';
 
 export default function ProfiloPersonale() {
   const { user, profile, isAdminOrRoot } = useRBAC();
@@ -67,16 +69,20 @@ export default function ProfiloPersonale() {
   const baseAltitude = 728;
   const currentAltitude = baseAltitude + points;
 
-  // Badge Logic Gamification
-  const badges = [
-    { name: 'Il Villeggiante', desc: 'Hai iniziato a frequentare Marzio', thres: 10,  color: 'bg-amber-500/10 text-amber-600 border-amber-200' },
-    { name: 'Custode del Baule', desc: 'Molto attivo tra gli archivi antichi', thres: 50, color: 'bg-blue-500/10 text-blue-600 border-blue-200' },
-    { name: 'Lo Storico', desc: 'Stai riportando in vita il secolo scorso', thres: 100, color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
-    { name: 'Sindaco di Marzio', desc: 'Leggenda locale e grande organizzatore', thres: 150, color: 'bg-purple-500/10 text-purple-600 border-purple-200' }
-  ];
+  // Phase 2 §15.C: full Gagliardetti catalog computed from snapshot metrics
+  // (collection-group queries cached 1h in localStorage). Replaces the old
+  // hardcoded `badges` array that only fired on raw `points` thresholds.
+  const { states: gagliardetti, loading: gagliardettiLoading } = useUserGagliardetti(user?.uid, points);
 
-  const nextBadge = badges.find(b => points < b.thres);
-  const progressToNext = nextBadge ? (points / nextBadge.thres) * 100 : 100;
+  // For the "next milestone" progress bar at the top of the Gamification
+  // panel: pick the unearned gagliardetto with the smallest `target -
+  // current` gap so the user always sees the closest goal.
+  const nextGagliardetto: GagliardettoState | undefined = gagliardetti
+    .filter(g => !g.earned && g.def.target !== null)
+    .sort((a, b) => (a.def.target! - a.current) - (b.def.target! - b.current))[0];
+  const progressToNext = nextGagliardetto
+    ? Math.min(100, Math.round(nextGagliardetto.progress * 100))
+    : 100;
 
   return (
     <div className="max-w-3xl mx-auto h-full flex flex-col gap-6">
@@ -155,7 +161,7 @@ export default function ProfiloPersonale() {
                          <MapPin size={24} className="text-slate-200 dark:text-[#24352b]" />
                       </div>
                       
-                      {nextBadge ? (
+                      {nextGagliardetto ? (
                          <div className="mt-4">
                            <div className="flex justify-between text-xs font-bold font-sans mb-1 text-slate-600 dark:text-slate-400">
                                  <motion.span
@@ -165,34 +171,69 @@ export default function ProfiloPersonale() {
                                  >
                                     Punti esp: {points}
                                  </motion.span>
-                              <span>Prox Riconoscimento a: {nextBadge.thres}</span>
+                              <span title={nextGagliardetto.def.description}>Prox: {nextGagliardetto.def.emoji} {nextGagliardetto.def.name}</span>
                            </div>
                            <div className="w-full bg-slate-100 dark:bg-[#111814] h-3 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
                               <motion.div initial={{ width: 0 }} animate={{ width: `${progressToNext}%` }} transition={{ duration: 0.8, ease: "easeOut" }} className="h-full bg-gradient-to-r from-[#2D5A27] to-[#42a83a]"></motion.div>
                            </div>
-                           <p className="text-[10px] text-slate-500 mt-2 text-center italic">Partecipa per salire di quota...</p>
+                           <p className="text-[10px] text-slate-500 mt-2 text-center italic">{nextGagliardetto.current} / {nextGagliardetto.def.target} — Partecipa per salire di quota...</p>
                          </div>
                       ) : (
-                         <p className="text-sm font-bold text-amber-500 mt-4 text-center">Hai raggiunto la vetta della Piambello!</p>
+                         <p className="text-sm font-bold text-amber-500 mt-4 text-center">Hai conquistato tutti i gagliardetti!</p>
                       )}
                     </div>
 
-                    {/* Badges Earned */}
+                    {/* Gagliardetti — full catalog (earned + in-progress) */}
                     <div className="bg-white dark:bg-[#1a261f] rounded-2xl border border-slate-200 dark:border-[#24352b] p-6 space-y-3">
-                       <h4 className="text-sm font-bold uppercase tracking-widest text-[#8C928D] dark:text-slate-500 mb-2">Gagliardetti Ottenuti</h4>
-                       <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                          {badges.filter(b => points >= b.thres).length === 0 && (
-                             <p className="text-sm text-slate-400 italic text-center py-6">Nessun gagliardetto ancora ottenuto.</p>
-                          )}
-                          {badges.filter(b => points >= b.thres).reverse().map((b, i) => (
-                             <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border ${b.color}`}>
-                                <Award size={20} className="shrink-0" />
-                                <div>
-                                   <p className="font-bold text-sm tracking-tight">{b.name}</p>
-                                   <p className="text-[10px] font-medium opacity-80">{b.desc}</p>
+                       <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-bold uppercase tracking-widest text-[#8C928D] dark:text-slate-500">Gagliardetti</h4>
+                          {gagliardettiLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
+                       </div>
+                       <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                          {(['historical', 'games', 'audio'] as const).map(cat => {
+                             const inCat = gagliardetti.filter(g => g.def.category === cat);
+                             if (inCat.length === 0) return null;
+                             const earnedInCat = inCat.filter(g => g.earned);
+                             const label = cat === 'historical' ? 'Comunità' : cat === 'games' ? 'Campo dei Giochi' : "L'Ainulindalë";
+                             return (
+                                <div key={cat} className="space-y-2">
+                                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                      {label} · {earnedInCat.length}/{inCat.length}
+                                   </p>
+                                   {inCat.map(g => (
+                                      <div
+                                         key={g.def.id}
+                                         className={`flex items-center gap-3 p-2.5 rounded-xl border ${
+                                            g.earned
+                                               ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/40'
+                                               : 'bg-slate-50 dark:bg-[#111814] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-[#24352b] opacity-70'
+                                         }`}
+                                         title={g.def.description}
+                                      >
+                                         <span className={`text-2xl shrink-0 ${g.earned ? '' : 'grayscale opacity-60'}`} aria-hidden>{g.def.emoji}</span>
+                                         <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-xs tracking-tight truncate">{g.def.name}</p>
+                                            <p className="text-[10px] font-medium opacity-80 truncate">{g.def.description}</p>
+                                            {!g.earned && g.def.target !== null && (
+                                               <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full mt-1 overflow-hidden">
+                                                  <div
+                                                     className="h-full bg-[#2D5A27] dark:bg-[#42a83a] transition-[width]"
+                                                     style={{ width: `${Math.round(g.progress * 100)}%` }}
+                                                  />
+                                               </div>
+                                            )}
+                                         </div>
+                                         {g.earned && <Award size={16} className="shrink-0" />}
+                                         {!g.earned && g.def.target !== null && (
+                                            <span className="text-[10px] font-mono shrink-0 tabular-nums">
+                                               {g.current}/{g.def.target}
+                                            </span>
+                                         )}
+                                      </div>
+                                   ))}
                                 </div>
-                             </div>
-                          ))}
+                             );
+                          })}
                        </div>
                     </div>
                  </div>

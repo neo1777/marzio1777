@@ -35,6 +35,17 @@
 - ⏳ Cloud Functions tutte rimandate a Fase 2 (vedi sotto)
 - ✅ **Quiz auto-generators (4/5) — chiusi in Fase 2 (Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` resta `null` con commento esplicito (richiede reverse-geocoding via Nominatim + caching, deferred a Fase 2.5). Wizard `QuizHostCreateRound.tsx` step 3 ora usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)`. 14 test unit verdi.
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
+- ✅ **Gagliardetti pesati da snapshot — Fase 2 (Maggio 2026)**: catalogo
+  completo 13 gagliardetti in `src/lib/gagliardetti.ts` (4 historical
+  point-based + 4 giochi + 5 audio). Hook `useUserGagliardetti` calcola
+  metriche con 6 collection-group queries (cached 1h in localStorage).
+  ProfiloPersonale mostra earned + progress per ognuno, raggruppati per
+  categoria. Indici composti `COLLECTION_GROUP` aggiunti a
+  `firestore.indexes.json` per `participants`, `leaderboard`, `queue`,
+  `audio_sessions`, `answers`. 7 nuovi unit test. **Gagliardetti che
+  richiedono tracking continuo (5 risposte consecutive, 10 sessioni Host
+  senza disconnessioni, 5 skip consecutivi) deferiti a Fase 2.5 con
+  contatori denormalizzati su `users/{uid}.{metric}`.**
 - ⏳ **Per-user count delle proposte queue attive** rimandato a CF Fase 2:
   il DSL Firestore non può contare documenti, quindi la formula bonus è
   validata in rule sul valore *snapshot* `effectiveMaxAtCreate` ma il count

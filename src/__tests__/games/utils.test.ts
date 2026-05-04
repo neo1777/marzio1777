@@ -5,6 +5,7 @@ import { calculateQuizPoints } from '../../utils/scoring';
 import { validStatusTransition } from '../../utils/eventState';
 import { questionGenerators, isAutoGenerationAvailable } from '../../utils/quizGenerators';
 import type { Post } from '../../types';
+import { computeGagliardetti, GAGLIARDETTI, ZERO_METRICS } from '../../lib/gagliardetti';
 
 function fakePost(over: Partial<Post>): Post {
   return {
@@ -332,5 +333,62 @@ describe('Quiz Generators — Phase 2', () => {
       const sorted = [...decades].sort((a, b) => a - b);
       expect(decades).toEqual(sorted);
     });
+  });
+});
+
+describe('Gagliardetti — Phase 2 catalog', () => {
+  it('catalog has at least one entry per category', () => {
+     const cats = new Set(GAGLIARDETTI.map(g => g.category));
+     expect(cats.has('historical')).toBe(true);
+     expect(cats.has('games')).toBe(true);
+     expect(cats.has('audio')).toBe(true);
+  });
+
+  it('every gagliardetto definition has a positive integer target', () => {
+     for (const g of GAGLIARDETTI) {
+        expect(g.target).not.toBeNull();
+        expect(g.target).toBeGreaterThan(0);
+        expect(typeof g.metric).toBe('function');
+     }
+  });
+
+  it('zero-metrics user earns nothing', () => {
+     const states = computeGagliardetti(ZERO_METRICS);
+     expect(states.every(s => s.earned === false)).toBe(true);
+     expect(states.every(s => s.progress === 0)).toBe(true);
+  });
+
+  it('user with 200 points earns the 4 historical badges (10/50/150) + Memoria di Ferro pending', () => {
+     const states = computeGagliardetti({ ...ZERO_METRICS, points: 200 });
+     const villeggiante = states.find(s => s.def.id === 'villeggiante')!;
+     const custode = states.find(s => s.def.id === 'custode_baule')!;
+     const sindaco = states.find(s => s.def.id === 'sindaco_marzio')!;
+     const memoria = states.find(s => s.def.id === 'memoria_ferro')!;
+     expect(villeggiante.earned).toBe(true);  // 200 ≥ 10
+     expect(custode.earned).toBe(true);       // 200 ≥ 50
+     expect(sindaco.earned).toBe(true);       // 200 ≥ 150
+     expect(memoria.earned).toBe(false);      // 200 < 500
+     expect(memoria.progress).toBeCloseTo(0.4, 2);
+  });
+
+  it('Maestro del Coro requires 20 long DJ sessions', () => {
+     const states = computeGagliardetti({ ...ZERO_METRICS, djSessionsLong: 20 });
+     const maestro = states.find(s => s.def.id === 'maestro_coro')!;
+     expect(maestro.earned).toBe(true);
+  });
+
+  it('Cantore tracks tracksProposed regardless of whether they were played', () => {
+     const states = computeGagliardetti({ ...ZERO_METRICS, tracksProposed: 50, tracksPlayed: 0 });
+     const cantore = states.find(s => s.def.id === 'cantore')!;
+     expect(cantore.earned).toBe(true);
+     const subCreatore = states.find(s => s.def.id === 'sub_creatore')!;
+     expect(subCreatore.earned).toBe(false);
+  });
+
+  it('progress saturates at 1 even when current exceeds target', () => {
+     const states = computeGagliardetti({ ...ZERO_METRICS, points: 99999 });
+     const villeggiante = states.find(s => s.def.id === 'villeggiante')!;
+     expect(villeggiante.progress).toBe(1);
+     expect(villeggiante.earned).toBe(true);
   });
 });
