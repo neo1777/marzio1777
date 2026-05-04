@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3 } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRBAC } from '../hooks/useRBAC';
 import { Avatar } from './ui';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { SW_UPDATE_EVENT } from '../main';
 
 export default function Layout() {
   const { user, profile, isRoot, isAdminOrRoot, isPending, isGuest } = useRBAC();
@@ -62,6 +64,17 @@ export default function Layout() {
 
   const [pendingUsers, setPendingUsers] = useState(0);
 
+  // Manual fallback for the silent-when-hidden auto-update flow in main.tsx.
+  // If the user stays in foreground long enough that visibilitychange never
+  // fires (e.g. an open DJ session), we surface a non-intrusive pill so they
+  // can opt in to the new bundle whenever it's safe for them.
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  useEffect(() => {
+    const handler = () => setUpdateAvailable(true);
+    window.addEventListener(SW_UPDATE_EVENT, handler);
+    return () => window.removeEventListener(SW_UPDATE_EVENT, handler);
+  }, []);
+
   useEffect(() => {
      if (!user || !profile) return;
      if (isAdminOrRoot) {
@@ -84,7 +97,35 @@ export default function Layout() {
   
   return (
     <div className="h-[100dvh] bg-[#F7F5F0] dark:bg-[#0d1310] text-[#1a2e16] dark:text-[#e2e8f0] flex flex-col md:flex-row md:p-6 md:gap-6 overflow-hidden font-sans relative transition-colors duration-300">
-      
+
+      {/* Update available pill (manual fallback). Auto-reload-on-hidden in
+          main.tsx handles the silent path; this surfaces a button for users
+          who never go into background. */}
+      <AnimatePresence>
+        {updateAvailable && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 250 }}
+            role="status"
+            aria-live="polite"
+            className="fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-[#FFA000] text-[#0A0A0F] rounded-full pl-3 pr-1 py-1 shadow-lg shadow-[#C2410C]/30 border border-[#C2410C]/40 max-w-[calc(100vw-1rem)]"
+          >
+            <RefreshCw size={14} className="shrink-0" />
+            <span className="text-xs font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
+              Nuova versione disponibile
+            </span>
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-1 px-3 py-1 rounded-full bg-[#0A0A0F] text-[#FFA000] text-[11px] font-bold uppercase tracking-widest hover:bg-[#1a1a24] transition-colors"
+            >
+              Aggiorna
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-1/3 h-full bg-[#2D5A27]/5 dark:bg-[#2D5A27]/10 -z-10 rounded-l-full blur-3xl"></div>
 
