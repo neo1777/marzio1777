@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LocalTrack } from '../../types/audio';
 import { Play, MoreVertical, Heart, Trash2, Tag, ListPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AddToSessionModal from './AddToSessionModal';
 
 interface Props {
   track: LocalTrack;
@@ -20,6 +21,7 @@ function formatDuration(ms: number) {
 
 export default function TrackCard({ track, onPlay, onToggleFav, onDelete }: Props) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showAddToSession, setShowAddToSession] = useState(false);
 
   return (
     <div className="relative group bg-[#16161D] hover:bg-[#1a1a24] rounded-xl p-3 flex items-center gap-4 transition-colors border border-transparent hover:border-[#24352b]">
@@ -70,10 +72,17 @@ export default function TrackCard({ track, onPlay, onToggleFav, onDelete }: Prop
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a24] border border-[#24352b] rounded-xl shadow-xl shadow-black/50 z-50 overflow-hidden"
                 >
-                  <button className="w-full text-left px-4 py-3 text-sm text-[#F5F0E1] hover:bg-[#24352b] flex items-center gap-3 transition-colors opacity-50 cursor-not-allowed">
-                     <ListPlus size={16} /> Aggiungi a Playlist
+                  <button
+                     onClick={() => { setShowAddToSession(true); setShowMenu(false); }}
+                     className="w-full text-left px-4 py-3 text-sm text-[#F5F0E1] hover:bg-[#24352b] flex items-center gap-3 transition-colors"
+                  >
+                     <ListPlus size={16} /> Aggiungi a un Coro
                   </button>
-                  <button className="w-full text-left px-4 py-3 text-sm text-[#F5F0E1] hover:bg-[#24352b] flex items-center gap-3 transition-colors opacity-50 cursor-not-allowed">
+                  <button
+                     disabled
+                     title="Disponibile in fase 3"
+                     className="w-full text-left px-4 py-3 text-sm text-[#F5F0E1] hover:bg-[#24352b] flex items-center gap-3 transition-colors opacity-50 cursor-not-allowed"
+                  >
                      <Tag size={16} /> Modifica Tag
                   </button>
                   <div className="h-px bg-[#24352b] w-full my-1"></div>
@@ -86,6 +95,12 @@ export default function TrackCard({ track, onPlay, onToggleFav, onDelete }: Prop
           </AnimatePresence>
         </div>
       </div>
+
+      <AddToSessionModal
+        isOpen={showAddToSession}
+        onClose={() => setShowAddToSession(false)}
+        track={track}
+      />
 
     </div>
   );
