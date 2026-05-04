@@ -156,6 +156,19 @@ export default function FullScreenPlayer(props: Props) {
 
         {/* Bottom Bar: Visualizer / EQ / Volume */}
         <div className="mt-auto pb-4">
+           <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-[10px] font-bold tracking-widest text-[#879b8f] uppercase">
+                 {showEQ ? 'Equalizzatore (±12 dB)' : 'Spettro'}
+              </span>
+              <button
+                 onClick={() => setShowEQ(!showEQ)}
+                 className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-md transition-colors ${showEQ ? 'text-[#FFA000] bg-[#FFA000]/10' : 'text-[#879b8f] hover:text-white hover:bg-white/5'}`}
+                 aria-label={showEQ ? 'Mostra spettro' : 'Mostra equalizzatore'}
+              >
+                 {showEQ ? '▼ Spettro' : '▲ EQ'}
+              </button>
+           </div>
+
            {showEQ ? (
              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                <Equalizer onEQChange={(l, m, h) => getAudioEngine().setEQ(l, m, h)} />
@@ -164,23 +177,34 @@ export default function FullScreenPlayer(props: Props) {
              <Visualizer analyser={analyser} isPlaying={isPlaying} />
            )}
 
-           <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2 flex-1 max-w-[150px]">
-                 <Volume2 size={16} className="text-slate-500" />
-                 <input 
-                    type="range" 
-                    min="0" max="1" step="0.01" 
-                    value={props.volume} 
+           <div className="flex items-center justify-between mt-4 gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-1 min-w-[140px] max-w-[200px]">
+                 <Volume2 size={16} className="text-slate-400" />
+                 <input
+                    type="range"
+                    min="0" max="1" step="0.01"
+                    value={props.volume}
                     onChange={(e) => props.onVolume(parseFloat(e.target.value))}
+                    aria-label="Volume"
                     className="w-full h-1 bg-[#24352b] rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                  />
               </div>
-              <div className="flex gap-4">
-                 <button onClick={props.onToggleBgPlayback} className={`p-2 rounded-full transition-colors ${props.bgPlayback ? 'bg-[#2D5A27]/20 text-[#42a83a]' : 'text-slate-500 hover:text-white'}`} title="Background Playback (Keep awake)">
-                    <Moon size={18} />
+              <div className="flex gap-2">
+                 <button
+                    onClick={props.onToggleBgPlayback}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${props.bgPlayback ? 'bg-[#2D5A27]/20 text-[#42a83a] border border-[#42a83a]/40' : 'text-slate-300 hover:text-white border border-[#24352b] hover:border-slate-600'}`}
+                    title="Tieni lo schermo attivo durante la riproduzione"
+                    aria-label="Sfondo (mantieni schermo attivo)"
+                 >
+                    <Moon size={14} /> Sfondo
                  </button>
-                 <button onClick={() => setShowEQ(!showEQ)} className={`p-2 transition-colors ${showEQ ? 'text-[#FFA000]' : 'text-slate-500 hover:text-white'}`}>
-                    <SlidersHorizontal size={18} />
+                 <button
+                    onClick={() => setShowEQ(!showEQ)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${showEQ ? 'bg-[#FFA000]/20 text-[#FFA000] border border-[#FFA000]/40' : 'text-slate-300 hover:text-white border border-[#24352b] hover:border-slate-600'}`}
+                    title="Equalizzatore 3 bande (Low 320Hz / Mid 1kHz / High 3.2kHz, ±12 dB)"
+                    aria-label="Equalizzatore"
+                 >
+                    <SlidersHorizontal size={14} /> EQ
                  </button>
               </div>
            </div>
