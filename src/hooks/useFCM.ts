@@ -27,7 +27,15 @@ import { useAuth } from '../contexts/AuthContext';
  * private mode, browser senza FCM, VAPID key non configurata, ecc.
  */
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+// VAPID public key for FCM Web Push. Generated in Firebase Console →
+// Project Settings → Cloud Messaging → Web Push certificates. This is a
+// PUBLIC key (it gets served to every browser inside the bundle anyway —
+// the security model relies on the corresponding private key staying on
+// FCM's servers, not on this constant being secret). Hardcoding keeps
+// the build deterministic; previous attempts to inject via
+// import.meta.env from a GitHub Secret produced byte-identical bundles
+// (the secret value carried a stray newline that broke the .env parse).
+const VAPID_KEY = 'BHyT0BSVgOAC2Fk1OrYr-lCBtLOr2hO7cH-3gR4vlB0-JJ7rwOnFJkWNt1RrkFpVP_L_BRlmXhOKugTEHm80Mjs';
 const SW_PATH = `${import.meta.env.BASE_URL}firebase-messaging-sw.js`;
 
 export interface FCMState {
