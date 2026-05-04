@@ -13,6 +13,9 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        // Bundles the icon into the precache so first-install works offline
+        // (the previous DiceBear CDN reference required network on first run).
+        includeAssets: ['icon.svg'],
         manifest: {
           name: 'marzio1777',
           short_name: 'marzio1777',
@@ -23,19 +26,19 @@ export default defineConfig(({mode}) => {
           orientation: 'portrait',
           icons: [
             {
-              src: 'https://api.dicebear.com/7.x/identicon/svg?seed=marzio1777',
+              src: 'icon.svg',
               sizes: '192x192',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
+              purpose: 'any maskable',
             },
-               {
-              src: 'https://api.dicebear.com/7.x/identicon/svg?seed=marzio1777',
+            {
+              src: 'icon.svg',
               sizes: '512x512',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
-            }
-          ]
-        }
+              purpose: 'any maskable',
+            },
+          ],
+        },
       })
     ],
     define: {

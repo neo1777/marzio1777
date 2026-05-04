@@ -277,20 +277,23 @@ In MVP, each round's composition happens in **guided-manual** mode through a seq
 
 Auto-save draft in `localStorage` with key `marzio1777:quiz-draft:{eventId}` for resilience to accidental refresh during composition.
 
-### 5.4 Real-time Architecture
+### 5.4 Real-time Architecture (post-B7, May 2026)
 
-**Host-driven** pattern with sync via Firestore subcollection.
+**Host-driven for sharing, owner-side for scoring** pattern, with sync via Firestore subcollection.
 
 1. Host presses "Launch Round!" at wizard end
 2. Creates `quizRounds/{roundId}` with `startedAt: serverTimestamp()`, `endsAt: startedAt + answerTime`, `sourcePostId` populated
 3. `correctIndex` written **exclusively** in `quizRounds/{roundId}/secret/correctness` (vault)
 4. All clients listen to `quizRounds` with `onSnapshot` → simultaneously render the question
-5. Each player creates `answers/{userId}` (rule: only before `endsAt`, only once)
+5. Each player creates `answers/{userId}` (rule: only before `endsAt`, only once) with `pointsAwarded: 0` placeholder
 6. Upon timer expiration (or when all have answered), Host presses "Reveal"
-7. Copy of `correctIndex` from `secret/` to parent doc + sets `revealedAt`
+7. `revealRound(eventId, roundId)`: reads `correctIndex` from `secret/`, performs a single update on the parent doc (`status: 'revealed'`, `revealedAt: serverTimestamp()`, `correctIndex`)
 8. Rules unblock reading of `correctIndex` and all `answers/*`
-9. Animation: response distribution bars, confetti on correct, leaderboard updates
-10. Loop to step 1 until `roundsPlayed === totalRounds` or host stops
+9. **Owner-side claim**: each client, via `useEffect` on `round.status === 'revealed'`, runs `claimMyAnswerPoints` — a local `runTransaction` that recomputes `pointsAwarded` from `correctIndex + scoringMode + elapsedMs + maxPointsPerRound × eventMultiplier`, updates `answers/{me}.pointsAwarded`, and if > 0 calls `increment` on `leaderboard/{me}` and `users/{me}.points`. Idempotency via `localStorage[marzio1777:quiz-claimed:{roundId}:{uid}]`.
+10. Animation: response distribution bars, confetti on correct, leaderboard updates in real-time as clients claim
+11. Loop to step 1 until `roundsPlayed === totalRounds` or host stops
+
+**Split rationale** (B7, May 2026): the previous version had the host running `tx.update(users/{otherUid}, ...)` for every participant with a correct answer. The `users.update` rule legitimately allows owner-side increment only, so that flow was rejected. The split flips the pipeline: host publishes the truth (public correctIndex), each client verifies it and self-credits. No host bottleneck, no race on concurrent sessions, anti-cheat unchanged (the `answers.update` rule re-derives correctness from the public correctIndex and caps `pointsAwarded`).
 
 ### 5.5 Decay Scoring
 
@@ -452,7 +455,7 @@ Philosophy: **trust but verify lite**. Village app, closed whitelisted community
 14. **The Teleporter** — capture without being in radius. *MVP limitation*: Firestore rule cannot do Haversine, audit log `collectedAtLat/Lng` + Cloud Function in Phase 2.
 15. **The Phantom Host** — non-host writing to `secret/correctness`. Blocked.
 16. **The Self-Crowning** — participant self-promoting to host OR writing an "alien" `currentHostId`. Blocked: rule isolates `affectedKeys()` and verifies via `exists()` + `get()` that the successor is a joined participant.
-17. **The Score Forger** — `pointsAwarded: 9999`. Blocked by rule.
+17. **The Score Forger** — `pointsAwarded: 9999`. Blocked by rule, **further hardened in B7** with triple defensive cap (round configuration, +1000/transaction on `users.points`, monotonicity).
 18. **The Late Submitter** — answer after `endsAt`. Blocked by rule.
 19. **The Ghost Capture** — capture of already-collected item. Resolved by `runTransaction`.
 20. **The Speed Demon** — DevTools GPS spoofing. Tolerated (community-level trust).
@@ -498,14 +501,14 @@ A round's `correctIndex` is NEVER written directly to the parent doc before reve
 
 Accepted compromise: the host sees the correct answer before others. Unavoidable without Cloud Functions. Transparent UX: red banner "The Host views the correct answer".
 
-### 7.4 Score Validation
+### 7.4 Score Validation (post-B7, May 2026)
 
-The rule on `answers.update` locks down `pointsAwarded`:
-- Valid range: `[0, maxPointsPerRound]`
-- If `pointsAwarded > 0`, then `selectedIndex == correctIndex` (verifiable post-reveal because `correctIndex` is now public)
-- Only host triad can write it
+The rule on `answers.update` locks down `pointsAwarded` on both authorized paths:
+- **Self-claim path** (preferred): `answerUserId == request.auth.uid && isEventParticipant(eventId)`. **Host-triade override** path (Root recovery): `currentHostId | organizer | Root`.
+- Common to both: `revealedAt != null`, `affectedKeys().hasOnly(['pointsAwarded'])`, `pointsAwarded ∈ [0, photoQuizConfig.maxPointsPerRound × pointsMultiplier]` (cap aligned to actual round configuration, no longer just `pointsMultiplier × 100` as pre-B7), and `selectedIndex == correctIndex` when `pointsAwarded > 0`.
+- Triple defensive cap: `answers.update` rule (round configuration cap), `users.update` rule (≤+1000/transaction), and `users.points` monotonic increment.
 
-A cheat bypassing the client and writing `pointsAwarded: 1000000` is rejected at DB level.
+A cheat bypassing the client and writing `pointsAwarded: 1000000` is rejected at DB level on any of the three caps. Same outcome for someone trying to write another participant's `pointsAwarded` (rule blocks via `answerUserId == request.auth.uid`).
 
 ### 7.5 Known Limitations (and Accepted)
 

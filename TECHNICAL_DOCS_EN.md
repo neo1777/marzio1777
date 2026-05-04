@@ -290,10 +290,13 @@ The platform uses a Zero-Trust architecture natively applied via Firestore rules
    - Any `create`/`update` passes through validation helpers enforcing correct field writes.
    - For `game_events`, a function `validStatusTransition(old, new)` explicitly codifies allowed transitions (draft→scheduled→lobby→active→completed, with aborted as emergency exit from any pre-completed state).
    - For `items.update` (capture): validated that `resource.data.status == 'spawned'`, `request.resource.data.collectedBy == request.auth.uid`, and that `lat/lng/points/templateId` are unchanged. The actual geographic distance check (Haversine) is delegated to a Phase 2 Cloud Function — known limitation, capture audit log includes `collectedAtLat/Lng` for ex-post investigation.
-   - For `quizRounds/answers`: rules ensure `selectedIndex ∈ [0..3]`, `userId == request.auth.uid`, `submittedAt < endsAt`, and lock down `pointsAwarded` with valid range `[0, maxPointsPerRound]` and check `selectedIndex == correctIndex` (executable in rules because `correctIndex` is already public post-reveal).
+   - For `quizRounds/answers`: rules ensure `selectedIndex ∈ [0..3]`, `userId == request.auth.uid`, `submittedAt < endsAt`. For the `update` (`pointsAwarded` assignment), the **preferred path is owner-side self-claim post-reveal** (`answerUserId == request.auth.uid && isEventParticipant`), with host-triade override for Root recovery: the rule re-derives correctness from the public `correctIndex` and caps `pointsAwarded ≤ photoQuizConfig.maxPointsPerRound × pointsMultiplier` (default `100 × 1 = 100`). See §4.8 for the client flow.
    - For `game_events.update` with `currentHostId` change: the rule isolates the diff with `affectedKeys()`, verifies `request.auth.uid` is one of `oldCurrentHostId | organizerId | Root`, **and verifies via `exists()` + `get()` that the new host is a participant with `status == 'joined'`**. A malicious host cannot write `currentHostId = "alien-uid"` to freeze the quiz.
    - For `game_events.update` when `status == 'completed'`: the `finalLeaderboard` field is declared immutable via clause `(resource.data.status != 'completed' || !affectedKeys().hasAny(['finalLeaderboard']))`. Allows the write only in the `active → completed` transition (because in that moment `resource.data.status == 'active'`).
-   - For `audio_sessions` and sub-collections: analogous rules — see `security_spec_EN.md` §1.3 and §2.3 for the full audio invariants and attack vector catalog.
+   - For `game_events/{}/leaderboard.write` and `game_events/{}/participants.delete`: ownership-tight (`userId == request.auth.uid` or organizer/Root). Pre-B7 both rules were "any approved user", letting a participant zero out a rival's leaderboard or kick them off the participants list.
+   - For `users.update`: owner-side `points` increment allowed up to **+1000/transaction** (was +50 pre-B7, undersized for the `pointsMultiplier ∈ [0.5, 5.0]` range). The cap still blocks catastrophic forging (`points: 9999999`) while leaving room for legitimate capture/quiz/audio rewards scaled by the event multiplier. Real anti-cheat lives in the rule of the action that earns the points.
+   - For `audio_sessions/{}/queue.update`: `affectedKeys().hasOnly(['status', 'position', 'transferStartedAt', 'transferCompletedAt', 'transferFailureReason', 'pointsAwarded'])` + explicit immutability of `proposedBy`/`localTrackId`/`trackTitle`/`trackArtist`/`trackDurationMs` (defense-in-depth). Cap `pointsAwarded ∈ [0, 50]`. This closes Sporche #25/#26 "Theme Hijacker" 100% (B7).
+   - For `audio_sessions` and sub-collections: analogous rules — see `security_spec_EN.md` §1.3 and §2.3 for the full audio invariants and attack vector catalog. The `validQueueStatusTransition` state machine now enforces the spec'd `queued → transferring` flow (no shortcut to `ready`/`failed`).
 
 ---
 
@@ -352,13 +355,15 @@ Real-time multiplayer photo-trivia with host-driven sync via Firestore.
 **Architecture:**
 - The host (default `organizerId`, optionally rotating) creates a new `quizRounds/{roundId}` with `startedAt: serverTimestamp()` and `endsAt: startedAt + answerTimeMs`. `correctIndex` is written **exclusively** in `quizRounds/{roundId}/secret/correctness`, accessible only by the host triad.
 - Participants, via `onSnapshot` on `quizRounds`, receive the round in real-time. They render the fullscreen photo + 4 shuffled options (option positions are identical for everyone because seeded by `roundId`).
-- Each participant creates their own `answers/{userId}` (rule: only before `endsAt`, only once).
-- Upon timer expiration, the host presses "Reveal": copies `correctIndex` from `secret/` to the parent doc and sets `revealedAt`. The rule unblocks reading of `correctIndex` and aggregated reads of `answers/*`.
-- Client-side scoring (`utils/scoring.ts`):
-  - `fixed mode`: 10pt correct, 0pt wrong
-  - `decay mode`: `points = max(0, round(maxPoints × (1 - timeMs/maxTimeMs)))` with floor at 1pt minimum if correct within time
-- The rule on `answers.update` validates `pointsAwarded` in `[0, maxPointsPerRound]` range and enforces `selectedIndex == correctIndex` when `pointsAwarded > 0` (anti-cheat on score).
-- Atomic transaction for: writing `pointsAwarded` to `answers/{userId}` + `increment(points)` on `leaderboard/{userId}` + `increment(points × pointsMultiplier)` on `users/{userId}.points`.
+- Each participant creates their own `answers/{userId}` (rule: only before `endsAt`, only once) with `pointsAwarded: 0` placeholder.
+- Upon timer expiration, the host calls `revealRound(eventId, roundId)`: reads `correctIndex` from `secret/` and performs a single update on the parent doc (`status: 'revealed'`, `revealedAt: serverTimestamp()`, `correctIndex`). The rule unblocks reading of `correctIndex` and aggregated reads of `answers/*`.
+- **Owner-side scoring post-reveal** (`claimMyAnswerPoints` in `usePhotoQuiz.ts`): every participant, via `useEffect` on `round.status === 'revealed'`, runs a local `runTransaction` that:
+  - re-reads their own `answers/{me}` and computes `pointsAwarded` via `calculateQuizPoints(scoringMode, isCorrect, elapsedMs, windowMs, maxPointsPerRound) × eventMultiplier`
+  - updates `answers/{me}.pointsAwarded`
+  - if > 0, `set merge` on `leaderboard/{me}` with `increment(pts)` and `update` on `users/{me}.points` with `increment(pts)`
+  - idempotency via `localStorage[marzio1777:quiz-claimed:{roundId}:{uid}]` — claim is single-shot per round-user
+- The rule on `answers.update` accepts both self-claim (`answerUserId == request.auth.uid && isEventParticipant`) and host-triade override, and in both cases: requires `revealedAt != null`, validates `pointsAwarded ∈ [0, photoQuizConfig.maxPointsPerRound × pointsMultiplier]`, enforces `selectedIndex == correctIndex` when `pointsAwarded > 0`, and caps the increment on `users/{me}.points` to +1000/transaction (see §3).
+- **Split rationale** (B7, May 2026): the previous version (`evaluateRoundAnswers`) had the host running `tx.update(users/{otherUid}, { points: increment(...) })` for every participant with a correct answer. The `users.update` rule legitimately allows only the owner to mutate their own `points` doc, so that flow was rejected in production. Self-claim flips the pipeline: the host publishes the truth (public correctIndex), each client verifies it and credits themselves. No host bottleneck, no concurrent-session race, anti-cheat unchanged (the rule re-derives everything from the public correctIndex).
 
 **Question composition — 4-step UI Wizard** (`QuizHostCreateRound.tsx`):
 - Step 1: choose source post from grid of public `posts` (with decade/author filters + search)
@@ -542,6 +547,14 @@ Mode 'manual': same engine but stop after each track, wait DJ "Play Next" input.
 - If `rules.allowDuplicates == false`, no active duplicates
 - Metadata and `localTrackId` immutable after create
 
+**Constraints on `queue.update` (B7 hardening, May 2026)**:
+- Only `isSessionDJ(sessionId)` can call update
+- `affectedKeys().hasOnly(['status', 'position', 'transferStartedAt', 'transferCompletedAt', 'transferFailureReason', 'pointsAwarded'])` — any other field is rejected
+- Redundant defense-in-depth: `proposedBy`/`localTrackId`/`trackTitle`/`trackArtist`/`trackDurationMs` compared explicitly to `existing()` and rejected if changed
+- `validQueueStatusTransition(oldStatus, newStatus)` enforces the `queued → transferring → ready/failed → playing/skipped → played` flow (no shortcut from `queued` directly to `ready`)
+- `pointsAwarded ∈ [0, 50]` when modified — coherent with `BASE_TRACK_POINTS × eventMultiplier_max = 2 × 5 = 10` plus margin
+- Result: 100% closure of Sporche #25 and #26 (Theme Hijacker, also DJ variant)
+
 ### 4.14 L'Ainulindalë — P2P Transfer (WebRTC)
 
 Pattern **Firestore-as-signaling**: no dedicated WebSocket, no additional backend. SDP offer/answer and ICE candidates written as Firestore docs in `audio_sessions/{sessionId}/signaling/{userId}`, listened with `onSnapshot`.
@@ -677,6 +690,23 @@ No npm dependency added — the delta is pure React code + local TypeScript util
 ---
 
 ## 9. 🔄 Recent Cleanup & Migrations
+
+**Batch B7 — Post-audit hardening (May 2026, after the B7 audit):**
+- **`users.points` increment cap**: raised from +50 to +1000 per owner-side transaction. Pre-fix the cap was incoherent with the multiplier range 0.5–5.0 (e.g. `closeSession` with multiplier 5x wanted to credit 75pt, rejected). The new cap covers the legitimate worst case while still blocking catastrophic forging.
+- **Owner-side quiz scoring split**: `evaluateRoundAnswers` (host-driven, broke `users.update` rule because it wrote `users/{other}.points`) replaced by `revealRound` (host: publishes correctIndex + revealedAt) + `claimMyAnswerPoints` (client: each participant runs their own scoring transaction with localStorage idempotency). See §4.8.
+- **Sporche #25/#26 "Theme Hijacker" closed 100%**: `audio_sessions/{}/queue.update` now has explicit `affectedKeys.hasOnly([...])` + immutability of `proposedBy`/`localTrackId`/`trackTitle`/`trackArtist`/`trackDurationMs` as defense-in-depth. Cap `pointsAwarded ≤ 50`.
+- **Tightened `validQueueStatusTransition`**: removed the `queued → ready`/`queued → failed` shortcuts not foreseen by spec; flow now follows `queued → transferring → ready/failed → playing/skipped → played` with `failed → skipped` as cleanup path.
+- **Quiz `pointsAwarded` cap**: was `pointsMultiplier × 100` (default 100, with multiplier 5 → 500), now `photoQuizConfig.maxPointsPerRound × pointsMultiplier` (default `100 × 1 = 100`). New optional field `photoQuizConfig.maxPointsPerRound` (backward-compat with default 100 in rule).
+- **Tight leaderboard ownership**: `game_events/{}/leaderboard.write` now requires `userId == request.auth.uid || isEventOrganizer || isRoot`. Pre-fix any participant could zero out a rival's leaderboard.
+- **Tight participants delete ownership**: `game_events/{}/participants.delete` now allowed only to `userId == request.auth.uid || isEventOrganizer || isRoot`.
+- **`advanceGameEventStatus` race-safety**: the `→ completed` branch now wraps the write in `runTransaction` with a re-check of `status` after fetching the leaderboard. Two clients concurrently completing the event won't both rewrite `finalLeaderboard` (one is no-op).
+- **`advanceQuizRound` no-op cleanup**: `status: 'active'` is now written only if different from the current one.
+- **`AuthContext` profile listener leak**: `unsubscribe` now managed via `useRef` for guaranteed detach across `auth.onAuthStateChanged` transitions.
+- **WebRTC signaling timestamp**: ICE `addedAt` and signaling docs `createdAt`/`expireAt` now use Firestore `Timestamp` (was `Date.now()` epoch number).
+- **PWA icons offline-safe**: replaced remote DiceBear SVGs with `public/icon.svg` inline (~400 bytes). PWA installs offline on first run.
+- **`scoring.calculateQuizPoints` universal floor**: a correct in-window answer is now always ≥ 1pt (was 0 for `9999/10000` in the default `maxPoints=10` because `Math.floor(10 × 0.0001) = 0`).
+- **Removed dead code**: `setRoundStatus`, `configureQuizRound` orphaned since `QuizHostCreateRound` writes the docs directly.
+- **Extended rule tests**: 6 new `describe` blocks in `firestore.rules.test.ts` (cap 1000, answers self-claim, leaderboard ownership, participants delete, finalLeaderboard immutability) and 1 in `firestore.rules.audio.test.ts` (queue immutable metadata + status transition). `audioEngine.test.ts` rewritten with 8 concrete checks (vs 4 smoke `expect(true).toBe(true)`).
 
 **Firebase v12 migration (May 2026):** replacement of deprecated `enableIndexedDbPersistence(db)` with new API `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`. Transparent replacement, no exposed API changes. Console clean of deprecation warning.
 

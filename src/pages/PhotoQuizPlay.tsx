@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameEvent, useGameLeaderboard, useGameParticipants } from '../hooks/useGameEvents';
-import { 
-   useQuizRounds, 
-   useCurrentRound, 
-   useRoundAnswers, 
-   submitQuizAnswer, 
-   advanceQuizRound, 
-   setRoundStatus, 
-   evaluateRoundAnswers 
+import {
+   useQuizRounds,
+   useCurrentRound,
+   useRoundAnswers,
+   submitQuizAnswer,
+   advanceQuizRound,
+   revealRound,
+   claimMyAnswerPoints,
 } from '../hooks/usePhotoQuiz';
 import { Loader2, Users, CheckCircle, Clock, Trophy, Crown } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
@@ -111,15 +111,31 @@ export default function PhotoQuizPlay() {
 
    const handleReveal = async () => {
       if (!eventId || !round) return;
-      const { correctIndex } = await evaluateRoundAnswers(
-         eventId, 
-         round.id, 
-         event.photoQuizConfig?.answerTimeSeconds || 20, 
-         100 * (event.pointsMultiplier || 1),
-         'decay' // Ensure decay scoring
-      );
-      await setRoundStatus(eventId, round.id, 'revealed', correctIndex);
+      // Lift correctIndex from the secret to the public round doc; scoring
+      // is then claimed owner-side by each participant via the effect below.
+      await revealRound(eventId, round.id);
    };
+
+   // Owner-side scoring claim: once the round is revealed, each participant
+   // commits their own pointsAwarded + leaderboard + global points in one
+   // transaction. Idempotent via a localStorage flag inside the helper.
+   useEffect(() => {
+      if (!eventId || !round || !user || !profile) return;
+      if (round.status !== 'revealed') return;
+      const myAns = answers.find(a => a.userId === user.uid);
+      if (!myAns) return; // didn't answer — nothing to claim
+      if ((myAns.pointsAwarded ?? 0) > 0) return; // already credited
+
+      claimMyAnswerPoints({
+         eventId,
+         roundId: round.id,
+         userId: user.uid,
+         displayName: profile.displayName || 'Anonimo',
+         scoringMode: (event?.photoQuizConfig?.scoringMode as 'fixed' | 'decay') || 'decay',
+         maxPointsPerRound: event?.photoQuizConfig?.maxPointsPerRound ?? 10,
+         eventMultiplier: event?.pointsMultiplier ?? 1,
+      });
+   }, [round?.status, round?.id, user?.uid, profile?.displayName, answers]);
 
    // Player Handlers
    const handleSelectAnswer = async (index: number) => {

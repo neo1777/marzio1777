@@ -137,20 +137,26 @@ describe('Geo Utils — edge cases', () => {
 
 describe('Scoring Utils — edge cases', () => {
   it('decay floors to 1pt at the maxTimeMs boundary', () => {
-     // The spec promises a 1pt floor "if correct in time"; the current
-     // implementation only triggers that floor exactly at timeMs >=
-     // maxTimeMs, not for intermediate values like 9999/10000 (which
-     // round down to 0). This test pins the actual behaviour so future
-     // refactors don't silently regress; the spec/code divergence is
-     // tracked separately.
      expect(calculateQuizPoints('decay', true, 10000, 10000)).toBe(1);
   });
 
+  it('decay floors to 1pt for any correct answer within the window', () => {
+     // Spec contract: a correct in-window answer is *never* worth 0,
+     // even when the player just barely makes it. Pre-B7 the code
+     // returned 0 for 9999/10000 because floor(10 * 0.0001) = 0.
+     expect(calculateQuizPoints('decay', true, 9999, 10000)).toBe(1);
+     expect(calculateQuizPoints('decay', true, 9000, 10000)).toBe(1);
+  });
+
   it('decay overtime stays at the 1pt floor', () => {
-     // Anything past the deadline collapses to the same 1pt floor
-     // (the rule blocks late submissions server-side; this is the
-     // client-only sanity result).
      expect(calculateQuizPoints('decay', true, 12000, 10000)).toBe(1);
+  });
+
+  it('decay still rewards speed in the meaty middle', () => {
+     // Floor doesn't squash the gradient: at half the window we still
+     // get half the points (modulo flooring).
+     expect(calculateQuizPoints('decay', true, 5000, 10000)).toBe(5);
+     expect(calculateQuizPoints('decay', true, 1000, 10000)).toBe(9);
   });
 });
 

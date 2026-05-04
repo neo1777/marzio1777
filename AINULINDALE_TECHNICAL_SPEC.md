@@ -611,12 +611,15 @@ Stesso engine ma:
 - Se `session.rules.allowDuplicates == false`, non esiste già un altro item con stesso `trackTitle + trackArtist` in stato non-`played`/non-`skipped`
 - `position` viene assegnato dal client come `max(positions) + 1` ma **validato** dalla rule che sia >= 0
 
-**Vincoli su `queue.update`:**
+**Vincoli su `queue.update`** (post-B7, Maggio 2026):
 
-- Solo il DJ può cambiare `status` da queued/ready a `playing` o `skipped`
-- Solo il DJ può modificare `position` (riordino)
+- Solo il DJ può chiamare `update` (`isSessionDJ(sessionId)`)
+- `affectedKeys().hasOnly(['status', 'position', 'transferStartedAt', 'transferCompletedAt', 'transferFailureReason', 'pointsAwarded'])` — qualsiasi altro campo viene respinto
+- Defense-in-depth ridondante: `proposedBy`, `localTrackId`, `trackTitle`, `trackArtist`, `trackDurationMs` confrontati esplicitamente con `existing()` (in caso di future-relaxation di `affectedKeys`)
+- `validQueueStatusTransition`: `queued → transferring | skipped`, `transferring → ready | failed`, `ready → playing | skipped`, `playing → played | skipped`, `failed → skipped`. **Non più ammesso lo shortcut `queued → ready/failed`** (era una rilassatezza pre-B7 non prevista dalla spec).
+- `pointsAwarded ∈ [0, 50]` quando modificato
 - Solo il proposer può fare `delete` del proprio item se `status == 'queued'` (ritirare la propria proposta)
-- `proposedBy`, `localTrackId`, metadati traccia sono **immutabili dopo create**
+- Risultato: chiusura al 100% di Sporca #25 e #26 "Theme Hijacker"
 
 ### Partecipazione alla sessione
 
@@ -886,7 +889,7 @@ function validQueueStatusTransition(oldStatus, newStatus, isDJ) {
 
 23. **The Phantom DJ** — partecipante che cerca di scrivere su `audio_sessions` con `djId == self.uid` ma non è Admin/Root. Bloccato.
 24. **The Queue Stuffer** — utente che cerca di mettere 100 tracce in coda bypassando il limite. **Bloccato a livello formula**: la rule `queue.create` valida che `incoming().effectiveMaxAtCreate == effectiveMaxQueued(sessionId)`, dove l'helper rule riproduce in DSL `rules.maxQueuedPerUser + int(getUserDoc().points / 100) * rules.bonusPerHundredPoints`. Chiude il forge del valore. **Il count effettivo dei doc attivi resta CF Fase 2** (il DSL Firestore non può contare documenti — vedi `MIGRATION.md`, callable `enforceQueuePerUserLimit`).
-25. **The Theme Hijacker** — utente che cerca di modificare `proposedBy` o `localTrackId` di un item creato da altri. Bloccato.
+25. **The Theme Hijacker** — utente che cerca di modificare `proposedBy`, `localTrackId` o i metadati traccia di un item creato da altri. **Bloccato al 100% (B7, Maggio 2026)** via `affectedKeys.hasOnly([status, position, transferStartedAt, transferCompletedAt, transferFailureReason, pointsAwarded])` + check espliciti `incoming().proposedBy == existing().proposedBy` (e analoghi) come defense-in-depth. Pre-B7 la rule controllava solo lo status; il DJ poteva tecnicamente riscrivere i metadati. Test: `firestore.rules.audio.test.ts` casi "DJ cannot rewrite proposedBy/trackTitle/localTrackId".
 26. **The Player Ghost** — partecipante che modifica `currentQueueItemId` o `currentTrackStartedAt` su `audio_sessions`. Bloccato (solo DJ).
 27. **The Resurrectionist (audio variant)** — write su `audio_sessions/{closed}` o sui suoi `queue/*` post-close. Bloccato.
 28. **The Mass Skipper** — DJ malizioso che skippa tutte le tracce di un partecipante per dispetto. *Tollerato per design* (community-level trust); il proposer vede `skipped` con timestamp e può segnalare al Root.

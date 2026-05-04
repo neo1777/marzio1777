@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { doc, setDoc, onSnapshot, Unsubscribe, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, Unsubscribe, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 
 const STUN_SERVERS = {
   iceServers: [
@@ -77,7 +77,7 @@ export class WebRTCTransfer {
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
               sdpMLineIndex: event.candidate.sdpMLineIndex,
-              addedAt: Date.now()
+              addedAt: Timestamp.now()
             }) 
          }).catch(() => {
             // fallback if doc not exists
@@ -85,7 +85,7 @@ export class WebRTCTransfer {
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
               sdpMLineIndex: event.candidate.sdpMLineIndex,
-              addedAt: Date.now()
+              addedAt: Timestamp.now()
             }] }, { merge: true });
          });
       }
@@ -111,9 +111,9 @@ export class WebRTCTransfer {
         sdp: offer.sdp,
         type: offer.type,
         queueItemId: this.queueItemId,
-        createdAt: Date.now()
+        createdAt: Timestamp.now(),
       },
-      expireAt: Date.now() + 60000
+      expireAt: Timestamp.fromMillis(Date.now() + 60_000),
     }, { merge: true });
     
     this.subscribeToSignaling();
@@ -130,14 +130,14 @@ export class WebRTCTransfer {
                candidate: event.candidate.candidate,
                sdpMid: event.candidate.sdpMid,
                sdpMLineIndex: event.candidate.sdpMLineIndex,
-               addedAt: Date.now()
+               addedAt: Timestamp.now()
             })
          }).catch(() => {
             setDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId), { proposerCandidates: [{
                candidate: event.candidate.candidate,
                sdpMid: event.candidate.sdpMid,
                sdpMLineIndex: event.candidate.sdpMLineIndex,
-               addedAt: Date.now()
+               addedAt: Timestamp.now()
             }] }, { merge: true });
          });
       }
@@ -169,8 +169,8 @@ export class WebRTCTransfer {
       proposerAnswer: {
         sdp: answer.sdp,
         type: answer.type,
-        createdAt: Date.now()
-      }
+        createdAt: Timestamp.now(),
+      },
     }, { merge: true });
     
     this.subscribeToSignaling();

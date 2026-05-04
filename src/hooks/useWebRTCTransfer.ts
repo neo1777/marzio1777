@@ -59,8 +59,11 @@ export function useWebRTCTransferProposer(sessionId: string) {
          if (data.sessionId !== sessionId) return;
          
          // DJ has sent an offer for a queue item. We need to answer and send the blob.
-         const offerTs = data.djOffer.createdAt;
-         if (Date.now() - offerTs > 60000) return; // stale offer
+         // createdAt is a Firestore Timestamp now (was epoch ms before B7 hardening).
+         const offerTsMs: number = typeof data.djOffer.createdAt?.toMillis === 'function'
+            ? data.djOffer.createdAt.toMillis()
+            : (typeof data.djOffer.createdAt === 'number' ? data.djOffer.createdAt : 0);
+         if (offerTsMs > 0 && Date.now() - offerTsMs > 60_000) return; // stale offer
          
          if (isTransferring) return; // already handling
          setIsTransferring(true);

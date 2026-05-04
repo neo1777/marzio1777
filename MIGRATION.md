@@ -1,25 +1,37 @@
 # MIGRATION — Marzio1777
 
-**Stato MVP (Maggio 2026):**
+**Stato MVP (Maggio 2026, post-batch B7):**
 - ✅ Il Campo dei Giochi (Concept A — Caccia, Concept B — Quiz) funzionante
 - ✅ L'Ainulindalë Fase 1 (Biblioteca personale + Walkman) funzionante
 - ✅ L'Ainulindalë Fase 2 (Sessioni del Coro + WebRTC P2P transfer) funzionante
-- ✅ Correzioni post-audit applicate: `collectedAtLat/Lng` audit log,
+- ✅ Correzioni post-audit B1–B6 applicate: `collectedAtLat/Lng` audit log,
   `finalLeaderboard` embedded immutable, validazione `currentHostId`
-  con `exists()+get()`, Firebase v12 `persistentLocalCache`
-  (ora reale, via `initializeFirestore` + `persistentMultipleTabManager`),
-  Wake Lock `featurePolicy` hardening (hook condiviso `useWakeLock`),
-  container Leaflet stabile con `MapController.invalidateSize()` debounce 200ms,
-  marker Leaflet inline DivIcon SVG (no CDN esterno, PWA offline-safe)
-- ✅ Hardening rule audio: queue.create valida `effectiveMaxAtCreate` contro
-  `effectiveMaxQueued(sessionId)` (chiude il 90% di Sporca #24); signaling
-  spostato a sub-collection `audio_sessions/{id}/signaling/{userId}` con
-  ownership stretto (chiude Sporca #30)
-- ✅ DJ scoring: pointsAwarded × eventMultiplier (linkedGameEventId), bonus +5
-  base + (>30 min di musica) +10 long-session, flag `djBonusAwarded`
-  one-way per anti double-spend, `currentTrackStartedAt` come `serverTimestamp()`
-- ✅ Hook `useRBAC` centralizzato; `useAudioEngineRaw` per separare API raw
-  del DJ dalla pipeline Walkman; routing audio rinominato a `/sessioni/*`
+  con `exists()+get()`, Firebase v12 `persistentLocalCache`,
+  Wake Lock `featurePolicy` hardening, marker Leaflet inline SVG.
+- ✅ Hardening rule audio (B1–B6): queue.create valida `effectiveMaxAtCreate`
+  contro `effectiveMaxQueued(sessionId)`; signaling sub-collection.
+- ✅ DJ scoring (B2): pointsAwarded × eventMultiplier, +5/+10 long-session
+  bonus protetti da `djBonusAwarded` one-way.
+- ✅ **Batch B7 — Post-audit hardening (Maggio 2026):**
+  - Cap `users.points` increment 50→1000 per coerenza con `pointsMultiplier ∈ [0.5, 5.0]`
+  - Quiz scoring split owner-side: `revealRound` (host) + `claimMyAnswerPoints` (client)
+    con localStorage idempotency. Pre-fix `evaluateRoundAnswers` veniva respinto
+    dalla rule `users.update`.
+  - Sporche #25/#26 "Theme Hijacker" chiuse al 100% via `affectedKeys.hasOnly`
+    + check espliciti su metadati immutabili
+  - `validQueueStatusTransition` stretta (no shortcut `queued → ready/failed`)
+  - Cap quiz `pointsAwarded` allineato a `maxPointsPerRound × pointsMultiplier`
+    (era `pointsMultiplier × 100` ignorando il `maxPointsPerRound` reale)
+  - Ownership stretto su `leaderboard.write` e `participants.delete` (gap
+    identificati in audit B7 — partecipante terzo non può più sovrascrivere
+    il leaderboard di un avversario o kickarlo)
+  - Race-safety `advanceGameEventStatus` via `runTransaction`
+  - `AuthContext` profile listener cleanup via `useRef`
+  - WebRTC signaling `Timestamp` invece di epoch number
+  - PWA icon `public/icon.svg` inline (no CDN DiceBear)
+  - `scoring.calculateQuizPoints` decay floor universale a 1pt
+  - 24 nuovi test rule (cap, self-claim, queue immutable, leaderboard, participants)
+  - `audioEngine.test.ts` riscritto con verifiche concrete (vs smoke `expect(true)`)
 - ⏳ Cloud Functions tutte rimandate a Fase 2 (vedi sotto)
 - ⏳ Quiz auto-generators rimandati a Fase 2 (architettura pluggable già pronta)
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
@@ -127,34 +139,37 @@ downtime e senza touch dei round già giocati.
 
 ---
 
-## Fase 2 — Tech Debt & Refactoring
+## Tech Debt — Storia (chiuso in B4/B7)
 
-**`useRBAC()` helper centralizzato.** L'implementazione corrente di
-Fase 2 audio ha la logica RBAC duplicata in ogni componente
-`AudioSession*` (es. `profile?.role === 'Admin'`). Funziona ed è
-isolata, ma:
+**`useRBAC()` helper centralizzato** ✅ chiuso in B4 (`d00f1b3`). Hook
+derivato in `src/hooks/useRBAC.ts`; ~40 occorrenze di `profile?.role === 'X'`
+migrate.
 
-1. Creare `/src/hooks/useRBAC.ts` che derivi da `useAuth()` e esponga:
-   ```typescript
-   const { isRoot, isAdmin, isAdminOrRoot, isApproved, isPending } = useRBAC();
-   ```
-2. Sostituire tutte le occorrenze di `profile?.role === 'X'` nei file
-   audio (e successivamente anche in quelli giochi se desiderato).
-3. NON modificare `AuthContext.tsx`: il hook è derivato, non sostitutivo.
+**Hook split `useAudioPlayer` / `useAudioEngineRaw`** ✅ chiuso in B2
+(`19e8d28`). Le API raw del singleton `AudioEngine` (engine, playBlob,
+pause, resume, stop, getCurrentTime, getDuration, isPlaying) sono ora in
+`src/hooks/useAudioEngineRaw.ts`, consumate dal pannello DJ. `useAudioPlayer`
+resta state-level Walkman.
 
-**Effort stimato:** 30 minuti, zero rischio di rottura. Da fare nel
-prossimo ciclo di polish post-MVP. Tracciato come `// TODO: useRBAC`
-nei file interessati.
+**Quiz host-side scoring** ✅ chiuso in B7 (`evaluateRoundAnswers` cancellato,
+sostituito da `revealRound` + `claimMyAnswerPoints` owner-side). La rule
+`users.update` consente l'increment solo all'owner; il vecchio flusso era
+respinto in produzione.
 
-**FullScreenPlayer encapsulation review.** Le esposizioni aggiuntive
-di `useAudioPlayer` (engine, playBlob, getCurrentTime, getDuration)
-sono usate solo da `AudioSessionDJ` e `DJEngine`. Considerare
-spostamento di queste API in un hook dedicato `useAudioEngineRaw()`
-per mantenere `useAudioPlayer` come API pulita per Walkman/MiniPlayer.
+**Sporche #25/#26 "Theme Hijacker"** ✅ chiuse al 100% in B7 (rule
+`audio_sessions/{}/queue.update` con `affectedKeys.hasOnly` + check espliciti
+su metadati immutabili).
 
-**Effort stimato:** 1 ora, basso rischio (nessun consumer esterno
-ai 2 file Phase 2). Tradeoff: più file vs più clean separation.
-Da valutare in base a evoluzione futura del modulo.
+**Cap `users.points` incoerente con multiplier range** ✅ chiuso in B7
+(50→1000/transaction).
+
+**`advanceGameEventStatus` race su `→ completed`** ✅ chiuso in B7
+(wrap in `runTransaction`).
+
+**Cross-leaderboard / cross-participant write/delete** ✅ chiusi in B7
+(ownership stretto: self-only o organizer/Root).
+
+**`AuthContext` profile listener leak** ✅ chiuso in B7 (cleanup via `useRef`).
 
 ---
 

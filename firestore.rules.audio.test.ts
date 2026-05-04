@@ -247,4 +247,102 @@ describe('Ainulindale Rules', () => {
       await assertFails(db.collection('audio_sessions').doc('s1').update({ mode: 'manual' }));
     });
   });
+
+  describe('queue.update — Theme Hijacker (Sporca #25/#26)', () => {
+    async function seedQueueItem(sessionId: string, itemId: string, status = 'queued') {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore()
+          .collection('audio_sessions').doc(sessionId)
+          .collection('queue').doc(itemId)
+          .set({
+            proposedBy: PROPOSER_UID, proposedByName: 'P', proposedByPhotoURL: '',
+            proposedAt: new Date(),
+            trackTitle: 'T', trackArtist: 'A', trackDurationMs: 200000,
+            localTrackId: 'lt1',
+            status, position: 1,
+            effectiveMaxAtCreate: 2,
+          });
+      });
+    }
+
+    it('DJ can transition queued → transferring', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = adminDb();
+      await assertSucceeds(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ status: 'transferring', transferStartedAt: new Date() }));
+    });
+
+    it('DJ cannot skip directly from queued to ready (transferring step is mandatory)', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = adminDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ status: 'ready' }));
+    });
+
+    it('DJ cannot rewrite immutable metadata (proposedBy)', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = adminDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ proposedBy: 'someone-else' }));
+    });
+
+    it('DJ cannot rewrite trackTitle', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = adminDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ trackTitle: 'Forged Title' }));
+    });
+
+    it('DJ cannot rewrite localTrackId', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = adminDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ localTrackId: 'attacker-track' }));
+    });
+
+    it('DJ cannot award more than 50 points', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'playing');
+      const db = adminDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ status: 'played', pointsAwarded: 9999 }));
+    });
+
+    it('DJ can award a reasonable points value with the played transition', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'playing');
+      const db = adminDb();
+      await assertSucceeds(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ status: 'played', pointsAwarded: 10 }));
+    });
+
+    it('listener cannot update a queue item', async () => {
+      await seedUsers();
+      await seedOpenSession('s1');
+      await seedQueueItem('s1', 'q1', 'queued');
+      const db = guestDb();
+      await assertFails(db.collection('audio_sessions').doc('s1')
+        .collection('queue').doc('q1')
+        .update({ status: 'transferring' }));
+    });
+  });
 });

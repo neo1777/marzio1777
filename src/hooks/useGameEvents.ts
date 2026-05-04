@@ -22,6 +22,10 @@ export interface GameEvent {
     answerTimeSeconds: number;
     questionTypes: string[];
     scoringMode: string;
+    // Upper bound for per-round points. Default 10 (matches the spec'd
+    // 'fixed' mode); admins can raise it for special events but the rule
+    // caps the actual `pointsAwarded` at maxPointsPerRound × pointsMultiplier.
+    maxPointsPerRound?: number;
     currentHostId?: string;
     rotateHost?: boolean;
   };
@@ -169,24 +173,48 @@ export async function createGameEvent(eventData: Partial<GameEvent>) {
 
 export async function advanceGameEventStatus(eventId: string, newStatus: GameEvent['status']) {
    const eventRef = doc(db, 'game_events', eventId);
+
+   if (newStatus === 'completed') {
+      // The leaderboard read happens *outside* the transaction (a Firestore
+      // transaction can't read a query, only point reads). To avoid the
+      // race "two clients complete the event with stale snapshots", we
+      // re-check the status inside the transaction and refuse if someone
+      // already flipped it: rule + immutability of `finalLeaderboard`
+      // post-completed gives us a final guard, but we want a clear UX
+      // error rather than a permission-denied bubble.
+      const lbSnap = await getDocs(collection(db, `game_events/${eventId}/leaderboard`));
+      const finalLeaderboard = lbSnap.docs
+         .map(d => d.data() as LeaderboardEntry)
+         .sort((a, b) => b.points - a.points);
+
+      await runTransaction(db, async (tx) => {
+         const evSnap = await tx.get(eventRef);
+         if (!evSnap.exists()) throw new Error('Event non trovato');
+         const evData = evSnap.data();
+         if (evData.status === 'completed') {
+            // Someone already finalised: do nothing, finalLeaderboard is immutable.
+            return;
+         }
+         tx.update(eventRef, {
+            status: 'completed',
+            organizerId: evData.organizerId,
+            type: evData.type,
+            createdAt: evData.createdAt,
+            finalLeaderboard,
+         });
+      });
+      return;
+   }
+
    const currentSnap = await getDoc(eventRef);
-   if (!currentSnap.exists()) throw new Error("Event non trovato");
+   if (!currentSnap.exists()) throw new Error('Event non trovato');
    const data = currentSnap.data();
-   
-   const payload: any = {
+   await updateDoc(eventRef, {
       status: newStatus,
       organizerId: data.organizerId,
       type: data.type,
-      createdAt: data.createdAt
-   };
-
-   if (newStatus === 'completed') {
-      const lbSnap = await getDocs(collection(db, `game_events/${eventId}/leaderboard`));
-      const finalLeaderboard = lbSnap.docs.map(d => d.data() as LeaderboardEntry).sort((a, b) => b.points - a.points);
-      payload.finalLeaderboard = finalLeaderboard;
-   }
-   
-   await updateDoc(eventRef, payload);
+      createdAt: data.createdAt,
+   });
 }
 
 export async function createGameItem(eventId: string, itemData: Omit<GameItem, 'id' | 'status' | 'collectedBy'>) {

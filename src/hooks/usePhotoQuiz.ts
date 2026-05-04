@@ -95,130 +95,155 @@ export async function submitQuizAnswer(eventId: string, roundId: string, userId:
    });
 }
 
-export async function configureQuizRound(eventId: string, roundId: string, payload: Partial<QuizRound>, correctIndex?: number) {
-   const roundRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}`);
-   await updateDoc(roundRef, payload);
-   if (typeof correctIndex === 'number') {
-      const secretRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}/secret/correctness`);
-      await setDoc(secretRef, { correctIndex });
-   }
-}
-
 import { calculateQuizPoints } from '../utils/scoring';
 
 export async function advanceQuizRound(eventId: string, nextRound: number, currentRoundId?: string, newHostId?: string | null) {
-   // Update the game event to point to the new round
    const evRef = doc(db, 'game_events', eventId);
-   
+
    if (currentRoundId) {
-      // Mark old round as finished
+      // Mark old round as finished. Best-effort: a missing or already-finished
+      // round shouldn't block the host advancing.
       const oldRoundRef = doc(db, `game_events/${eventId}/quizRounds/${currentRoundId}`);
       try {
          await updateDoc(oldRoundRef, { status: 'finished' });
-      } catch (e) {
-         // might not exist if manipulating wildly, safe ignore in prototype
+      } catch {
+         // tolerated
       }
    }
 
-   // Create the next round dynamically if it's new
+   // Materialise the next round if it doesn't exist yet (host hasn't composed it).
    const newRoundRef = doc(db, `game_events/${eventId}/quizRounds`, `round_${nextRound}`);
    const nextRoundSnap = await getDoc(newRoundRef);
-   
+
    if (!nextRoundSnap.exists()) {
       await setDoc(newRoundRef, {
          roundNumber: nextRound,
          status: 'waiting',
-         type: 'guess_place', // defaults
+         type: 'guess_place',
          mediaUrl: '',
          questionOptions: [],
-         revealedAt: null
+         revealedAt: null,
       });
    }
 
-   const gameUpdate: any = {
-      currentRound: nextRound,
-      status: 'active'
-   };
-   if (newHostId) {
-      gameUpdate['photoQuizConfig.currentHostId'] = newHostId;
-   }
+   // Read the event's current status so we only include `status: 'active'` when
+   // it's a real transition. Re-writing 'active' over 'active' is accepted by
+   // the rule (identity transition) but is a no-op write that masks intent.
+   const evSnap = await getDoc(evRef);
+   const currentStatus = evSnap.data()?.status;
+
+   const gameUpdate: Record<string, unknown> = { currentRound: nextRound };
+   if (currentStatus !== 'active') gameUpdate.status = 'active';
+   if (newHostId) gameUpdate['photoQuizConfig.currentHostId'] = newHostId;
 
    await updateDoc(evRef, gameUpdate);
 }
 
-export async function setRoundStatus(eventId: string, roundId: string, status: 'waiting' | 'active' | 'revealed' | 'finished', correctIndex?: number) {
-   const roundRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}`);
-   const updateData: any = { status };
-   if (status === 'active') {
-      const evSnap = await getDoc(doc(db, `game_events/${eventId}`));
-      const timeSecs = evSnap.data()?.photoQuizConfig?.answerTimeSeconds || 20;
-      updateData.startedAt = serverTimestamp();
-      updateData.endsAt = new Date(Date.now() + timeSecs * 1000 + 3000); // + 3s grace period
-   }
-   if (status === 'revealed') {
-      updateData.revealedAt = serverTimestamp();
-      if (typeof correctIndex === 'number') {
-         updateData.correctIndex = correctIndex;
-      }
-   }
-   await updateDoc(roundRef, updateData);
-}
-
-// Evaluation when revealed
-export async function evaluateRoundAnswers(eventId: string, roundId: string, timeLimitSeconds: number, maxPoints: number, scoringMode: 'fixed' | 'decay' = 'decay') {
-   const roundSnap = await getDoc(doc(db, `game_events/${eventId}/quizRounds/${roundId}`));
-   const roundData = roundSnap.data();
-   const startedAtMs = roundData?.startedAt?.toMillis() || Date.now();
-   
-   // Fetches the secret correctness
+/**
+ * Host-only: reveal the round by lifting `correctIndex` from the secret
+ * sub-collection into the public round doc and stamping `revealedAt`.
+ * Performs no scoring — points are claimed by each participant client-side
+ * via `claimMyAnswerPoints` once the round is in 'revealed' status.
+ *
+ * Why split: the legacy `evaluateRoundAnswers` wrote `users/{otherUid}.points`
+ * from the host's session, which the rules legitimately reject (only the
+ * owner can mutate their own points doc). Splitting also removes the
+ * O(N participants) bottleneck on the host and makes scoring tolerant to
+ * reconnections.
+ */
+export async function revealRound(eventId: string, roundId: string): Promise<{ correctIndex: number }> {
    const secretSnap = await getDoc(doc(db, `game_events/${eventId}/quizRounds/${roundId}/secret/correctness`));
    const correctIndex = secretSnap.data()?.correctIndex ?? -1;
+   await updateDoc(doc(db, `game_events/${eventId}/quizRounds/${roundId}`), {
+      status: 'revealed',
+      revealedAt: serverTimestamp(),
+      correctIndex,
+   });
+   return { correctIndex };
+}
 
-   const answersSnap = await getDocs(collection(db, `game_events/${eventId}/quizRounds/${roundId}/answers`));
+/**
+ * Owner-side claim: each participant credits their own points once the round
+ * is revealed. Idempotency is enforced by a localStorage flag (claim is a
+ * single-shot per round per user; refreshing or re-rendering won't double-spend).
+ *
+ * The Firestore rule on `answers.update` re-derives the correctness from the
+ * now-public `correctIndex` and bounds `pointsAwarded` by `maxPointsPerRound *
+ * pointsMultiplier`, so a malicious client can't forge a positive score.
+ */
+const CLAIM_KEY = (roundId: string, userId: string) => `marzio1777:quiz-claimed:${roundId}:${userId}`;
 
-   let fastestUserId = null;
-   let fastestTime = Infinity;
+export function hasClaimedRound(roundId: string, userId: string): boolean {
+   try { return localStorage.getItem(CLAIM_KEY(roundId, userId)) === '1'; } catch { return false; }
+}
 
-   for (const ansDoc of answersSnap.docs) {
-      const ansData = ansDoc.data();
-      let pts = 0;
-      if (ansData.selectedIndex === correctIndex && correctIndex !== -1) {
-         const ansTimeMs = ansData.timestamp?.toMillis() || Date.now();
-         const elapsedMs = ansTimeMs - startedAtMs;
-         
-         pts = calculateQuizPoints(scoringMode, true, elapsedMs, timeLimitSeconds * 1000, maxPoints);
+export async function claimMyAnswerPoints(opts: {
+   eventId: string;
+   roundId: string;
+   userId: string;
+   displayName: string;
+   scoringMode: 'fixed' | 'decay';
+   maxPointsPerRound: number;
+   eventMultiplier: number;
+}): Promise<number> {
+   const { eventId, roundId, userId, displayName, scoringMode, maxPointsPerRound, eventMultiplier } = opts;
 
-         if (elapsedMs < fastestTime) {
-            fastestTime = elapsedMs;
-            fastestUserId = ansData.userId;
+   if (hasClaimedRound(roundId, userId)) return 0;
+
+   const roundRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}`);
+   const ansRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}/answers/${userId}`);
+
+   try {
+      const ptsAwarded = await runTransaction(db, async (tx) => {
+         const roundSnap = await tx.get(roundRef);
+         if (!roundSnap.exists()) throw new Error('round not found');
+         const round = roundSnap.data();
+         if (round.revealedAt == null) throw new Error('round not yet revealed');
+
+         const ansSnap = await tx.get(ansRef);
+         if (!ansSnap.exists()) return 0; // user didn't answer
+
+         const ans = ansSnap.data();
+         if (typeof ans.pointsAwarded === 'number' && ans.pointsAwarded > 0) {
+            // already claimed in a previous tab/session
+            return 0;
          }
-      }
 
-      await runTransaction(db, async (tx) => {
-         const ansRef = doc(db, `game_events/${eventId}/quizRounds/${roundId}/answers/${ansDoc.id}`);
+         const correctIndex: number = round.correctIndex;
+         const isCorrect = ans.selectedIndex === correctIndex && correctIndex >= 0;
+
+         let pts = 0;
+         if (isCorrect) {
+            const ansTimeMs = ans.timestamp?.toMillis?.() ?? Date.now();
+            const startedAtMs = round.startedAt?.toMillis?.() ?? ansTimeMs;
+            const endsAtMs = round.endsAt?.toMillis?.() ?? (startedAtMs + 60_000);
+            const elapsedMs = ansTimeMs - startedAtMs;
+            const windowMs = Math.max(1, endsAtMs - startedAtMs);
+            pts = calculateQuizPoints(scoringMode, true, elapsedMs, windowMs, maxPointsPerRound);
+            pts = Math.max(0, Math.round(pts * eventMultiplier));
+         }
+
          tx.update(ansRef, { pointsAwarded: pts });
 
          if (pts > 0) {
-            // Update Leaderboard
-            const lbRef = doc(db, `game_events/${eventId}/leaderboard/${ansData.userId}`);
+            const lbRef = doc(db, `game_events/${eventId}/leaderboard/${userId}`);
             tx.set(lbRef, {
-               userId: ansData.userId,
-               displayName: ansData.displayName,
-               points: increment(pts)
+               userId,
+               displayName,
+               points: increment(pts),
             }, { merge: true });
 
-            // Update user global points
-            const userRef = doc(db, `users/${ansData.userId}`);
-            tx.update(userRef, {
-               points: increment(pts)
-            });
+            const userRef = doc(db, `users/${userId}`);
+            tx.update(userRef, { points: increment(pts) });
          }
+
+         return pts;
       });
+
+      try { localStorage.setItem(CLAIM_KEY(roundId, userId), '1'); } catch {}
+      return ptsAwarded;
+   } catch (e) {
+      console.warn('claimMyAnswerPoints failed', e);
+      return 0;
    }
-
-   await updateDoc(doc(db, `game_events/${eventId}/quizRounds/${roundId}`), {
-      winnerId: fastestUserId
-   });
-
-   return { fastestUserId, correctIndex };
 }

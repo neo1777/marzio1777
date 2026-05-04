@@ -273,12 +273,222 @@ describe('Marzio Memories Framework Rules', () => {
 
       it('current host cannot change other fields of the event', async () => {
          const db = testEnv.authenticatedContext('hostUser', { email_verified: true }).firestore();
-         
+
          await assertFails(db.collection('game_events').doc('event1').update({
             status: 'completed',
             photoQuizConfig: { currentHostId: 'guestUser' }
          }));
       });
+    });
+  });
+
+  describe('B7 — Owner-side points cap (1000/transaction)', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        await ctx.firestore().collection('users').doc('userA').set({
+           uid: 'userA', email: 'a@test.com', role: 'Guest', accountStatus: 'approved', points: 100,
+        });
+      });
+    });
+
+    it('accepts an increment within the cap', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('userA').update({ points: 600 })); // +500
+    });
+
+    it('accepts an increment up to the cap', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('userA').update({ points: 1100 })); // +1000 exact
+    });
+
+    it('rejects an increment above the cap', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('userA').update({ points: 9999999 }));
+    });
+
+    it('rejects a decrement (monotonic)', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('userA').update({ points: 50 }));
+    });
+
+    it('rejects writing another user points field', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        await ctx.firestore().collection('users').doc('userB').set({
+           uid: 'userB', email: 'b@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+      });
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('userB').update({ points: 50 }));
+    });
+  });
+
+  describe('B7 — answers.update self-claim post-reveal', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('userA').set({
+          uid: 'userA', email: 'a@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('users').doc('userB').set({
+          uid: 'userB', email: 'b@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        const ev = db.collection('game_events').doc('ev1');
+        await ev.set({
+          organizerId: 'orgX', status: 'active', type: 'photo_quiz',
+          createdAt: new Date(),
+          pointsMultiplier: 1,
+          photoQuizConfig: { currentHostId: 'orgX', maxPointsPerRound: 10 },
+        });
+        await ev.collection('participants').doc('userA').set({ status: 'joined', userId: 'userA' });
+        await ev.collection('participants').doc('userB').set({ status: 'joined', userId: 'userB' });
+        const round = ev.collection('quizRounds').doc('r1');
+        await round.set({
+          revealedAt: new Date(),
+          correctIndex: 2,
+          startedAt: new Date(Date.now() - 5000),
+          endsAt: new Date(Date.now() + 60_000),
+        });
+        await round.collection('answers').doc('userA').set({
+          userId: 'userA', selectedIndex: 2, displayName: 'A',
+          timestamp: new Date(Date.now() - 4000),
+          pointsAwarded: 0,
+        });
+        await round.collection('answers').doc('userB').set({
+          userId: 'userB', selectedIndex: 1, displayName: 'B',
+          timestamp: new Date(Date.now() - 3000),
+          pointsAwarded: 0,
+        });
+      });
+    });
+
+    it('participant can claim points on their own correct answer', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('quizRounds').doc('r1')
+        .collection('answers').doc('userA')
+        .update({ pointsAwarded: 10 }));
+    });
+
+    it('participant cannot claim positive points on a wrong answer', async () => {
+      const db = testEnv.authenticatedContext('userB', { email: 'b@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('quizRounds').doc('r1')
+        .collection('answers').doc('userB')
+        .update({ pointsAwarded: 10 }));
+    });
+
+    it('participant can write a 0 points outcome on a wrong answer', async () => {
+      const db = testEnv.authenticatedContext('userB', { email: 'b@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('quizRounds').doc('r1')
+        .collection('answers').doc('userB')
+        .update({ pointsAwarded: 0 }));
+    });
+
+    it('participant cannot write someone else answer', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('quizRounds').doc('r1')
+        .collection('answers').doc('userB')
+        .update({ pointsAwarded: 0 }));
+    });
+
+    it('participant cannot exceed the per-round cap (multiplier × maxPointsPerRound)', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('quizRounds').doc('r1')
+        .collection('answers').doc('userA')
+        .update({ pointsAwarded: 999 }));
+    });
+  });
+
+  describe('B7 — leaderboard ownership-stretto', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('userA').set({
+           uid: 'userA', email: 'a@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('users').doc('userB').set({
+           uid: 'userB', email: 'b@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        const ev = db.collection('game_events').doc('ev1');
+        await ev.set({ organizerId: 'orgX', status: 'active', type: 'treasure_hunt', createdAt: new Date() });
+        await ev.collection('participants').doc('userA').set({ status: 'joined', userId: 'userA' });
+        await ev.collection('participants').doc('userB').set({ status: 'joined', userId: 'userB' });
+      });
+    });
+
+    it('participant can write their own leaderboard row', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('leaderboard').doc('userA')
+        .set({ userId: 'userA', displayName: 'A', points: 5 }));
+    });
+
+    it('participant cannot write someone else leaderboard row (B7 fix)', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('leaderboard').doc('userB')
+        .set({ userId: 'userB', displayName: 'B', points: 0 }));
+    });
+  });
+
+  describe('B7 — participants.delete ownership-stretto', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('userA').set({
+           uid: 'userA', email: 'a@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('users').doc('userB').set({
+           uid: 'userB', email: 'b@test.com', role: 'Guest', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('users').doc('orgX').set({
+           uid: 'orgX', email: 'o@test.com', role: 'Admin', accountStatus: 'approved', points: 0,
+        });
+        const ev = db.collection('game_events').doc('ev1');
+        await ev.set({ organizerId: 'orgX', status: 'active', type: 'treasure_hunt', createdAt: new Date() });
+        await ev.collection('participants').doc('userA').set({ status: 'joined', userId: 'userA' });
+        await ev.collection('participants').doc('userB').set({ status: 'joined', userId: 'userB' });
+      });
+    });
+
+    it('user can delete their own participant doc (self-leave)', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('participants').doc('userA').delete());
+    });
+
+    it('an unrelated participant cannot kick another participant (B7 fix)', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('participants').doc('userB').delete());
+    });
+
+    it('the organizer can kick any participant', async () => {
+      const db = testEnv.authenticatedContext('orgX', { email: 'o@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('participants').doc('userB').delete());
+    });
+  });
+
+  describe('B7 — finalLeaderboard immutability (Sporca #22 The Resurrectionist)', () => {
+    it('rejects rewriting finalLeaderboard once the event is completed', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('orgX').set({
+           uid: 'orgX', email: 'o@test.com', role: 'Admin', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('game_events').doc('ev1').set({
+          organizerId: 'orgX', status: 'completed', type: 'treasure_hunt',
+          createdAt: new Date(),
+          finalLeaderboard: [{ userId: 'orgX', points: 100 }],
+        });
+      });
+      const db = testEnv.authenticatedContext('orgX', { email: 'o@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .update({ finalLeaderboard: [{ userId: 'orgX', points: 999_999 }] }));
     });
   });
 });

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, updateDoc, Timestamp, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { UserProfile } from '../types';
 
@@ -22,9 +22,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Held in a ref so we can detach the previous profile listener whenever the
+  // auth state flips (logout, account switch, token refresh races). Returning
+  // the unsubscribe from the inner async callback wouldn't propagate to
+  // useEffect cleanup — it'd leak across auth transitions.
+  const profileUnsubRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
+    const detachProfile = () => {
+       if (profileUnsubRef.current) {
+          profileUnsubRef.current();
+          profileUnsubRef.current = null;
+       }
+    };
+
     const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
+      // Always detach any prior profile listener before reattaching.
+      detachProfile();
       setUser(firebaseUser);
       if (firebaseUser && firebaseUser.emailVerified) {
 
@@ -67,19 +81,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
            console.error("Error setting up user profile", e);
         }
 
-        const unsubscribeProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+        profileUnsubRef.current = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
           if (docSnap.exists()) {
              setProfile(docSnap.data() as UserProfile);
           }
           setLoading(false);
         });
-        return () => unsubscribeProfile();
       } else {
         setProfile(null);
         setLoading(false);
       }
     });
-    return () => unsubscribeAuth();
+    return () => {
+       detachProfile();
+       unsubscribeAuth();
+    };
   }, []);
 
   useEffect(() => {

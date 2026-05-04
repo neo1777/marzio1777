@@ -125,14 +125,21 @@ service cloud.firestore {
             incoming().points == existing().points
          )) ||
          // Monotonic owner-side points increment: lets the client commit
-         // gamification rewards (capture, quiz, +2 audio play, +10 DJ bonus)
-         // bounded to 50/transaction. Real anti-cheat lives in the rules of
-         // the action that earns the points (e.g. items.update, answers.update).
+         // gamification rewards (capture, quiz self-claim, +2 audio play,
+         // +5 DJ base, +10 DJ long-session) bounded to 1000/transaction.
+         // Cap sized to cover worst-case (item × 5x multiplier ≈ 5000 is
+         // impossible because items.update writes points × eventMultiplier
+         // and the linked event's pointsMultiplier is rule-bounded to 5.0,
+         // while item.points are practically ≤ 200). The 1000 cap blocks
+         // catastrophic forging (`points: 9999999`) while leaving room for
+         // legitimate rewards. Real anti-cheat lives in the rule of the
+         // action that earned the points (items.update, answers.update,
+         // queue.update — each independently validates correctness).
          (request.auth.uid == userId &&
           incoming().diff(existing()).affectedKeys().hasOnly(['points', 'updatedAt']) &&
           incoming().points is number && existing().points is number &&
           incoming().points >= existing().points &&
-          incoming().points - existing().points <= 50) ||
+          incoming().points - existing().points <= 1000) ||
          (isRoot() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'accountStatus'])) ||
          (isAdminOrRoot() && !isRoot() && existing().role != 'Root' && incoming().role != 'Root' && (
             // Admin can approve pending to Guest
@@ -310,14 +317,29 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'respondedAt', 'shareLocationDuringEvent', 'leftAt']);
 
-        allow delete: if isApprovedUser();
+        // Self-leave or organizer/Root cleanup (e.g. kick a misbehaving
+        // participant). Plain "approved user can delete anyone" was too
+        // permissive and would have let a third party erase rivals from
+        // the participants list.
+        allow delete: if userId == request.auth.uid
+          || isEventOrganizer(eventId)
+          || isRoot();
       }
 
       match /leaderboard/{userId} {
         allow read: if isApprovedUser();
-        allow write: if isApprovedUser() 
+        // Self-write (the player's own row), organizer or Root.
+        // Pre-fix any participant could rewrite anyone else's leaderboard
+        // entry; a malicious player could zero out a rival's score.
+        // Note: capture transactions write `leaderboard/{auth.uid}` from
+        // the player's own client, so the self-branch is the hot path.
+        allow write: if isApprovedUser()
           && getEventDoc(eventId).status != 'completed'
-          && (isEventParticipant(eventId) || isEventOrganizer(eventId) || isAdminOrRoot());
+          && (
+              userId == request.auth.uid
+              || isEventOrganizer(eventId)
+              || isRoot()
+          );
       }
 
       match /quizRounds/{roundId} {
@@ -343,13 +365,25 @@ service cloud.firestore {
             && request.resource.data.selectedIndex >= 0
             && request.resource.data.selectedIndex <= 3;
             
-          allow update: if (isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot()) 
+          // Owner-side self-claim post-reveal (preferred) OR host triade
+          // override. Anti-cheat is identical for both paths: the rule
+          // re-derives the correct outcome from `correctIndex` (publicly
+          // readable post-reveal) and caps `pointsAwarded` to the
+          // event-configured maximum scaled by the multiplier.
+          allow update: if (
+                (answerUserId == request.auth.uid && isEventParticipant(eventId))
+                || isCurrentHost(eventId) || isEventOrganizer(eventId) || isRoot()
+              )
+            && get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.revealedAt != null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pointsAwarded'])
             && request.resource.data.pointsAwarded >= 0
-            && request.resource.data.pointsAwarded <= (getEventDoc(eventId).get('pointsMultiplier', 1) * 100)
+            && request.resource.data.pointsAwarded <= (
+                 getEventDoc(eventId).get('photoQuizConfig', {}).get('maxPointsPerRound', 100)
+                 * getEventDoc(eventId).get('pointsMultiplier', 1)
+               )
             && (
-              request.resource.data.pointsAwarded == 0 
-              || 
+              request.resource.data.pointsAwarded == 0
+              ||
               (resource.data.selectedIndex == get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.correctIndex)
             )
             && resource.data.timestamp <= get(/databases/$(database)/documents/game_events/$(eventId)/quizRounds/$(roundId)).data.endsAt;
@@ -367,10 +401,14 @@ service cloud.firestore {
              get(/databases/$(database)/documents/audio_sessions/$(sessionId)/participants/$(request.auth.uid)).data.status == 'joined';
     }
     function validQueueStatusTransition(oldStatus, newStatus) {
-      return (oldStatus == 'queued' && newStatus in ['transferring', 'skipped', 'ready', 'failed']) ||
+      // Tightened to the spec'd flow: queued must go through 'transferring'
+      // before reaching 'ready'/'failed' (no shortcut). 'failed → skipped'
+      // is the cleanup path the engine uses to drop a transfer that errored.
+      return (oldStatus == 'queued' && newStatus in ['transferring', 'skipped']) ||
              (oldStatus == 'transferring' && newStatus in ['ready', 'failed']) ||
-             (oldStatus == 'ready' && newStatus in ['playing', 'failed']) ||
+             (oldStatus == 'ready' && newStatus in ['playing', 'skipped']) ||
              (oldStatus == 'playing' && newStatus in ['played', 'skipped']) ||
+             (oldStatus == 'failed' && newStatus == 'skipped') ||
              oldStatus == newStatus;
     }
     function isValidAudioSession(data) {
@@ -414,9 +452,32 @@ service cloud.firestore {
                       incoming().effectiveMaxAtCreate is int &&
                       incoming().effectiveMaxAtCreate == effectiveMaxQueued(sessionId);
                       
-        allow update: if isSessionDJ(sessionId) && 
-                      validQueueStatusTransition(existing().status, incoming().status) &&
-                      (incoming().status != 'played' || (incoming().pointsAwarded >= 0));
+        // Theme Hijacker (Sporca #25/#26): metadata are immutable after create.
+        // Only the DJ can mutate, and only the listed mutable fields. Track
+        // metadata, proposedBy, localTrackId, proposedAt, position guards
+        // (… well: position is still mutable, the DJ may re-order the
+        // queue) and effectiveMaxAtCreate are all forbidden post-create.
+        allow update: if isSessionDJ(sessionId)
+                      && validQueueStatusTransition(existing().status, incoming().status)
+                      && incoming().diff(existing()).affectedKeys()
+                          .hasOnly([
+                            'status', 'position',
+                            'transferStartedAt', 'transferCompletedAt', 'transferFailureReason',
+                            'pointsAwarded'
+                          ])
+                      // Defense in depth: even though affectedKeys above already
+                      // refuses metadata writes, re-assert the key invariants
+                      // explicitly so a future affectedKeys-relaxation can't
+                      // silently re-open the hijack vector.
+                      && incoming().proposedBy == existing().proposedBy
+                      && incoming().localTrackId == existing().localTrackId
+                      && incoming().trackTitle == existing().trackTitle
+                      && incoming().trackArtist == existing().trackArtist
+                      && incoming().trackDurationMs == existing().trackDurationMs
+                      // pointsAwarded bounded; matches DJEngine.markCurrentPlayed
+                      // upper bound (BASE × 5x multiplier = 10) with margin.
+                      && (!incoming().diff(existing()).affectedKeys().hasAny(['pointsAwarded'])
+                          || (incoming().pointsAwarded >= 0 && incoming().pointsAwarded <= 50));
         allow delete: if (isSessionDJ(sessionId) || (existing().proposedBy == request.auth.uid && existing().status == 'queued'));
       }
 
