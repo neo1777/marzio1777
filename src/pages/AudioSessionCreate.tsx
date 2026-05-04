@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
-import { doc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { Button, Input, Label, Textarea, Switch, Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui';
 
 export function AudioSessionCreate() {
@@ -31,9 +31,15 @@ export function AudioSessionCreate() {
       setLoading(true);
       try {
          const sessionId = doc(collection(db, 'audio_sessions')).id;
-         const batch = writeBatch(db);
-         
-         batch.set(doc(db, 'audio_sessions', sessionId), {
+
+         // The two writes used to live in a writeBatch but the participant
+         // rule (firestore.rules:577) requires get(audio_sessions/{sessionId})
+         // .data.status == 'open' — and inside an atomic batch that get()
+         // resolves against the pre-batch snapshot, where the session does
+         // not yet exist. The whole batch was rejected with "Missing or
+         // insufficient permissions". Splitting into sequential awaits lets
+         // the participant.create see the freshly-committed session doc.
+         await setDoc(doc(db, 'audio_sessions', sessionId), {
             id: sessionId,
             type: 'audio_session',
             djId: user.uid,
@@ -55,8 +61,8 @@ export function AudioSessionCreate() {
             queuedCount: 0,
             playedCount: 0
          });
-         
-         batch.set(doc(db, 'audio_sessions', sessionId, 'participants', user.uid), {
+
+         await setDoc(doc(db, 'audio_sessions', sessionId, 'participants', user.uid), {
             userId: user.uid,
             displayName: user.displayName,
             photoURL: user.photoURL,
@@ -66,17 +72,13 @@ export function AudioSessionCreate() {
             tracksPlayed: 0,
             status: 'joined'
          });
-         
-         await batch.commit();
+
          // AudioSessionWrapper at /sessioni/:id will route the creator to the
          // DJ panel automatically (session.djId === user.uid).
          navigate(`/dashboard/ainulindale/sessioni/${sessionId}`);
       } catch (e: any) {
          console.error(e);
          setLoading(false);
-         // Surface the failure: previously the batch could be denied by the
-         // rules engine and the user would see only the spinner reverting,
-         // making the button feel inert.
          alert(`Apertura del coro fallita: ${e?.message || 'errore sconosciuto'}`);
       }
    };
