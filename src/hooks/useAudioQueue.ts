@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db, functions } from '../lib/firebase';
-import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../contexts/AuthContext';
 import { QueueItem, AudioSession } from '../types/audio';
@@ -34,6 +34,29 @@ export function useAudioQueue(sessionId: string) {
 
     return () => unsub();
   }, [sessionId]);
+
+  // Phase 2.5: Discordante gagliardetto. Watch for transitions on the
+  // proposer's own queue items: queued|transferring|ready → skipped
+  // bumps `users.{me}.metrics.consecutiveSkipped`; playing → played
+  // resets it. Idempotency via a Map<itemId, lastStatus> ref so a
+  // second snapshot delivering the same status doesn't double-count.
+  const lastStatusRef = useRef<Map<string, QueueItem['status']>>(new Map());
+  useEffect(() => {
+     if (!user) return;
+     const userRef = doc(db, 'users', user.uid);
+     for (const item of queue) {
+        if (item.proposedBy !== user.uid) continue;
+        const prev = lastStatusRef.current.get(item.id);
+        if (prev === item.status) continue;
+        lastStatusRef.current.set(item.id, item.status);
+        if (prev === undefined) continue; // first time we see this item — no transition
+        if (item.status === 'skipped' && (prev === 'queued' || prev === 'transferring' || prev === 'ready')) {
+           updateDoc(userRef, { 'metrics.consecutiveSkipped': increment(1) }).catch(() => {});
+        } else if (item.status === 'played' && prev === 'playing') {
+           updateDoc(userRef, { 'metrics.consecutiveSkipped': 0 }).catch(() => {});
+        }
+     }
+  }, [queue, user]);
 
   const proposeTrack = async (track: LocalTrack, session: AudioSession) => {
     if (!user || !userData) throw new Error('Not authenticated');

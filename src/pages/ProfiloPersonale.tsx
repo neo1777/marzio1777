@@ -72,7 +72,7 @@ export default function ProfiloPersonale() {
   // Phase 2 §15.C: full Gagliardetti catalog computed from snapshot metrics
   // (collection-group queries cached 1h in localStorage). Replaces the old
   // hardcoded `badges` array that only fired on raw `points` thresholds.
-  const { states: gagliardetti, loading: gagliardettiLoading } = useUserGagliardetti(user?.uid, points);
+  const { states: gagliardetti, loading: gagliardettiLoading } = useUserGagliardetti(user?.uid, points, profile.metrics);
 
   // For the "next milestone" progress bar at the top of the Gamification
   // panel: pick the unearned gagliardetto with the smallest `target -

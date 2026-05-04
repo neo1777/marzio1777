@@ -225,6 +225,7 @@ export async function claimMyAnswerPoints(opts: {
 
          tx.update(ansRef, { pointsAwarded: pts });
 
+         const userRef = doc(db, `users/${userId}`);
          if (pts > 0) {
             const lbRef = doc(db, `game_events/${eventId}/leaderboard/${userId}`);
             tx.set(lbRef, {
@@ -233,8 +234,20 @@ export async function claimMyAnswerPoints(opts: {
                points: increment(pts),
             }, { merge: true });
 
-            const userRef = doc(db, `users/${userId}`);
-            tx.update(userRef, { points: increment(pts) });
+            // Phase 2.5: bump points + extend the Veggente quiz streak.
+            // The rule's owner-side users.update branch allows points
+            // increment and metrics writes in the same transaction
+            // (affectedKeys.hasOnly([points, updatedAt, metrics])).
+            tx.update(userRef, {
+               points: increment(pts),
+               'metrics.quizStreak': increment(1),
+            });
+         } else {
+            // Wrong answer (or no answer earned) — reset the streak.
+            // Owner-side metrics-only branch on users.update accepts this.
+            tx.update(userRef, {
+               'metrics.quizStreak': 0,
+            });
          }
 
          return pts;

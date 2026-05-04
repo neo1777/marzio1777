@@ -134,10 +134,19 @@ service cloud.firestore {
          // action that earned the points (items.update, answers.update,
          // queue.update — each independently validates correctness).
          (request.auth.uid == userId &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['points', 'updatedAt']) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['points', 'updatedAt', 'metrics']) &&
           incoming().points is number && existing().points is number &&
           incoming().points >= existing().points &&
           incoming().points - existing().points <= 1000) ||
+         // Phase 2.5: continuous-tracking gagliardetti metrics. The
+         // owner can write their own `metrics` map in isolation (without
+         // also bumping points). The actual semantics (only-up for
+         // streaks, only-up for huntsLegacyCompleted, reset to 0 on
+         // wrong answer / played) are enforced client-side; the rule
+         // just contains the blast radius to a single field, no PII
+         // path, no points bump.
+         (request.auth.uid == userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['metrics', 'updatedAt'])) ||
          (isRoot() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'accountStatus'])) ||
          (isAdminOrRoot() && !isRoot() && existing().role != 'Root' && incoming().role != 'Root' && (
             // Admin can approve pending to Guest

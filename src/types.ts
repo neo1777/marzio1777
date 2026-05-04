@@ -23,6 +23,24 @@ export interface UserProfile {
    animSpeed?: number;    // duration in seconds
    animDistance?: number; // vertical distance in pixels
    animColor?: string;    // hex/rgb tint
+
+   // Phase 2.5: continuous-tracking gagliardetti (Veggente, Discordante,
+   // Pellegrino). Maintained by client-side increment/reset in the
+   // existing transactions (claimMyAnswerPoints, useAudioQueue queue
+   // listener, captureItemTransaction). See `src/lib/gagliardetti.ts`.
+   metrics?: {
+      // Quiz Bivacco — current streak of consecutive correct answers.
+      // Increment on every correct claim, reset to 0 on a wrong claim.
+      quizStreak?: number;
+      // L'Ainulindalë — current streak of own tracks skipped without a
+      // played in between. Increment when a own queue item transitions
+      // queued|transferring|ready → skipped, reset on playing → played.
+      consecutiveSkipped?: number;
+      // Campo dei Giochi — count of treasure_hunt events in legacy_posts
+      // mode where the user collected ≥1 item. Incremented on the first
+      // capture inside a legacy_posts hunt (idempotent — see captureItemTransaction).
+      huntsLegacyCompleted?: number;
+   };
 }
 
 export interface PostLocation {

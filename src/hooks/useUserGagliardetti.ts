@@ -7,6 +7,7 @@ import {
    UserMetrics,
    ZERO_METRICS,
 } from '../lib/gagliardetti';
+import type { UserProfile } from '../types';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const CACHE_KEY = (uid: string) => `marzio1777:gagliardetti:${uid}`;
@@ -168,10 +169,37 @@ async function fetchUserMetrics(uid: string, basePoints: number): Promise<UserMe
       djSessionsTotal,
       djSessionsLong,
       listenerSessions,
+      // Phase 2.5 continuous-tracking metrics overlaid by the caller
+      // from the live profile (see hook below) — fetched values here
+      // are placeholders.
+      quizStreak: 0,
+      consecutiveSkipped: 0,
+      huntsLegacyCompleted: 0,
    };
 }
 
-export function useUserGagliardetti(uid: string | undefined, points: number = 0) {
+/**
+ * Overlay the Phase 2.5 continuous-tracking metrics from the live profile
+ * onto the (cached or freshly computed) snapshot metrics. The Phase 2.5
+ * counters live on `users/{uid}.metrics` and are mutated by transactions
+ * in usePhotoQuiz, useAudioQueue, useGameEvents — reading them straight
+ * from the profile keeps the badges responsive without extra reads.
+ */
+function overlayContinuousMetrics(base: UserMetrics, profileMetrics: UserProfile['metrics']): UserMetrics {
+   const m = profileMetrics ?? {};
+   return {
+      ...base,
+      quizStreak: typeof m.quizStreak === 'number' ? m.quizStreak : 0,
+      consecutiveSkipped: typeof m.consecutiveSkipped === 'number' ? m.consecutiveSkipped : 0,
+      huntsLegacyCompleted: typeof m.huntsLegacyCompleted === 'number' ? m.huntsLegacyCompleted : 0,
+   };
+}
+
+export function useUserGagliardetti(
+   uid: string | undefined,
+   points: number = 0,
+   profileMetrics?: UserProfile['metrics']
+) {
    const [states, setStates] = useState<GagliardettoState[]>(() => computeGagliardetti(ZERO_METRICS));
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
@@ -187,7 +215,10 @@ export function useUserGagliardetti(uid: string | undefined, points: number = 0)
       if (cached) {
          // Always overlay the freshest `points` from the live profile so
          // the historical badges respond in real time even on cache hit.
-         const merged: UserMetrics = { ...cached.metrics, points };
+         const merged: UserMetrics = overlayContinuousMetrics(
+            { ...cached.metrics, points },
+            profileMetrics
+         );
          setStates(computeGagliardetti(merged));
          return;
       }
@@ -199,7 +230,8 @@ export function useUserGagliardetti(uid: string | undefined, points: number = 0)
          .then(metrics => {
             if (cancelled) return;
             writeCache(uid, metrics);
-            setStates(computeGagliardetti(metrics));
+            const overlaid = overlayContinuousMetrics(metrics, profileMetrics);
+            setStates(computeGagliardetti(overlaid));
          })
          .catch(e => {
             if (cancelled) return;
@@ -207,7 +239,8 @@ export function useUserGagliardetti(uid: string | undefined, points: number = 0)
             setError(e?.message || 'Errore nel calcolo dei gagliardetti');
             // On error fall back to the points-only badges (the historical
             // category still works without any query).
-            setStates(computeGagliardetti({ ...ZERO_METRICS, points }));
+            const fallback = overlayContinuousMetrics({ ...ZERO_METRICS, points }, profileMetrics);
+            setStates(computeGagliardetti(fallback));
          })
          .finally(() => {
             if (!cancelled) setLoading(false);
@@ -216,7 +249,7 @@ export function useUserGagliardetti(uid: string | undefined, points: number = 0)
       return () => {
          cancelled = true;
       };
-   }, [uid, points]);
+   }, [uid, points, profileMetrics?.quizStreak, profileMetrics?.consecutiveSkipped, profileMetrics?.huntsLegacyCompleted]);
 
    const earned = states.filter(s => s.earned);
 

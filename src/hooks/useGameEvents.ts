@@ -264,6 +264,20 @@ export async function captureItemTransaction(eventId: string, itemId: string, us
       const itemData = itemSnap.data();
       if (itemData.status !== 'spawned') throw new Error("Oggetto già catturato da qualcun altro!");
 
+      // Phase 2.5 — Pellegrino delle Polaroid. Detect "first capture in
+      // a legacy_posts hunt" by reading the event doc + the user's
+      // existing leaderboard entry inside the same transaction. If
+      // captures==0 AND the hunt is in legacy_posts mode, bump
+      // `metrics.huntsLegacyCompleted` once. The eventDoc + lbDoc reads
+      // must happen before any writes in a Firestore transaction.
+      const eventRef = doc(db, `game_events/${eventId}`);
+      const lbRef = doc(db, `game_events/${eventId}/leaderboard/${userId}`);
+      const [eventSnap, lbSnap] = await Promise.all([tx.get(eventRef), tx.get(lbRef)]);
+      const eventData = eventSnap.exists() ? eventSnap.data() : null;
+      const isLegacyHunt = eventData?.type === 'treasure_hunt'
+         && eventData?.treasureHuntConfig?.spawnMode === 'legacy_posts';
+      const isFirstCapture = !lbSnap.exists() || ((lbSnap.data()?.captures ?? 0) === 0);
+
       // Update item
       tx.update(itemRef, {
          status: 'collected',
@@ -273,10 +287,8 @@ export async function captureItemTransaction(eventId: string, itemId: string, us
          collectedAt: serverTimestamp()
       });
 
-      // Update leaderboard
-      const lbRef = doc(db, `game_events/${eventId}/leaderboard/${userId}`);
       const pointsToAdd = itemData.points * eventMultiplier;
-      
+
       tx.set(lbRef, {
          userId: userId,
          displayName: userDisplayName,
@@ -284,11 +296,13 @@ export async function captureItemTransaction(eventId: string, itemId: string, us
          captures: increment(1),
       }, { merge: true });
 
-      // Update user points (Altitudine)
+      // Update user points (Altitudine), and bump Pellegrino if eligible.
       const userRef = doc(db, `users/${userId}`);
-      tx.update(userRef, {
-         points: increment(pointsToAdd)
-      });
+      const userPatch: Record<string, unknown> = { points: increment(pointsToAdd) };
+      if (isLegacyHunt && isFirstCapture) {
+         userPatch['metrics.huntsLegacyCompleted'] = increment(1);
+      }
+      tx.update(userRef, userPatch);
    });
 }
 

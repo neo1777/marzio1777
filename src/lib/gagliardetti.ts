@@ -39,6 +39,12 @@ export interface UserMetrics {
    djSessionsLong: number;
    /** Numero di audio_sessions partecipate (joined) come listener — esclude le proprie da DJ */
    listenerSessions: number;
+   /** Phase 2.5 — current streak of consecutive correct quiz answers */
+   quizStreak: number;
+   /** Phase 2.5 — current streak of consecutive own tracks skipped */
+   consecutiveSkipped: number;
+   /** Phase 2.5 — total treasure_hunt events in legacy_posts mode the user completed (≥1 capture) */
+   huntsLegacyCompleted: number;
 }
 
 export const ZERO_METRICS: UserMetrics = {
@@ -53,6 +59,9 @@ export const ZERO_METRICS: UserMetrics = {
    djSessionsTotal: 0,
    djSessionsLong: 0,
    listenerSessions: 0,
+   quizStreak: 0,
+   consecutiveSkipped: 0,
+   huntsLegacyCompleted: 0,
 };
 
 export interface GagliardettoDef {
@@ -203,6 +212,38 @@ export const GAGLIARDETTI: GagliardettoDef[] = [
       phase: '2',
       target: 10,
       metric: m => m.listenerSessions,
+   },
+
+   // ─── Phase 2.5 — continuous-tracking gagliardetti ─────────────────────
+   {
+      id: 'veggente_bivacco',
+      name: 'Il Veggente del Bivacco',
+      emoji: '🔮',
+      description: '5 risposte corrette consecutive nel Quiz',
+      category: 'games',
+      phase: '2.5',
+      target: 5,
+      metric: m => m.quizStreak,
+   },
+   {
+      id: 'pellegrino_polaroid',
+      name: 'Il Pellegrino delle Polaroid',
+      emoji: '🗺️',
+      description: '3 cacce in modalità Post Legacy completate',
+      category: 'games',
+      phase: '2.5',
+      target: 3,
+      metric: m => m.huntsLegacyCompleted,
+   },
+   {
+      id: 'discordante',
+      name: 'Il Discordante',
+      emoji: '🎙️',
+      description: '5 Temi skippati di fila (ti voglio bene lo stesso)',
+      category: 'audio',
+      phase: '2.5',
+      target: 5,
+      metric: m => m.consecutiveSkipped,
    },
 ];
 

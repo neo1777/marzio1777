@@ -401,4 +401,32 @@ describe('Gagliardetti — Phase 2 catalog', () => {
      expect(villeggiante.progress).toBe(1);
      expect(villeggiante.earned).toBe(true);
   });
+
+  describe('Phase 2.5 — continuous-tracking', () => {
+     it('Veggente earns at 5 quizStreak', () => {
+        const at5 = computeGagliardetti({ ...ZERO_METRICS, quizStreak: 5 }).find(s => s.def.id === 'veggente_bivacco')!;
+        const at4 = computeGagliardetti({ ...ZERO_METRICS, quizStreak: 4 }).find(s => s.def.id === 'veggente_bivacco')!;
+        expect(at5.earned).toBe(true);
+        expect(at4.earned).toBe(false);
+        expect(at4.progress).toBeCloseTo(0.8, 2);
+     });
+
+     it('Discordante earns at 5 consecutiveSkipped', () => {
+        const at5 = computeGagliardetti({ ...ZERO_METRICS, consecutiveSkipped: 5 }).find(s => s.def.id === 'discordante')!;
+        expect(at5.earned).toBe(true);
+     });
+
+     it('Pellegrino earns at 3 huntsLegacyCompleted', () => {
+        const at3 = computeGagliardetti({ ...ZERO_METRICS, huntsLegacyCompleted: 3 }).find(s => s.def.id === 'pellegrino_polaroid')!;
+        expect(at3.earned).toBe(true);
+        const at0 = computeGagliardetti(ZERO_METRICS).find(s => s.def.id === 'pellegrino_polaroid')!;
+        expect(at0.earned).toBe(false);
+     });
+
+     it('all phase 2.5 gagliardetti are flagged with phase: "2.5"', () => {
+        const phase25 = GAGLIARDETTI.filter(g => g.phase === '2.5');
+        expect(phase25.length).toBeGreaterThanOrEqual(3);
+        expect(phase25.map(g => g.id).sort()).toEqual(['discordante', 'pellegrino_polaroid', 'veggente_bivacco']);
+     });
+  });
 });
