@@ -52,12 +52,7 @@ export function QueueItemCard({ item, isDJ, isProposer, onWithdraw, onKick, onFo
                   <Music className="w-6 h-6 text-muted-foreground" />
                </div>
             )}
-            <img 
-               src={item.proposedByPhotoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + item.proposedBy} 
-               alt={item.proposedByName}
-               className="w-5 h-5 rounded-full border border-background absolute -bottom-1 -right-1 shadow-sm"
-               title={item.proposedByName}
-            />
+            <ProposerAvatar photoURL={item.proposedByPhotoURL} name={item.proposedByName} />
          </div>
          
          <div className="flex-1 min-w-0 mr-4">
@@ -109,4 +104,24 @@ function formatMs(ms: number) {
    const m = Math.floor(totalSeconds / 60);
    const s = totalSeconds % 60;
    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Offline-safe proposer badge: prefers the actual photoURL, falls back to a
+// locally-rendered initial. Avoids the DiceBear CDN dependency that would
+// 404 the avatar in PWA-installed/offline mode.
+function ProposerAvatar({ photoURL, name }: { photoURL?: string; name?: string }) {
+   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+   const className = 'w-5 h-5 rounded-full border border-background absolute -bottom-1 -right-1 shadow-sm';
+   if (photoURL) {
+      return <img src={photoURL} alt={name ?? ''} title={name} className={`${className} object-cover`} />;
+   }
+   return (
+      <div
+         title={name}
+         aria-label={name}
+         className={`${className} bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold leading-none`}
+      >
+         {initial}
+      </div>
+   );
 }

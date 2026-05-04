@@ -10,7 +10,32 @@
   --color-marzio-oro: #F5A623;
   --color-marzio-azzurro: #4A90E2;
   --color-marzio-grigio: #8C928D;
-  
+
+  /* Semantic aliases consumed by `src/components/ui/*` and the four
+     `AudioSession*` pages. Mapped on the Ainulindalë dark-flame palette
+     (the only current callers force dark-flame via parent bg-[#0A0A0F]).
+     Without these, Tailwind v4 silently drops `.bg-primary`, `.bg-card`,
+     `.text-muted-foreground` etc. — bug "pagina nera" on `apri sessione`. */
+  --color-background: #0A0A0F;
+  --color-foreground: #F5F0E1;
+  --color-card: #16161D;
+  --color-card-foreground: #F5F0E1;
+  --color-popover: #16161D;
+  --color-popover-foreground: #F5F0E1;
+  --color-primary: #FFA000;
+  --color-primary-foreground: #0A0A0F;
+  --color-secondary: #24352B;
+  --color-secondary-foreground: #F5F0E1;
+  --color-accent: #C2410C;
+  --color-accent-foreground: #F5F0E1;
+  --color-muted: #1A1A24;
+  --color-muted-foreground: #879B8F;
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #F5F0E1;
+  --color-border: #24352B;
+  --color-input: #24352B;
+  --color-ring: #FFA000;
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }

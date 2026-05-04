@@ -6,11 +6,13 @@ import FullScreenPlayer from '../components/audio/FullScreenPlayer';
 import { LocalTrack } from '../types/audio';
 import { AnimatePresence } from 'framer-motion';
 import { Disc3, Radio, PlusCircle } from 'lucide-react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AudioSessionsList } from './AudioSessionsList';
 import { AudioSessionCreate } from './AudioSessionCreate';
 import { AudioSessionDJ } from './AudioSessionDJ';
 import { AudioSessionListener } from './AudioSessionListener';
+import { useAuth } from '../contexts/AuthContext';
+import { useAudioSession } from '../hooks/useAudioSession';
 
 function IlAinulindaleLayout() {
   const navigate = useNavigate();
@@ -115,11 +117,7 @@ function IlAinulindaleLayout() {
   );
 }
 
-// Wrapper to decide if DJ or Listener view
-import { useAuth } from '../contexts/AuthContext';
-import { useAudioSession } from '../hooks/useAudioSession';
-import { useParams } from 'react-router-dom';
-
+// Wrapper to decide if DJ or Listener view based on session.djId.
 function AudioSessionWrapper() {
    const { id } = useParams<{id: string}>();
    const { user } = useAuth();

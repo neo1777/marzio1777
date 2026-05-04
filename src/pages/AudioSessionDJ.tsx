@@ -10,6 +10,7 @@ import { useWebRTCTransferDJ } from '../hooks/useWebRTCTransfer';
 import { DJEngine } from '../utils/djEngine';
 import { QueueItemCard } from '../components/audio/QueueItemCard';
 import { useAudioEngineRaw } from '../hooks/useAudioEngineRaw';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { Button, Switch, Label, ScrollArea } from '../components/ui';
 import { LogOut, Play, SkipForward, Users, Settings } from 'lucide-react';
 
@@ -28,6 +29,12 @@ export function AudioSessionDJ() {
 
    const [engineState, setEngineState] = useState<'idle' | 'playing' | 'transferring' | 'paused'>('idle');
    const [eventMultiplier, setEventMultiplier] = useState(1);
+
+   // Keep the screen alive while the DJ is conducting an open session: the
+   // engine drives queue/transfer/playback off a 1Hz interval and the WebRTC
+   // signaling needs the tab to stay foreground-active. Listeners don't need
+   // this — they are passive consumers and audio comes from the DJ device.
+   useWakeLock(session?.status === 'open' && session?.djId === user?.uid);
 
    // Resolve the linked game_event multiplier once per session change.
    useEffect(() => {
