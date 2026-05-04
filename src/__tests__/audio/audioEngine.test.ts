@@ -152,4 +152,9 @@ describe('AudioEngine', () => {
       lastAudio.dispatch('ended');
       expect(cb).not.toHaveBeenCalled();
    });
+
+   it('load(undefined) rejects with a meaningful error instead of a cryptic URL.createObjectURL crash', async () => {
+      const engine = await importEngine();
+      await expect(engine.load(undefined as any)).rejects.toThrow(/blob\/url is null/);
+   });
 });

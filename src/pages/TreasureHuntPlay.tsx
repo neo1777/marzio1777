@@ -137,7 +137,7 @@ export default function TreasureHuntPlay() {
                   <div>
                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Punteggio (MVP)</p>
                      <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                        {myCollectedItems.reduce((acc, i) => acc + i.points, 0) * event.pointsMultiplier} pt
+                        {myCollectedItems.reduce((acc, i) => acc + i.points, 0) * (event.pointsMultiplier ?? 1)} pt
                      </p>
                   </div>
                </div>
@@ -186,7 +186,7 @@ export default function TreasureHuntPlay() {
                           <Popup className="font-sans">
                              <div className="text-center">
                                 <p className="font-bold text-lg mb-1">{item.emoji}</p>
-                                <p className="font-bold text-sm mb-2 text-slate-600">{item.points * event.pointsMultiplier} pt</p>
+                                <p className="font-bold text-sm mb-2 text-slate-600">{item.points * (event.pointsMultiplier ?? 1)} pt</p>
                                 <button
                                    onClick={() => handleOpenAR(item)}
                                    className="bg-[#2D5A27] hover:bg-[#23471f] text-white px-4 py-2 rounded-lg font-bold text-xs transition-colors min-h-[56px] w-full mt-2"

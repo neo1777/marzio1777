@@ -21,8 +21,12 @@ function IlAinulindaleLayout() {
   const player = useAudioPlayer();
 
   const handlePlayTrack = (track: LocalTrack, trackList: LocalTrack[]) => {
-     const startIndex = trackList.findIndex(t => t.id === track.id);
-     player.playQueue(trackList, Math.max(0, startIndex));
+     try {
+        const startIndex = trackList.findIndex(t => t.id === track.id);
+        player.playQueue(trackList, Math.max(0, startIndex));
+     } catch (e) {
+        console.error('[Ainulindalë] play error', e);
+     }
   };
 
   const getActiveTab = () => {

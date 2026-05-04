@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Layout = lazy(() => import('./components/Layout'));
 const Landing = lazy(() => import('./pages/Landing'));
@@ -38,8 +39,9 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
             <Route path="/" element={<Landing />} />
             
             <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -60,8 +62,9 @@ export default function App() {
               <Route path="admin" element={<AdminPanel />} />
               <Route path="istruzioni" element={<Istruzioni />} />
             </Route>
-          </Routes>
-        </Suspense>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

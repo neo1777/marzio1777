@@ -67,6 +67,7 @@ export class AudioEngine {
   }
 
   public async load(blob: Blob | string): Promise<void> {
+    if (!blob) throw new Error('AudioEngine.load: blob/url is null or undefined');
     if (typeof blob === 'string') {
       this.audioEl.src = blob;
     } else {

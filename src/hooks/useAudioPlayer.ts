@@ -104,17 +104,23 @@ export function useAudioPlayer() {
   const playTrack = async(track: LocalTrack) => {
      try {
        await engine.load(track.blob);
-       setCurrentTrack(track);
-       setDuration(track.durationMs / 1000); // approx until engine parses
        await engine.play();
+       // Only commit state once load+play succeeded — otherwise consumers
+       // (MiniPlayer/FullScreenPlayer) get a track with duration=0 / src=
+       // empty and dereferenced fields can throw during render.
+       setCurrentTrack(track);
+       setDuration(track.durationMs / 1000);
        updateMediaSession(track);
-       
-       // Update playcount
+
        track.playCount += 1;
        track.lastPlayedAt = Date.now();
        db.updateTrack(track); // fire and forget
      } catch (e) {
         console.error("Play error", e);
+        setCurrentTrack(null);
+        setIsPlaying(false);
+        setDuration(0);
+        setCurrentTime(0);
      }
   }
 
