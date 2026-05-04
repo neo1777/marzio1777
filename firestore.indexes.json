@@ -129,7 +129,23 @@
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "pointsAwarded", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "game_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "scheduledKickoff", "order": "ASCENDING" }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "signaling",
+      "fieldPath": "expireAt",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
+      ]
+    }
+  ]
 }
