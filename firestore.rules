@@ -435,6 +435,25 @@ service cloud.firestore {
       }
     }
 
+    // --- PLACES CACHE ---
+    // Cache pubblica per il reverse-geocoding di Nominatim. Il quiz
+    // wizard (quizGenerators.guess_place) la legge prima di hitare
+    // Nominatim e la popola sui miss. Lettura aperta a tutti gli
+    // approved (la collezione è composta da nomi di luogo pubblici).
+    // Scrittura validata: forma + cap dimensione.
+    match /places_cache/{geoKey} {
+      allow read: if isApprovedUser();
+      allow create, update: if isApprovedUser()
+        && request.resource.data.placeName is string
+        && request.resource.data.placeName.size() > 0
+        && request.resource.data.placeName.size() <= 200
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180;
+      allow delete: if isRoot();
+    }
+
     // --- AUDIT LOG ---
     // Written exclusively by Cloud Functions (admin SDK bypasses rules).
     // Read access restricted to Root for forensic review of capture

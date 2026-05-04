@@ -1,4 +1,5 @@
 import type { Post } from '../types';
+import { reverseGeocode } from '../lib/reverseGeocode';
 
 export type QuestionType =
   | 'guess_who'
@@ -38,15 +39,13 @@ export interface GeneratedQuestion {
 export type QuestionGenerator = (
   post: Post,
   poolPosts: Post[]
-) => GeneratedQuestion | null;
+) => Promise<GeneratedQuestion | null>;
 
 const AUTO_AVAILABLE: Record<QuestionType, boolean> = {
   guess_who: true,
   guess_year: true,
-  // Reverse-geocoding (Nominatim / cached lat-lng → place name) deferred
-  // to Phase 2.5; the wizard keeps the `Manuale` badge on this type and
-  // the host composes manually.
-  guess_place: false,
+  // Phase 2.5: reverse-geocoding via Nominatim + Firestore cache. Now live.
+  guess_place: true,
   guess_caption: true,
   chronology: true,
 };
@@ -132,7 +131,7 @@ function formatDecade(year: number): string {
 
 // ─── Generators ────────────────────────────────────────────────────────────
 
-const guess_who: QuestionGenerator = (post, pool) => {
+const guess_who: QuestionGenerator = async (post, pool) => {
   if (!post.authorName || post.authorName.trim().length === 0) return null;
   const others = pool.filter(
     p => p.authorName && p.authorName.trim().length > 0 && p.authorName !== post.authorName
@@ -149,7 +148,7 @@ const guess_who: QuestionGenerator = (post, pool) => {
   };
 };
 
-const guess_year: QuestionGenerator = (post, pool) => {
+const guess_year: QuestionGenerator = async (post, pool) => {
   const sourceYear = parseDecade(post.decade);
   if (sourceYear === null) return null;
   const correctText = formatDecade(sourceYear);
@@ -192,16 +191,59 @@ const guess_year: QuestionGenerator = (post, pool) => {
   };
 };
 
-const guess_place: QuestionGenerator = (_post, _pool) => {
-  // Reverse-geocoding (lat-lng → place name) deferred to Phase 2.5.
-  // Reasons: (a) free-tier Nominatim is rate-limited (1 req/s), so the host
-  // wizard would need a cache; (b) results need post-processing to be
-  // distinguishable as quiz options ("Marzio (VA), Italia" vs "Marzio (CO),
-  // Italia"). Kept null so the wizard shows the `Manuale` badge.
-  return null;
+const guess_place: QuestionGenerator = async (post, pool) => {
+  // Phase 2.5: reverse-geocode the source post location, then sample 3
+  // distractor locations from the pool of posts that have a `location`
+  // and are NOT close to the source (we approximate "not close" by
+  // requiring a different reverse-geocoded name).
+  const loc = post.location;
+  if (!loc || typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return null;
+
+  const sourcePlace = await reverseGeocode(loc.lat, loc.lng);
+  if (!sourcePlace) return null;
+
+  const candidates = pool.filter(
+    p => p.id !== post.id && p.location && typeof p.location.lat === 'number' && typeof p.location.lng === 'number'
+  );
+  if (candidates.length < 3) return null;
+
+  // Shuffle deterministically by post.id so the same source always yields
+  // the same distractor set.
+  const seedFn = mulberry32(hashString(post.id + ':place'));
+  const shuffled = candidates.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(seedFn() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Walk the shuffled candidates and pick the first 3 that resolve to a
+  // distinct place name (not equal to source, not equal to a previously
+  // chosen distractor). Cap on N requests to avoid hitting Nominatim
+  // rate-limit on a thin pool.
+  const distractors: string[] = [];
+  const seen = new Set<string>([sourcePlace]);
+  for (const cand of shuffled) {
+    if (distractors.length === 3) break;
+    if (!cand.location) continue;
+    const name = await reverseGeocode(cand.location.lat, cand.location.lng);
+    if (!name) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    distractors.push(name);
+  }
+  if (distractors.length < 3) return null;
+
+  const all = shuffleSeeded([sourcePlace, ...distractors], post.id + ':place-final');
+  const correctIndex = all.indexOf(sourcePlace) as 0 | 1 | 2 | 3;
+  return {
+    questionText: 'Dove è stata scattata questa foto?',
+    options: all as [string, string, string, string],
+    correctIndex,
+    postId: post.id,
+  };
 };
 
-const guess_caption: QuestionGenerator = (post, pool) => {
+const guess_caption: QuestionGenerator = async (post, pool) => {
   if (!post.caption || post.caption.trim().length < 5) return null;
   const others = pool.filter(
     p => p.id !== post.id && p.caption && p.caption.trim().length >= 5 && p.caption !== post.caption
@@ -218,7 +260,7 @@ const guess_caption: QuestionGenerator = (post, pool) => {
   };
 };
 
-const chronology: QuestionGenerator = (post, pool) => {
+const chronology: QuestionGenerator = async (post, pool) => {
   // Need ≥4 distinct decades total (source + 3 others). Format the question
   // as "put these decades in chronological order"; one option string is the
   // correct sorted permutation, the other three are distinct wrong shuffles.

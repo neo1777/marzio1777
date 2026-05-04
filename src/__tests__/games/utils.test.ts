@@ -1,4 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// quizGenerators.ts imports reverseGeocode → ../lib/firebase, which calls
+// initializeFirestore() at module-eval time. In unit tests there's no Vite
+// env injection, so the firebase init crashes. Mock reverseGeocode so the
+// firebase chain is never imported.
+vi.mock('../../lib/reverseGeocode', () => ({
+  reverseGeocode: vi.fn(async () => null),
+}));
 import { haversineDistance, bearing } from '../../utils/geo';
 import { generateUniformPointsInRadius } from '../../utils/spawning';
 import { calculateQuizPoints } from '../../utils/scoring';
@@ -189,29 +197,29 @@ describe('Spawning Utils — edge cases', () => {
 
 describe('Quiz Generators — Phase 2', () => {
   describe('isAutoGenerationAvailable', () => {
-    it('flags 4 generators as auto-available, leaves guess_place manual', () => {
+    it('flags all 5 generators as auto-available (Phase 2.5: guess_place via reverse-geocode)', () => {
       expect(isAutoGenerationAvailable('guess_who')).toBe(true);
       expect(isAutoGenerationAvailable('guess_year')).toBe(true);
       expect(isAutoGenerationAvailable('guess_caption')).toBe(true);
       expect(isAutoGenerationAvailable('chronology')).toBe(true);
-      // Reverse-geocoding deferred to Phase 2.5
-      expect(isAutoGenerationAvailable('guess_place')).toBe(false);
+      // Phase 2.5: guess_place is now wired to Nominatim + Firestore cache.
+      expect(isAutoGenerationAvailable('guess_place')).toBe(true);
     });
   });
 
   describe('guess_who', () => {
-    it('returns null if the source post has no author', () => {
-      const r = questionGenerators.guess_who(fakePost({ id: 's', authorName: '' }), []);
+    it('returns null if the source post has no author', async () => {
+      const r = await questionGenerators.guess_who(fakePost({ id: 's', authorName: '' }), []);
       expect(r).toBeNull();
     });
 
-    it('returns null if the pool has < 3 distinct other authors', () => {
+    it('returns null if the pool has < 3 distinct other authors', async () => {
       const source = fakePost({ id: 's', authorName: 'Mario' });
       const pool = [fakePost({ id: 'a', authorName: 'Mario' }), fakePost({ id: 'b', authorName: 'Luigi' })];
-      expect(questionGenerators.guess_who(source, pool)).toBeNull();
+      expect(await questionGenerators.guess_who(source, pool)).toBeNull();
     });
 
-    it('produces a valid 4-option question with the source author as correct', () => {
+    it('produces a valid 4-option question with the source author as correct', async () => {
       const source = fakePost({ id: 's', authorName: 'Mario' });
       const pool = [
         fakePost({ id: 'a', authorName: 'Luigi' }),
@@ -219,7 +227,7 @@ describe('Quiz Generators — Phase 2', () => {
         fakePost({ id: 'c', authorName: 'Giovanna' }),
         fakePost({ id: 'd', authorName: 'Carlo' }),
       ];
-      const r = questionGenerators.guess_who(source, pool);
+      const r = await questionGenerators.guess_who(source, pool);
       expect(r).not.toBeNull();
       expect(r!.options).toHaveLength(4);
       expect(r!.options[r!.correctIndex]).toBe('Mario');
@@ -230,7 +238,7 @@ describe('Quiz Generators — Phase 2', () => {
       });
     });
 
-    it('is deterministic by post.id', () => {
+    it('is deterministic by post.id', async () => {
       const source = fakePost({ id: 'stable_id', authorName: 'Mario' });
       const pool = [
         fakePost({ id: 'a', authorName: 'Luigi' }),
@@ -238,70 +246,72 @@ describe('Quiz Generators — Phase 2', () => {
         fakePost({ id: 'c', authorName: 'Giovanna' }),
         fakePost({ id: 'd', authorName: 'Carlo' }),
       ];
-      const r1 = questionGenerators.guess_who(source, pool);
-      const r2 = questionGenerators.guess_who(source, pool);
+      const r1 = await questionGenerators.guess_who(source, pool);
+      const r2 = await questionGenerators.guess_who(source, pool);
       expect(r1).toEqual(r2);
     });
   });
 
   describe('guess_year', () => {
-    it('returns null if the source has no parsable decade', () => {
-      const r = questionGenerators.guess_year(fakePost({ id: 's', decade: 'foo' }), []);
+    it('returns null if the source has no parsable decade', async () => {
+      const r = await questionGenerators.guess_year(fakePost({ id: 's', decade: 'foo' }), []);
       expect(r).toBeNull();
     });
 
-    it('produces 4 unique decade strings with the source decade as correct', () => {
+    it('produces 4 unique decade strings with the source decade as correct', async () => {
       const source = fakePost({ id: 's', decade: '1970' });
       const pool = [
         fakePost({ id: 'a', decade: '1960' }),
         fakePost({ id: 'b', decade: '1980' }),
         fakePost({ id: 'c', decade: '1990' }),
       ];
-      const r = questionGenerators.guess_year(source, pool);
+      const r = await questionGenerators.guess_year(source, pool);
       expect(r).not.toBeNull();
       expect(r!.options).toHaveLength(4);
       expect(new Set(r!.options).size).toBe(4); // all distinct
       expect(r!.options[r!.correctIndex]).toBe('Anni 70');
     });
 
-    it('falls back to synthetic ±20y candidates when the pool is thin', () => {
+    it('falls back to synthetic ±20y candidates when the pool is thin', async () => {
       const source = fakePost({ id: 's', decade: '1970' });
-      const r = questionGenerators.guess_year(source, []);
-      // Even with empty pool, synthetic offsets [-20,-10,+10,+20] give us 4 candidates.
+      const r = await questionGenerators.guess_year(source, []);
       expect(r).not.toBeNull();
       expect(r!.options).toHaveLength(4);
       expect(r!.options[r!.correctIndex]).toBe('Anni 70');
     });
 
-    it('handles 2-digit decade format', () => {
+    it('handles 2-digit decade format', async () => {
       const source = fakePost({ id: 's', decade: '70' });
-      const r = questionGenerators.guess_year(source, []);
+      const r = await questionGenerators.guess_year(source, []);
       expect(r).not.toBeNull();
       expect(r!.options[r!.correctIndex]).toBe('Anni 70');
     });
   });
 
   describe('guess_place', () => {
-    it('returns null in MVP (reverse-geocoding deferred to Phase 2.5)', () => {
-      const r = questionGenerators.guess_place(fakePost({ id: 's' }), [fakePost({ id: 'a' })]);
+    // Reverse-geocoding hits Firestore + Nominatim; the unit test runner
+    // has neither. Verify the early-out paths only — the happy path is
+    // covered by integration testing on the live wizard.
+    it('returns null when the source post has no location', async () => {
+      const r = await questionGenerators.guess_place(fakePost({ id: 's' }), [fakePost({ id: 'a' })]);
       expect(r).toBeNull();
     });
   });
 
   describe('guess_caption', () => {
-    it('returns null on too-short captions', () => {
-      const r = questionGenerators.guess_caption(fakePost({ id: 's', caption: 'hi' }), []);
+    it('returns null on too-short captions', async () => {
+      const r = await questionGenerators.guess_caption(fakePost({ id: 's', caption: 'hi' }), []);
       expect(r).toBeNull();
     });
 
-    it('produces 4 captions, source as correct, others from pool', () => {
+    it('produces 4 captions, source as correct, others from pool', async () => {
       const source = fakePost({ id: 's', caption: 'La pizza più buona del paese' });
       const pool = [
         fakePost({ id: 'a', caption: 'Tramonto sulla diga' }),
         fakePost({ id: 'b', caption: 'Carnevale del 1985' }),
         fakePost({ id: 'c', caption: 'Festa patronale Ferragosto' }),
       ];
-      const r = questionGenerators.guess_caption(source, pool);
+      const r = await questionGenerators.guess_caption(source, pool);
       expect(r).not.toBeNull();
       expect(r!.options).toHaveLength(4);
       expect(r!.options[r!.correctIndex]).toBe('La pizza più buona del paese');
@@ -309,13 +319,13 @@ describe('Quiz Generators — Phase 2', () => {
   });
 
   describe('chronology', () => {
-    it('returns null if pool has < 4 distinct decades', () => {
+    it('returns null if pool has < 4 distinct decades', async () => {
       const source = fakePost({ id: 's', decade: '1970' });
       const pool = [fakePost({ id: 'a', decade: '1980' }), fakePost({ id: 'b', decade: '1980' })];
-      expect(questionGenerators.chronology(source, pool)).toBeNull();
+      expect(await questionGenerators.chronology(source, pool)).toBeNull();
     });
 
-    it('produces 4 distinct permutations, one is the chronological order', () => {
+    it('produces 4 distinct permutations, one is the chronological order', async () => {
       const source = fakePost({ id: 's', decade: '1970' });
       const pool = [
         fakePost({ id: 'a', decade: '1960' }),
@@ -323,7 +333,7 @@ describe('Quiz Generators — Phase 2', () => {
         fakePost({ id: 'c', decade: '1990' }),
         fakePost({ id: 'd', decade: '2000' }),
       ];
-      const r = questionGenerators.chronology(source, pool);
+      const r = await questionGenerators.chronology(source, pool);
       expect(r).not.toBeNull();
       expect(r!.options).toHaveLength(4);
       expect(new Set(r!.options).size).toBe(4); // all distinct permutations

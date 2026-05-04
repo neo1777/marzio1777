@@ -80,22 +80,28 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
 
   const canAutoGenerate = !!selectedPost && !!draft.questionType && isAutoGenerationAvailable(draft.questionType);
 
-  const handleAutoGenerate = () => {
+  const [generating, setGenerating] = useState(false);
+  const handleAutoGenerate = async () => {
     if (!selectedPost || !draft.questionType) return;
-    const generator = questionGenerators[draft.questionType];
-    const generated = generator(selectedPost, posts);
-    if (!generated) {
-      alert(
-        'Generatore non disponibile per questo post (pool insufficiente o dati mancanti). ' +
-        'Prova con un altro post o compila manualmente.'
-      );
-      return;
+    setGenerating(true);
+    try {
+      const generator = questionGenerators[draft.questionType];
+      const generated = await generator(selectedPost, posts);
+      if (!generated) {
+        alert(
+          'Generatore non disponibile per questo post (pool insufficiente o dati mancanti). ' +
+          'Prova con un altro post o compila manualmente.'
+        );
+        return;
+      }
+      handleUpdateDraft({
+        questionText: generated.questionText,
+        options: generated.options,
+        correctIndex: generated.correctIndex,
+      });
+    } finally {
+      setGenerating(false);
     }
-    handleUpdateDraft({
-      questionText: generated.questionText,
-      options: generated.options,
-      correctIndex: generated.correctIndex,
-    });
   };
 
   const handleLaunch = async () => {
@@ -297,23 +303,25 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
                     <button
                       type="button"
                       onClick={handleAutoGenerate}
-                      disabled={!canAutoGenerate}
+                      disabled={!canAutoGenerate || generating}
                       className={`text-xs font-bold flex items-center gap-1 transition-colors min-h-[44px] px-2 rounded-md ${
-                        canAutoGenerate
+                        canAutoGenerate && !generating
                           ? 'text-[#2D5A27] hover:bg-[#2D5A27]/10'
                           : 'text-slate-400 cursor-not-allowed'
                       }`}
                       title={
-                        !selectedPost
+                        generating
+                          ? 'Generazione in corso...'
+                          : !selectedPost
                           ? 'Seleziona prima una foto sorgente'
                           : !draft.questionType
                           ? 'Seleziona prima un tipo di domanda'
                           : !isAutoGenerationAvailable(draft.questionType)
-                          ? 'Tipo di domanda solo manuale (richiede reverse-geocoding)'
+                          ? 'Tipo di domanda non disponibile in auto'
                           : 'Compila domanda + opzioni dal post sorgente e dal pool'
                       }
                     >
-                      <Sparkles size={12} /> Genera distrattori
+                      <Sparkles size={12} /> {generating ? 'Genero...' : 'Genera distrattori'}
                     </button>
                   </div>
                   <div className="space-y-2">
