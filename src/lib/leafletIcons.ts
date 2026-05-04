@@ -50,3 +50,29 @@ export function createMarkerIcon(color: MarkerColor): L.DivIcon {
     className: 'marzio-marker', // hook for global CSS if ever needed (no default styles)
   });
 }
+
+/**
+ * Offline-safe HTML for a live-user avatar inside a Leaflet `divIcon` (string
+ * context — can't render React there). Mirrors the `Avatar` component policy:
+ * use the photoURL when present, fall back to an initial-on-#2D5A27 circle.
+ * Avoids the DiceBear CDN dependency that would 404 the marker in PWA-
+ * installed/offline mode.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+export function liveUserAvatarHtml(opts: { photoURL?: string | null; name?: string | null; size?: number }): string {
+  const size = opts.size ?? 36;
+  const initial = ((opts.name ?? '?').trim()[0] ?? '?').toUpperCase();
+  const common = `width:${size}px;height:${size}px;border-radius:50%;border:2px solid #10b981;box-shadow:0 4px 6px rgba(0,0,0,0.3);`;
+  if (opts.photoURL) {
+    return `<img src="${escapeHtml(opts.photoURL)}" referrerpolicy="no-referrer" style="${common}object-fit:cover;" />`;
+  }
+  return `<div style="${common}background:#2D5A27;color:white;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-weight:700;font-size:${Math.round(size * 0.42)}px;line-height:1;">${escapeHtml(initial)}</div>`;
+}

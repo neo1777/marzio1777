@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3 } from 'lucide-react';
 import { useRBAC } from '../hooks/useRBAC';
+import { Avatar } from './ui';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
@@ -153,7 +154,7 @@ export default function Layout() {
           </div>
           
           <div onClick={() => navigate('/dashboard/profilo')} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-[#24352b] transition-colors flex items-center gap-3 mb-4 p-2 bg-white dark:bg-[#111814] border border-slate-100 dark:border-[#24352b] shadow-sm rounded-xl">
-            <img src={profile?.photoURL || 'https://picsum.photos/seed/avatar/100/100'} className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b]" alt="avatar" />
+            <Avatar photoURL={profile?.photoURL} name={profile?.displayName} size="sm" className="border border-slate-200 dark:border-[#24352b]" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-[#1a2e16] dark:text-[#e2e8f0]">{profile?.displayName}</p>
               <p className={`text-[10px] font-sans uppercase font-bold truncate ${isRoot ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>{profile?.role || 'OSPITE'}</p>

@@ -473,6 +473,114 @@ describe('Marzio Memories Framework Rules', () => {
     });
   });
 
+  describe('Sporca #31 — Like Forger (posts.update likedBy diff)', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('userA').set({
+           uid: 'userA', email: 'a@test.com', role: 'Admin', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('users').doc('userB').set({
+           uid: 'userB', email: 'b@test.com', role: 'Admin', accountStatus: 'approved', points: 0,
+        });
+        await db.collection('posts').doc('p1').set({
+           authorId: 'userA', authorName: 'A', timestamp: 1234,
+           likesCount: 0, commentsCount: 0, visibilityStatus: 'public',
+           likedBy: [],
+        });
+      });
+    });
+
+    it('owner self-likes their own post (size+1, diff = [auth.uid])', async () => {
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('posts').doc('p1').update({
+         likesCount: 1, likedBy: ['userA'],
+         // isValidPost requires the rest of the keys to remain intact.
+         authorId: 'userA', authorName: 'A', timestamp: 1234, commentsCount: 0, visibilityStatus: 'public',
+      }));
+    });
+
+    it('rejects forging another user uid into likedBy (Sporca #31)', async () => {
+      const db = testEnv.authenticatedContext('userB', { email: 'b@test.com', email_verified: true }).firestore();
+      // userB tries to "like" the post but injects userA's uid in likedBy.
+      // size+1 and likesCount+1 match, but the diff is not {userB}.
+      await assertFails(db.collection('posts').doc('p1').update({
+         likesCount: 1, likedBy: ['userA'],
+         authorId: 'userA', authorName: 'A', timestamp: 1234, commentsCount: 0, visibilityStatus: 'public',
+      }));
+    });
+
+    it('rejects double-like (caller already in likedBy)', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        await ctx.firestore().collection('posts').doc('p1').update({ likesCount: 1, likedBy: ['userA'] });
+      });
+      const db = testEnv.authenticatedContext('userA', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('posts').doc('p1').update({
+         likesCount: 2, likedBy: ['userA', 'userA'],
+         authorId: 'userA', authorName: 'A', timestamp: 1234, commentsCount: 0, visibilityStatus: 'public',
+      }));
+    });
+
+    it('accepts a legitimate unlike (caller was in the set)', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        await ctx.firestore().collection('posts').doc('p1').update({ likesCount: 2, likedBy: ['userA', 'userB'] });
+      });
+      const db = testEnv.authenticatedContext('userB', { email: 'b@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('posts').doc('p1').update({
+         likesCount: 1, likedBy: ['userA'],
+         authorId: 'userA', authorName: 'A', timestamp: 1234, commentsCount: 0, visibilityStatus: 'public',
+      }));
+    });
+
+    it('rejects an unlike that strips someone else (caller not in set)', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        await ctx.firestore().collection('posts').doc('p1').update({ likesCount: 1, likedBy: ['userA'] });
+      });
+      const db = testEnv.authenticatedContext('userB', { email: 'b@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('posts').doc('p1').update({
+         likesCount: 0, likedBy: [],
+         authorId: 'userA', authorName: 'A', timestamp: 1234, commentsCount: 0, visibilityStatus: 'public',
+      }));
+    });
+  });
+
+  describe('items.create — points bound [1, 200]', () => {
+    nodeBeforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('orgX').set({
+           uid: 'orgX', email: 'o@test.com', role: 'Admin', accountStatus: 'approved', points: 0,
+        });
+        const future = new Date(Date.now() + 60 * 60 * 1000);
+        await db.collection('game_events').doc('ev1').set({
+           organizerId: 'orgX', status: 'draft', type: 'treasure_hunt',
+           createdAt: new Date(), scheduledKickoff: future,
+        });
+      });
+    });
+
+    it('accepts a sane points value within the band', async () => {
+      const db = testEnv.authenticatedContext('orgX', { email: 'o@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('ev1')
+        .collection('items').doc('it1')
+        .set({ status: 'spawned', collectedBy: null, lat: 0, lng: 0, points: 50, templateId: 't' }));
+    });
+
+    it('rejects points = 0', async () => {
+      const db = testEnv.authenticatedContext('orgX', { email: 'o@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('items').doc('it2')
+        .set({ status: 'spawned', collectedBy: null, lat: 0, lng: 0, points: 0, templateId: 't' }));
+    });
+
+    it('rejects points > 200 (would break users.points +1000 cap at 5x multiplier)', async () => {
+      const db = testEnv.authenticatedContext('orgX', { email: 'o@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('ev1')
+        .collection('items').doc('it3')
+        .set({ status: 'spawned', collectedBy: null, lat: 0, lng: 0, points: 250, templateId: 't' }));
+    });
+  });
+
   describe('B7 — finalLeaderboard immutability (Sporca #22 The Resurrectionist)', () => {
     it('rejects rewriting finalLeaderboard once the event is completed', async () => {
       await testEnv.withSecurityRulesDisabled(async (ctx: any) => {

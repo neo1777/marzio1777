@@ -5,6 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase
 import { Shield, Users, Activity, AlertTriangle, Key, UserCheck, Clock } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Avatar } from '../components/ui';
 
 interface UserData {
   uid: string;
@@ -169,7 +170,7 @@ export default function AdminPanel() {
                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-amber-200 dark:border-amber-900/30 rounded-xl gap-4 hover:shadow-sm transition-shadow shadow-amber-500/5"
                         >
                            <div className="flex items-center gap-3">
-                           <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
+                           <Avatar photoURL={user.photoURL} name={user.displayName} size="md" className="border border-slate-200 dark:border-[#24352b] shadow-sm" />
                            <div>
                               <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
                               <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>
@@ -202,7 +203,7 @@ export default function AdminPanel() {
                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] rounded-xl gap-4 hover:border-[#2D5A27]/50 dark:hover:border-[#42a83a]/30 hover:shadow-sm transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <img src={user.photoURL || 'https://picsum.photos/seed/avatar/100/100'} alt={user.displayName} className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#24352b] shadow-sm" referrerPolicy="no-referrer" />
+                      <Avatar photoURL={user.photoURL} name={user.displayName} size="md" className="border border-slate-200 dark:border-[#24352b] shadow-sm" />
                       <div>
                         <p className="font-bold font-sans text-slate-800 dark:text-slate-200">{user.displayName}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">{user.email}</p>

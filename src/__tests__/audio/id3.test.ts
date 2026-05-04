@@ -58,8 +58,4 @@ describe('ID3 Parser', () => {
     expect(result.coverDataUrl).toContain('data:image/jpeg;base64,aW1n');
   });
 
-  it('parses UTF-16 BE correctly', async () => {
-     // Not strictly BE vs LE encoded here because the mock checks UTF-16 decoding which relies on TextDecoder
-     expect(true).toBe(true);
-  });
 });

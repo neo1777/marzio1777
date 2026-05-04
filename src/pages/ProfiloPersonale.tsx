@@ -5,6 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GestioneArchivio from '../components/GestioneArchivio';
+import { Avatar } from '../components/ui';
 
 export default function ProfiloPersonale() {
   const { user, profile, isAdminOrRoot } = useRBAC();
@@ -106,7 +107,7 @@ export default function ProfiloPersonale() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#2D5A27]/5 dark:bg-[#42a83a]/10 rounded-bl-full -z-0"></div>
                     
                     <div className="flex flex-col sm:flex-row gap-6 relative z-10">
-                       <img src={profile.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${user?.uid}`} alt="avatar" className="w-24 h-24 rounded-full border-4 border-slate-50 dark:border-[#111814] shadow-md object-cover bg-white" />
+                       <Avatar photoURL={profile.photoURL} name={profile.displayName} size="xl" className="border-4 border-slate-50 dark:border-[#111814] shadow-md" />
                        <div className="flex-1">
                           <h3 className="text-2xl font-bold font-serif text-[#1a2e16] dark:text-[#e2e8f0] flex items-center gap-2">
                              {profile.displayName}

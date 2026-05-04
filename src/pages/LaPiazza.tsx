@@ -6,6 +6,7 @@ import { Heart, MessageCircle, MapPin, Send, Leaf } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useRBAC } from '../hooks/useRBAC';
+import { Avatar } from '../components/ui';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -210,7 +211,7 @@ export default function LaPiazza() {
                   
                   {/* Author Row */}
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#24352b]">
-                    <img src={`https://api.dicebear.com/7.x/identicon/svg?seed=${post.authorId}`} alt="avatar" className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b] bg-slate-50 dark:bg-[#111814]" />
+                    <Avatar name={post.authorName} size="sm" className="border border-slate-200 dark:border-[#24352b]" />
                     <div>
                       <p className="font-bold text-sm text-[#1a2e16] dark:text-[#e2e8f0] font-sans">{post.authorName || 'Villeggiante Anonimo'}</p>
                       <p className="text-xs text-[#8C928D] dark:text-slate-500 font-sans">{post.timestamp ? formatDistanceToNow(post.timestamp.toDate(), { locale: it, addSuffix: true }) : 'In caricamento...'}</p>

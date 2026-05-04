@@ -6,6 +6,7 @@ import { db } from '../lib/firebase';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useRBAC } from '../hooks/useRBAC';
+import { Avatar } from './ui';
 
 export default function EventDetailModal({ event, onClose, user }: { event: any, onClose: () => void, user: any }) {
   const { profile, isGuest } = useRBAC();
@@ -124,7 +125,7 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
                        {Object.entries(attendees).filter(([_, a]: any) => a.status === 'yes').map(([uid, a]: any) => (
                           <div key={uid} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-[#24352b] last:border-0">
                              <div className="flex items-center gap-2">
-                                <img src={a.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`} className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#24352b]" alt="avatar" />
+                                <Avatar photoURL={a.photoURL} name={a.name} size="sm" className="border border-slate-200 dark:border-[#24352b]" />
                                 <span className="font-medium text-sm text-[#1a2e16] dark:text-[#e2e8f0]">{a.name}</span>
                              </div>
                              {a.guestCount > 0 && <span className="text-xs bg-slate-100 dark:bg-[#24352b] text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full font-bold">+{a.guestCount} compagni</span>}

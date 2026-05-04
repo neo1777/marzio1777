@@ -5,10 +5,13 @@ import { LocalTrack } from '../../types/audio';
 
 describe('IndexedDB', () => {
     beforeEach(async () => {
-       // fake-indexeddb automatically polyfills the global indexedDB
-       // but we might need to delete the db to ensure clean tests
+       // fake-indexeddb automatically polyfills the global indexedDB.
+       // The DB name must match the one used in src/utils/indexedDB.ts
+       // (`marzio1777_audio`). The previous value (`AinulindaleDB`) was a
+       // no-op cleanup — a renaming leftover that fake-indexeddb tolerated
+       // but didn't isolate runs against.
        await new Promise<void>((resolve) => {
-           const req = indexedDB.deleteDatabase('AinulindaleDB');
+           const req = indexedDB.deleteDatabase('marzio1777_audio');
            req.onsuccess = () => resolve();
            req.onerror = () => resolve();
            req.onblocked = () => resolve();

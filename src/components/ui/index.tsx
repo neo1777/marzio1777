@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -7,6 +7,65 @@ import { twMerge } from 'tailwind-merge';
 // (de-duplication of conflicting Tailwind utilities). Both are already in
 // package.json; we don't need class-variance-authority or shadcn-cli for this.
 const cn = (...inputs: Array<string | undefined | false | null>) => twMerge(clsx(inputs));
+
+// ─── Avatar ────────────────────────────────────────────────────────────────
+//
+// Offline-safe avatar: renders the user photoURL when present, falls back to
+// an initial-on-colored-bg div otherwise. Replaces the previous DiceBear /
+// picsum.photos CDN fallbacks scattered across the app — those would 404 in
+// PWA-installed/offline mode and depend on third-party uptime.
+//
+// `onError` also degrades a broken/forbidden photoURL (e.g. revoked Google
+// avatar) to the initial fallback at runtime, instead of showing a broken
+// image icon.
+
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+const AVATAR_SIZE_CLS: Record<AvatarSize, string> = {
+  xs: 'w-5 h-5 text-[9px]',
+  sm: 'w-8 h-8 text-xs',
+  md: 'w-10 h-10 text-sm',
+  lg: 'w-16 h-16 text-base',
+  xl: 'w-24 h-24 text-2xl',
+};
+
+interface AvatarProps {
+  photoURL?: string | null;
+  name?: string | null;
+  size?: AvatarSize;
+  className?: string;
+  ringClass?: string;
+}
+
+export function Avatar({ photoURL, name, size = 'md', className, ringClass }: AvatarProps) {
+  const [errored, setErrored] = useState(false);
+  const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+  const base = cn('rounded-full inline-flex items-center justify-center overflow-hidden shrink-0', AVATAR_SIZE_CLS[size], ringClass, className);
+
+  if (photoURL && !errored) {
+    return (
+      <img
+        src={photoURL}
+        alt={name ?? ''}
+        title={name ?? undefined}
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        onError={() => setErrored(true)}
+        className={cn(base, 'object-cover')}
+      />
+    );
+  }
+
+  return (
+    <div
+      role="img"
+      aria-label={name ?? 'avatar'}
+      title={name ?? undefined}
+      className={cn(base, 'bg-marzio-verde text-white font-bold leading-none select-none')}
+    >
+      {initial}
+    </div>
+  );
+}
 
 // ─── Button ────────────────────────────────────────────────────────────────
 

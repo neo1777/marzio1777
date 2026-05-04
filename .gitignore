@@ -8,3 +8,4 @@ coverage/
 !.env.example
 src/firebase-applet-config.json
 CLAUDE.md
+AUDIT_REPORT.md

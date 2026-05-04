@@ -179,10 +179,28 @@ service cloud.firestore {
             request.auth.uid == existing().authorId &&
             incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'location', 'decade', 'visibilityStatus', 'visibilityTime', 'showInCinematografo'])
          ) || (
-            // Anyone can like/comment - granular update
+            // Anyone (approved) can like/unlike or bump comments — granular updates.
+            // Sporca #31 "Like Forger": before this hardening the rule only
+            // checked `likedBy.size + 1 == likesCount + 1`, which a malicious
+            // caller could satisfy by appending some-other-uid to `likedBy`.
+            // The set diff below pins the new/removed element to the caller.
             (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'likedBy']) &&
-             (((incoming().likesCount == existing().likesCount + 1) && (incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() + 1)) ||
-              ((incoming().likesCount == existing().likesCount - 1) && (incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() - 1)))
+             (
+               // Like: incoming.likedBy = existing.likedBy ∪ {auth.uid},
+               //       likesCount += 1, and auth.uid wasn't in the old set.
+               (incoming().likesCount == existing().likesCount + 1 &&
+                incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() + 1 &&
+                incoming().get('likedBy', []).toSet().difference(existing().get('likedBy', []).toSet()).hasOnly([request.auth.uid]) &&
+                !(request.auth.uid in existing().get('likedBy', []))
+               ) ||
+               // Unlike: incoming.likedBy = existing.likedBy \ {auth.uid},
+               //         likesCount -= 1, and auth.uid was in the old set.
+               (incoming().likesCount == existing().likesCount - 1 &&
+                incoming().get('likedBy', []).size() == existing().get('likedBy', []).size() - 1 &&
+                existing().get('likedBy', []).toSet().difference(incoming().get('likedBy', []).toSet()).hasOnly([request.auth.uid]) &&
+                request.auth.uid in existing().get('likedBy', [])
+               )
+             )
             ) ||
             (incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount']) &&
              (incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
@@ -283,10 +301,18 @@ service cloud.firestore {
 
       match /items/{itemId} {
         allow read: if isAdminOrRoot() || isEventParticipant(eventId) || isApprovedUser();
+        // Bound `points` to [1, 200]: a capture writes
+        // `users/{uid}.points += points × pointsMultiplier`, and the
+        // `users.update` rule caps the per-transaction increment at +1000.
+        // With multiplier_max = 5.0, items.points must stay ≤ 200 or a
+        // legitimate worst-case capture rolls back at the rule layer.
         allow create: if (isEventOrganizer(eventId) || isAdminOrRoot())
           && getEventDoc(eventId).status in ['draft', 'scheduled']
           && request.resource.data.status == 'spawned'
-          && request.resource.data.collectedBy == null;
+          && request.resource.data.collectedBy == null
+          && request.resource.data.points is int
+          && request.resource.data.points >= 1
+          && request.resource.data.points <= 200;
 
         allow update: if isEventParticipant(eventId)
           && isEventActive(eventId)

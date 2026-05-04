@@ -1,7 +1,7 @@
 import React from 'react';
 import { QueueItem } from '../../types/audio';
 import { Music, Play, X, Ban, GripVertical, AlertTriangle } from 'lucide-react';
-import { Button } from '../ui';
+import { Button, Avatar } from '../ui';
 
 interface QueueItemCardProps {
    item: QueueItem;
@@ -52,7 +52,12 @@ export function QueueItemCard({ item, isDJ, isProposer, onWithdraw, onKick, onFo
                   <Music className="w-6 h-6 text-muted-foreground" />
                </div>
             )}
-            <ProposerAvatar photoURL={item.proposedByPhotoURL} name={item.proposedByName} />
+            <Avatar
+               photoURL={item.proposedByPhotoURL}
+               name={item.proposedByName}
+               size="xs"
+               className="absolute -bottom-1 -right-1 border border-background shadow-sm"
+            />
          </div>
          
          <div className="flex-1 min-w-0 mr-4">
@@ -104,24 +109,4 @@ function formatMs(ms: number) {
    const m = Math.floor(totalSeconds / 60);
    const s = totalSeconds % 60;
    return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-// Offline-safe proposer badge: prefers the actual photoURL, falls back to a
-// locally-rendered initial. Avoids the DiceBear CDN dependency that would
-// 404 the avatar in PWA-installed/offline mode.
-function ProposerAvatar({ photoURL, name }: { photoURL?: string; name?: string }) {
-   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
-   const className = 'w-5 h-5 rounded-full border border-background absolute -bottom-1 -right-1 shadow-sm';
-   if (photoURL) {
-      return <img src={photoURL} alt={name ?? ''} title={name} className={`${className} object-cover`} />;
-   }
-   return (
-      <div
-         title={name}
-         aria-label={name}
-         className={`${className} bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold leading-none`}
-      >
-         {initial}
-      </div>
-   );
 }

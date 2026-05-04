@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { doc, setDoc, onSnapshot, Unsubscribe, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, Unsubscribe, updateDoc, arrayUnion, Timestamp, deleteDoc } from 'firebase/firestore';
 
 const STUN_SERVERS = {
   iceServers: [
@@ -8,6 +8,11 @@ const STUN_SERVERS = {
 };
 
 const CHUNK_SIZE = 16384; // 16KB
+// Hard cap on the number of chunks the DJ will accept on a single transfer.
+// 3200 × 16KB = 51.2MB, just above the 50MB per-track ceiling. A proposer
+// declaring `totalChunks: 99999999` would otherwise trigger an unbounded
+// receiveBuffer allocation on the DJ side. Spec: AINULINDALE_TECHNICAL_SPEC §8.
+const MAX_TOTAL_CHUNKS = 3200;
 
 export class WebRTCTransfer {
   private peerConnection: RTCPeerConnection | null = null;
@@ -221,8 +226,21 @@ export class WebRTCTransfer {
            try {
               const msg = JSON.parse(event.data);
               if (msg.type === 'meta') {
-                 this.expectedChunks = msg.totalChunks;
-                 this.receiveMime = msg.mimeType;
+                 // Defensive validation on the receive side (DJ): reject
+                 // malformed/forged meta before allocating buffers.
+                 // Spec: AINULINDALE_TECHNICAL_SPEC §8 (MIME whitelist + size cap).
+                 const mime: string = typeof msg.mimeType === 'string' ? msg.mimeType : '';
+                 const total: number = typeof msg.totalChunks === 'number' ? msg.totalChunks : 0;
+                 if (!mime.startsWith('audio/')) {
+                    this.handleError('MIME non valido: atteso audio/*, ricevuto ' + (mime || 'vuoto'));
+                    return;
+                 }
+                 if (!Number.isInteger(total) || total <= 0 || total > MAX_TOTAL_CHUNKS) {
+                    this.handleError('Numero di chunk fuori intervallo (' + total + ')');
+                    return;
+                 }
+                 this.expectedChunks = total;
+                 this.receiveMime = mime;
                  this.receiveBuffer = [];
                  this.receivedChunks = 0;
                  this.resetTimeout();
@@ -326,5 +344,11 @@ export class WebRTCTransfer {
         this.peerConnection.close();
         this.peerConnection = null;
      }
+     // Best-effort cleanup of the signaling doc (Spec §8 step 21). Both the
+     // proposer (`userId == auth.uid`) and the DJ (`isSessionDJ`) are allowed
+     // to delete by the rule. Swallow errors: the doc may already be gone,
+     // or this side may not have permission for that path (race on close).
+     // The CF cleanupOrphanSignaling (Phase 2) catches anything we miss.
+     deleteDoc(doc(db, 'audio_sessions', this.sessionId, 'signaling', this.proposerId)).catch(() => {});
   }
 }

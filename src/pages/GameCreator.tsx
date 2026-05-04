@@ -314,8 +314,16 @@ export default function GameCreator() {
                     <input type="datetime-local" value={kickoff} onChange={(e) => setKickoff(e.target.value)} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
                  </div>
                  <div>
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Moltiplicatore Punti</label>
-                    <input type="number" step="0.1" value={pointsMultiplier} onChange={(e) => setPointsMultiplier(e.target.value)} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Moltiplicatore Punti (0.5 – 5.0)</label>
+                    <input
+                       type="number"
+                       step="0.1"
+                       min={0.5}
+                       max={5}
+                       value={pointsMultiplier}
+                       onChange={(e) => setPointsMultiplier(e.target.value)}
+                       className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white"
+                    />
                  </div>
               </div>
 
@@ -357,11 +365,24 @@ export default function GameCreator() {
                                    setItemTemplates(newT);
                                 }} className="flex-1 p-2 rounded bg-white dark:bg-slate-700 border-none outline-none dark:text-white text-sm" />
                                 <div className="flex items-center gap-1 w-24">
-                                   <input type="number" value={tmpl.points} onChange={(e) => {
-                                      const newT = [...itemTemplates];
-                                      newT[idx].points = parseInt(e.target.value) || 0;
-                                      setItemTemplates(newT);
-                                   }} className="w-full p-2 rounded bg-white dark:bg-slate-700 border-none outline-none dark:text-white text-sm text-center" />
+                                   <input
+                                      type="number"
+                                      min={1}
+                                      max={200}
+                                      value={tmpl.points}
+                                      onChange={(e) => {
+                                         const raw = parseInt(e.target.value) || 0;
+                                         // Clamp to [1, 200] — the firestore.rules
+                                         // items.create check rejects anything outside
+                                         // this band (worst-case capture × 5x multiplier
+                                         // must stay ≤ +1000 users.points cap).
+                                         const clamped = Math.min(200, Math.max(1, raw));
+                                         const newT = [...itemTemplates];
+                                         newT[idx].points = clamped;
+                                         setItemTemplates(newT);
+                                      }}
+                                      className="w-full p-2 rounded bg-white dark:bg-slate-700 border-none outline-none dark:text-white text-sm text-center"
+                                   />
                                    <span className="text-xs text-slate-500">pt</span>
                                 </div>
                              </div>

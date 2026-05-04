@@ -8,6 +8,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Map, MapPin } from 'lucide-react';
 import { useRBAC } from '../hooks/useRBAC';
+import { Avatar } from '../components/ui';
+import { liveUserAvatarHtml } from '../lib/leafletIcons';
 
 const customMarkerHtmlLight = `
   <div style="background-color: #2D5A27; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;">
@@ -38,14 +40,16 @@ const vintageIconDark = L.divIcon({
 });
 
 const createLiveUserIcon = (user: any) => {
-  const avatar = user.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.id}`;
   const name = user.displayName?.split(' ')[0] || 'User';
-  
+  // Offline-safe avatar HTML — mirrors <Avatar> policy (photoURL preferred,
+  // initial-on-#2D5A27 fallback). Replaces the previous DiceBear CDN URL.
+  const avatarHtml = liveUserAvatarHtml({ photoURL: user.photoURL, name: user.displayName, size: 36 });
+
   return L.divIcon({
     html: `
       <div style="display: flex; flex-direction: column; items-center; justify-content: center; transform: translate(-50%, -100%); width: 60px;">
          <div style="position: relative; width: 36px; height: 36px; margin: 0 auto;">
-            <img src="${avatar}" style="width: 100%; height: 100%; border-radius: 50%; border: 2px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.3); object-fit: cover;" />
+            ${avatarHtml}
             <div style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background-color: #10b981; border: 2px solid white; border-radius: 50%;"></div>
          </div>
          <div style="background-color: rgba(16, 185, 129, 0.9); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 12px; margin-top: 4px; text-align: center; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif;">
@@ -269,7 +273,7 @@ export default function LaMappa() {
                      <Popup className={`vintage-popup ${isDark ? 'dark-mode-popup' : ''}`}>
                         <div className="w-48 overflow-hidden bg-emerald-50 dark:bg-[#132c1c] border border-emerald-200 dark:border-emerald-900 rounded-lg p-3 m-0 shadow-xl flex items-center gap-3">
                            <div className="relative">
-                              <img src={liveUser.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${liveUser.id}`} alt="User" className="w-10 h-10 rounded-full border-2 border-emerald-500" />
+                              <Avatar photoURL={liveUser.photoURL} name={liveUser.displayName} size="md" className="border-2 border-emerald-500" />
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>
                            </div>
                            <div>
