@@ -113,6 +113,12 @@ export function AudioSessionDJ() {
       };
    }, []);
 
+   // useMemo MUST live above the early returns — React tracks hooks by call
+   // order, and skipping it on the loading render and then calling it once
+   // session is hydrated changes the hook count between renders, which is
+   // exactly the React error #310 that was firing here.
+   const activeQueue = useMemo(() => queue.filter(q => !['played', 'skipped', 'failed'].includes(q.status)), [queue]);
+
    if (loading || !session) {
       return <div className="p-8 text-center text-muted-foreground animate-pulse mt-24">Caricamento pannello DJ...</div>;
    }
@@ -171,8 +177,6 @@ export function AudioSessionDJ() {
       // For ease, just tell engine:
       engineRef.current?.forcePlayNext(); // actually we need specific force, wait.
    };
-
-   const activeQueue = useMemo(() => queue.filter(q => !['played', 'skipped', 'failed'].includes(q.status)), [queue]);
 
    return (
       <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8 pt-20 max-w-7xl mx-auto gap-6 bg-gradient-to-br from-background via-background to-secondary/10">
