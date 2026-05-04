@@ -312,15 +312,15 @@ L'MVP era a composizione manuale forzata. La Fase 2 (Maggio 2026) ha implementat
 
 ```typescript
 export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
-  guess_who,      // ✅ distrattori = 3 authorName distinti dal pool
-  guess_year,     // ✅ distrattori = 3 decadi (pool + fallback ±10y/±20y)
-  guess_place,    // ⏳ ancora null — Fase 2.5 (richiede reverse-geocoding)
-  guess_caption,  // ✅ distrattori = 3 caption di altri post
-  chronology,     // ✅ 4 permutazioni di decadi, una è quella ordinata
+  guess_who,      // ✅ Fase 2 — 3 authorName distinti dal pool
+  guess_year,     // ✅ Fase 2 — 3 decadi (pool + fallback ±10y/±20y)
+  guess_place,    // ✅ Fase 2.5 — reverse-geocoding Nominatim + Firestore cache
+  guess_caption,  // ✅ Fase 2 — 3 caption di altri post
+  chronology,     // ✅ Fase 2 — 4 permutazioni di decadi, una ordinata
 };
 
 const AUTO_AVAILABLE: Record<QuestionType, boolean> = {
-  guess_who: true, guess_year: true, guess_place: false,
+  guess_who: true, guess_year: true, guess_place: true,
   guess_caption: true, chronology: true,
 };
 export function isAutoGenerationAvailable(type: QuestionType): boolean {
@@ -329,7 +329,7 @@ export function isAutoGenerationAvailable(type: QuestionType): boolean {
 ```
 
 **Comportamento UI (`QuizHostCreateRound.tsx`):**
-- Step 2: badge "Auto" verde su 4 tipi, "Manuale" su `guess_place`.
+- Step 2: badge "Auto" verde su tutti e 5 i tipi (Fase 2.5 ha attivato `guess_place` via reverse-geocoding).
 - Step 3: pulsante "Genera distrattori" abilitato se source post + tipo selezionato + tipo auto-available. Click → `questionGenerators[type](source, posts)` → popola domanda + opzioni + corretta nel draft. Se ritorna `null` (pool insufficiente, es. < 3 autori distinti per `guess_who`), `alert()` invita a un altro post + composizione manuale.
 - L'admin può comunque sempre comporre manualmente (button "Genera" è additivo, non sostitutivo).
 
@@ -337,7 +337,7 @@ export function isAutoGenerationAvailable(type: QuestionType): boolean {
 
 **Schema invariato:** il campo `sourcePostId` su `quizRounds/{roundId}` era già pronto da B7. Zero migration. Zero cambio di rule Firestore. Zero cambio di indici.
 
-**`guess_place` Fase 2.5:** reverse-geocoding via Nominatim (free tier, rate-limit 1 req/s) richiede cache lato Firestore + post-processing per garantire distrattori distinguibili. Stretch goal di Fase 2.5, l'MVP attuale lascia il tipo manuale.
+**`guess_place` Fase 2.5 — chiuso (Maggio 2026):** reverse-geocoding via Nominatim free tier (rate-limit 1 req/s globale per IP, User-Agent identificativo) + cache su `places_cache/{geoKey}` (geoKey = lat/lng troncati a 4 decimali, ~11m precision). Helper `src/lib/reverseGeocode.ts`, output formattato come "Comune, Regione" con fallback al `display_name.split(',').slice(0,2)`. Tutti e 5 i `QuestionGenerator` ora con signature `Promise<...>`: i 4 sync sono wrapper async banali, `guess_place` fa il vero await su Firestore + Nominatim.
 
 ### 5.7 Modalità "Quiz a distanza"
 
@@ -522,13 +522,13 @@ Un cheat che bypassa il client e scrive `pointsAwarded: 1000000` è respinto a l
 
 | Limitazione | Vettore | Mitigazione attuale | Mitigazione completa |
 |---|---|---|---|
-| Cattura senza essere nel raggio | The Teleporter | Audit log `collectedAtLat/Lng` | Cloud Function Fase 2 |
-| GPS spoofing browser desktop | The Speed Demon | Rule respinge accuracy >100m | — (community-level trust) |
-| Host vede correctIndex pre-reveal | inerente al design | UX trasparente | Cloud Function Fase 2 |
-| FCM notifiche pre-evento | non implementate | nessuna | Fase 2 |
-| Quiz auto-generation | non implementata in MVP | composizione guidata-manuale via wizard | Fase 2 (architettura pluggable già pronta) |
+| Cattura senza essere nel raggio | The Teleporter | ✅ chiuso Fase 2 — CF `validateCaptureDistance` (Haversine server-side) | — |
+| GPS spoofing browser desktop | The Speed Demon | Rule respinge accuracy >100m | — (community-level trust, by-design MVP) |
+| Host vede correctIndex pre-reveal | inerente al design | UX trasparente (banner "L'Host vede") | Phase 3 (richiederebbe quiz CF orchestrator) |
+| FCM notifiche pre-evento | ✅ chiuso Fase 2 — CF `notifyKickoff` + VAPID hardcoded in `useFCM.ts` | — | — |
+| Quiz auto-generation | ✅ chiuso Fase 2 + 2.5 — 5/5 generators deterministici, `guess_place` via Nominatim | — | — |
 
-Tutte le limitazioni hanno un piano di chiusura in Fase 2 (Cloud Functions + sostituzione body dei generators). Non sono buchi, sono trade-off espliciti per chiudere l'MVP.
+Le limitazioni residue (Speed Demon, Host vede correctIndex) sono tollerate per design — community-trust app, threat model esplicito. Tutto il resto della Fase 2 originale è chiuso e deployato (Maggio 2026).
 
 ---
 
@@ -635,7 +635,7 @@ Target: ≤8% drain in 15 minuti di Caccia attiva su mobile mid-range. Va verifi
 
 **Fase 1 — Concept A MVP.** Caccia base con tap su mappa (no AR Layer ancora), Hot/Cold, leaderboard live, schermata risultati. ✅
 
-**Fase 2 — Concept A Polish.** AR Layer completo, Compass arrow, spawning automatico/ibrido/legacy_posts, wake lock, Cloud Function anti-cheat distanza. ✅ (Cloud Function rimandata a Fase 2 generale)
+**Fase 2 — Concept A Polish.** AR Layer completo, Compass arrow, spawning automatico/ibrido/legacy_posts, wake lock, Cloud Function anti-cheat distanza. ✅ (Cloud Function `validateCaptureDistance` deployata su `europe-west1`, Maggio 2026, chiude Sporca #14 The Teleporter)
 
 **Fase 3 — Concept B.** GameCreator per photo_quiz, round system, wizard manuale per composizione domande. ✅
 

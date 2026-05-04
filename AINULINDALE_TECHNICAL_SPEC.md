@@ -1081,8 +1081,8 @@ Target: ≤ 3% drain in 30 min di playback. Web Audio API è efficiente, nessun 
 | No streaming Spotify/YouTube | UX limitata a file user-owned | API ufficiali in Fase 3 (richiedono player embedded con ads) |
 | No mix multi-source dal vivo | DJ ha solo crossfade locale | Fase 3 (grosso lavoro) |
 | ID3 parser custom, gestisce ID3v2.3/2.4 ma non v1 raro | Pochi file colpiti | Estensione parser quando emerge |
-| Hash check del transfer optional | Anti-corruption non implementato | Fase 2: SHA-256 sul primo chunk |
-| Cleanup signaling docs solo client-side | Possibili documenti orfani in caso di crash | Cloud Function periodica Fase 2 |
+| Hash check del transfer optional | Anti-corruption non implementato | Fase 3: SHA-256 con `validateP2PTransferIntegrity` (skeleton già deployato come callable, ritorna `unimplemented`; richiede campo `blobSha256` su `QueueItem` proposer-side) |
+| Cleanup signaling docs solo client-side | ✅ chiuso Fase 2 (Maggio 2026) — CF `cleanupOrphanSignaling` cron 5 min su `europe-west1` deletes docs con `expireAt < now` (collectionGroup query + chunked batch). Cleanup client-side via `webrtc.ts` resta come fast-path, la CF è la network safe-net. |
 | Heartbeat partecipanti via campo `lastSeenAt` | Detezione "left" ritardata fino a 60s | OK per use case |
 
 ### Roadmap

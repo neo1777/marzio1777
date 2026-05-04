@@ -63,8 +63,8 @@ Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
   `places_cache/{}` (cache reverse-geocoding pubblica).
   Hook `useFCM` + `public/firebase-messaging-sw.js` + UI opt-in in
   `ProfiloPersonale`. Token gestiti via `users.{uid}.fcmTokens[]` (cap 20).
-- ✅ **Quiz auto-generators (4/5) — chiusi in Fase 2 (Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` resta `null` con commento esplicito (richiede reverse-geocoding via Nominatim + caching, deferred a Fase 2.5). Wizard `QuizHostCreateRound.tsx` step 3 ora usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)`. 14 test unit verdi.
-- ⏳ FCM notifiche pre-evento rimandate a Fase 2
+- ✅ **Quiz auto-generators 5/5 — chiusi (Fase 2 + 2.5, Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` chiuso in Fase 2.5 con reverse-geocoding via Nominatim free tier + cache su `places_cache/{geoKey}` (vedi `src/lib/reverseGeocode.ts`). Wizard `QuizHostCreateRound.tsx` step 3 usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)` (signature `Promise<...>`). 15 test unit verdi.
+- ✅ FCM notifiche pre-evento — chiuse in Fase 2 (Maggio 2026): `notifyKickoff` CF su `europe-west1`, VAPID **public** key hardcoded in `src/hooks/useFCM.ts` (non più via secret CI), Service Worker dedicato `public/firebase-messaging-sw.js`.
 - ✅ **Gagliardetti pesati da snapshot — Fase 2 + Fase 2.5 (Maggio 2026)**:
   catalogo completo 16 gagliardetti in `src/lib/gagliardetti.ts`:
   - **Fase 2** (13): 4 historical point-based + 4 giochi (Cacciatore di
@@ -84,35 +84,41 @@ Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
   test. Rule `users.update` ammette branch metrics-only (cap +1000/tx
   invariato). UI in `ProfiloPersonale` raggruppata per categoria con
   earned/progress per ognuno.
-- ⏳ **Per-user count delle proposte queue attive** rimandato a CF Fase 2:
-  il DSL Firestore non può contare documenti, quindi la formula bonus è
-  validata in rule sul valore *snapshot* `effectiveMaxAtCreate` ma il count
-  vero richiede una callable function (vedi §"Cloud Functions L'Ainulindalë").
+- ✅ **Per-user count delle proposte queue attive** — chiuso in Fase 2
+  (Maggio 2026) con CF callable `enforceQueuePerUserLimit` deployata su
+  `europe-west1`. Conta i doc attivi del proposer
+  (`status in [queued|transferring|ready|playing]`) e respinge con
+  `resource-exhausted` se eccede il limite formula. Rule `effectiveMaxAtCreate`
+  rimane come safety net. Wired in `useAudioQueue.proposeTrack` con fallback
+  graceful (CF unavailable → client-side check + rule snapshot).
 
 ---
 
-## Fase 2 — Quiz Auto-Generators ✅ chiuso (Maggio 2026, 4/5)
+## Fase 2 + 2.5 — Quiz Auto-Generators ✅ chiusi 5/5 (Maggio 2026)
 
-**Stato:** 4 generators su 5 sono `auto`-available. `guess_place` resta
-manuale (`null`) finché non si implementa il reverse-geocoding (Fase 2.5).
+**Stato:** tutti e 5 i generators sono `auto`-available.
 
 **Implementazione (`/src/utils/quizGenerators.ts`):**
 
-- **`guess_who`**: distrattori = 3 `authorName` distinti dal pool, pickati
-  via `pickUniqueSeeded(pool, 3, p => p.authorName, post.id)`. Shuffle
+- **`guess_who`** (Fase 2): distrattori = 3 `authorName` distinti dal pool,
+  pickati via `pickUniqueSeeded(pool, 3, p => p.authorName, post.id)`. Shuffle
   Fisher-Yates con `mulberry32(hashString(post.id + ':who'))`. Ritorna
   `null` se il pool ha < 3 autori distinti diversi dal source.
-- **`guess_year`**: distrattori = 3 decadi distinte. Prima fonte: decadi
-  presenti nel pool; fallback: candidati sintetici a `±10y, ±20y` dal
-  source. Output formato come "Anni 70" / "Anni 2000".
-- **`guess_place`**: ❌ ancora `null`. Reverse-geocoding (Nominatim free
-  tier 1 req/s) richiede cache lato Firestore + post-processing dei
-  risultati per garantire distrattori distinguibili. Fase 2.5 dedicata.
-- **`guess_caption`**: distrattori = 3 caption di altri post (length ≥ 5),
-  pickate con il solito seeded shuffle.
-- **`chronology`**: collect 4 decadi distinte (sourceDecade + 3 random dal
-  pool). Output: 4 stringhe "Anni X → Anni Y → ..." con una sola
-  ordinata cronologicamente.
+- **`guess_year`** (Fase 2): distrattori = 3 decadi distinte. Prima fonte:
+  decadi presenti nel pool; fallback: candidati sintetici a `±10y, ±20y`
+  dal source. Output formato come "Anni 70" / "Anni 2000".
+- **`guess_place`** (Fase 2.5): reverse-geocoding del `post.location` via
+  Nominatim free tier (1 req/s rate limit globale, User-Agent
+  identificativo) + cache su `places_cache/{geoKey}` Firestore (geoKey =
+  lat/lng troncati a 4 decimali ~11m precision). Output formattato come
+  "Comune, Regione" (fallback `display_name.split(',').slice(0,2)`).
+  Helper in `src/lib/reverseGeocode.ts`. Distrattori = 3 location
+  reverse-geocoded distinte dalla source.
+- **`guess_caption`** (Fase 2): distrattori = 3 caption di altri post
+  (length ≥ 5), pickate con il solito seeded shuffle.
+- **`chronology`** (Fase 2): collect 4 decadi distinte (sourceDecade + 3
+  random dal pool). Output: 4 stringhe "Anni X → Anni Y → ..." con una
+  sola ordinata cronologicamente.
 
 **Determinismo:** tutti i generators usano `mulberry32(hashString(post.id))`
 come seed. Risultato: lo stesso `(post, pool)` produce sempre lo stesso
@@ -120,7 +126,7 @@ output. UX consistente se l'host re-rolla, test unit asseribili senza
 flakiness.
 
 **Wiring UI (`src/components/QuizHostCreateRound.tsx`):**
-- Step 2: badge "Auto" verde su 4 tipi disponibili, "Manuale" su `guess_place`.
+- Step 2: badge "Auto" verde su tutti e 5 i tipi (Fase 2.5 ha attivato `guess_place` via reverse-geocoding).
 - Step 3: pulsante "Genera distrattori" abilitato se
   `selectedPost && draft.questionType && isAutoGenerationAvailable(draft.questionType)`.
   Click → `questionGenerators[type](source, posts)` → popola

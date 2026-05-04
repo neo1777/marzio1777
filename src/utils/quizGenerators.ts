@@ -18,14 +18,14 @@ export interface GeneratedQuestion {
 /**
  * REGISTRY DEI QUESTION GENERATORS PER IL QUIZ DEL BIVACCO.
  *
- * Status (Phase 2 partial — closed in commit fixing §15.B of AUDIT_REPORT):
- * - guess_who:      ✅ implemented (distractors = 3 different authorNames)
- * - guess_year:     ✅ implemented (distractors = 3 decades within ±20y)
- * - guess_place:    ⏳ still null — requires reverse-geocoding (Nominatim or
- *                   cached). Kept manual for MVP; the wizard `Manuale` badge
- *                   stays on this type until a Phase 2.5 deliverable.
- * - guess_caption:  ✅ implemented (distractors = 3 random other captions)
- * - chronology:     ✅ implemented (4 decade permutations, one is correct)
+ * Status (Phase 2 + 2.5 fully closed, May 2026):
+ * - guess_who:      ✅ Phase 2 — distractors = 3 different authorNames
+ * - guess_year:     ✅ Phase 2 — distractors = 3 decades within ±20y
+ * - guess_place:    ✅ Phase 2.5 — reverse-geocoding via Nominatim free tier
+ *                   + Firestore cache (places_cache/{geoKey}). See
+ *                   src/lib/reverseGeocode.ts.
+ * - guess_caption:  ✅ Phase 2 — distractors = 3 random other captions
+ * - chronology:     ✅ Phase 2 — 4 decade permutations, one is correct
  *
  * Determinism: all generators use a seeded RNG keyed off `post.id`. Two host
  * sessions with the same source post + pool produce the same distractor set,
@@ -44,8 +44,7 @@ export type QuestionGenerator = (
 const AUTO_AVAILABLE: Record<QuestionType, boolean> = {
   guess_who: true,
   guess_year: true,
-  // Phase 2.5: reverse-geocoding via Nominatim + Firestore cache. Now live.
-  guess_place: true,
+  guess_place: true,   // Phase 2.5: Nominatim + Firestore cache
   guess_caption: true,
   chronology: true,
 };

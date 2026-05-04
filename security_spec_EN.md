@@ -116,21 +116,21 @@
 
 | Limitation | Vector | Module | Current mitigation | Full mitigation |
 |---|---|---|---|---|
-| Capture without being in radius | The Teleporter (#14) | Games | `collectedAtLat/Lng` audit log | Phase 2 Cloud Function |
+| Capture without being in radius | The Teleporter (#14) | Games | ✅ closed Phase 2 (May 2026) — CF `validateCaptureDistance` server-side Haversine + `serverValidatedAt` ≤30s on `items.update` | — |
 | Desktop browser GPS spoofing | The Speed Demon (#20) | Games | Rule rejects accuracy >100m | — (community-level trust) |
-| Host sees correctIndex pre-reveal | inherent in design | Games | Transparent UX (banner "Host sees") | Phase 2 Cloud Function |
+| Host sees correctIndex pre-reveal | inherent in design | Games | Transparent UX (banner "Host sees") | Phase 3 (would need a quiz CF orchestrator) |
 | Pre-event FCM notifications | ✅ closed Phase 2 (May 2026) — `notifyKickoff` CF on `europe-west1`, `users.{uid}.fcmTokens[]` capped at 20, dedicated Service Worker, opt-in UI in ProfiloPersonale | Cross-cutting | — | — |
-| DJ skip burst | The Mass Skipper (#29) | Audio | Root can intervene | Audit log + alert in Phase 2 |
-| Orphan signaling | The Signaling Spammer (#30) | Audio | Closed sub-collection rule (proposer/DJ-only) + Firebase project quotas | Periodic cleanup Cloud Function `cleanupOrphanSignaling` (Phase 2) |
-| Queue stuffer count | The Queue Stuffer (#24) | Audio | Rule validates `effectiveMaxAtCreate` snapshot of bonus formula | Cloud Function `enforceQueuePerUserLimit` for actual count (Phase 2) |
-| Tampered transferred files | hash check absent | Audio | none | SHA-256 verify in Phase 2 |
+| DJ skip burst | The Mass Skipper (#29) | Audio | Root can intervene + skeleton CF `auditMassSkip` deployed (no-op TODO) | Phase 3 (rolling-window counter on `audit_state/{sessionId}`) |
+| Orphan signaling | The Signaling Spammer (#30) | Audio | ✅ closed Phase 2 (May 2026) — CF `cleanupOrphanSignaling` cron 5 min on `europe-west1` with collectionGroup query + chunked batch delete | — |
+| Queue stuffer count | The Queue Stuffer (#24) | Audio | ✅ closed Phase 2 (May 2026) — CF `enforceQueuePerUserLimit` callable counts proposer's active docs; rule `effectiveMaxAtCreate` snapshot remains as a safety net | — |
+| Tampered transferred files | hash check absent | Audio | skeleton CF `validateP2PTransferIntegrity` deployed (returns `unimplemented`) | Phase 3 (needs `blobSha256` field on `QueueItem`) |
 | Track copyright license | trust model | Audio | UI warning "golden rule" | — (community-level trust) |
 | Theme Hijacker DJ-side | The Theme Hijacker (#25/#26) | Audio | **100% closed (B7)** via `affectedKeys.hasOnly` + explicit metadata checks | — (vector closed) |
 | Score Forger post-reveal | The Score Forger (#17) | Games | **Hardened (B7)** with triple cap: rule answers cap (`maxPointsPerRound × pointsMultiplier`), rule users cap (+1000/tx), monotonic users.points increment | — (vector mitigated at rule level) |
 | Cross-leaderboard rewrite | new vector identified in B7 audit | Games | **Closed (B7)** via `userId == auth.uid` on `leaderboard.write` | — (vector closed) |
 | Cross-participant kick | new vector identified in B7 audit | Games | **Closed (B7)** via `userId == auth.uid \|\| isEventOrganizer \|\| isRoot` on `participants.delete` | — (vector closed) |
 
-All limitations have a closing plan in Phase 2 (Cloud Functions). They are not holes, they are explicit trade-offs to close the MVP.
+**May 2026 update:** Phase 2 closed at 100% for hardening CF (8 CF live on `europe-west1` / `nodejs22`). The remaining items in the table are either real Phase 3 limitations (skeleton callables already deployed, awaiting tracking fields that don't exist yet) or by-design trade-offs (Speed Demon, Host sees correctIndex).
 
 ## 3. Test Runner
 

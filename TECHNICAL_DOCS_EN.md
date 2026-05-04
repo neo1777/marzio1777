@@ -375,11 +375,11 @@ Real-time multiplayer photo-trivia with host-driven sync via Firestore.
 **Pluggable architecture for automatic generators** (`/src/utils/quizGenerators.ts`) — **Phase 2 closed at 4/5 (May 2026):**
 ```typescript
 export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
-  guess_who,      // ✅ distractors = 3 distinct authorNames from the pool
-  guess_year,     // ✅ distractors = 3 decades (pool + ±10y/±20y fallback)
-  guess_place,    // ⏳ still null — requires reverse-geocoding (Phase 2.5)
-  guess_caption,  // ✅ distractors = 3 captions from other posts
-  chronology,     // ✅ 4 decade permutations, only one chronologically sorted
+  guess_who,      // ✅ Phase 2 — 3 distinct authorNames from the pool
+  guess_year,     // ✅ Phase 2 — 3 decades (pool + ±10y/±20y fallback)
+  guess_place,    // ✅ Phase 2.5 — reverse-geocoding Nominatim + Firestore cache
+  guess_caption,  // ✅ Phase 2 — 3 captions from other posts
+  chronology,     // ✅ Phase 2 — 4 decade permutations, one chronologically sorted
 };
 ```
 - **Determinism:** seeded RNG `mulberry32(hashString(post.id))` → same `(post, pool)` → same output. Enables assertable tests and consistent UX if the host re-rolls.
@@ -390,7 +390,7 @@ export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
 
 **Host Rotation (rotateHost === true):** each round, the outgoing host computes the next `currentHostId` by sorting `participants.status === 'joined'` by `userId` (immutable, deterministic) and picking the next with wrap-around. Only the outgoing host, organizer, or Root can write the new `currentHostId` (rule via `diff().affectedKeys()` + `exists()` check on the new host as per §3 and §10). Edge case: if `joinedPlayers.length === 0`, automatic fallback to `organizerId`.
 
-**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded from `post.location`, ⏳ Phase 2.5), `guess_caption` (4 captions including the real one), `chronology` (4 decades to be ordered). Each type has a dedicated generator producing `{questionText, options[4], correctIndex}` from a `Post` — 4/5 implementation closed in Phase 2 (May 2026), `guess_place` stays manual until reverse-geocoding lands.
+**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded from `post.location` via Nominatim + cache `places_cache/{geoKey}`), `guess_caption` (4 captions including the real one), `chronology` (4 decades to be ordered). Each type has a dedicated generator producing `{questionText, options[4], correctIndex}` from a `Post` — **5/5 implementation closed: Phase 2 (May 2026) for 4 generators, Phase 2.5 (May 2026) for `guess_place` with reverse-geocoding via `src/lib/reverseGeocode.ts`**. All generators carry `Promise<...>` signatures.
 
 ### 4.9 AR Capture Layer — Technical Architecture
 
@@ -686,7 +686,7 @@ No npm dependency added — the delta is pure React code + local TypeScript util
 - Server-side Haversine distance validation on capture (verifies that `collectedAtLat/Lng` is within `captureRadius` of item `lat/lng`)
 - Cleanup of `active` events older than 24h (auto transition to `aborted` with organizer notification)
 - Periodic cleanup of orphan `signaling/*` docs (>60s inactive)
-- FCM notifications 30 minutes pre-kickoff and on lobby opening ✅ closed Phase 2 (May 2026): `notifyKickoff` CF cron 5 min on `europe-west1`, two windows (kickoff-30min, lobby-open ±5min), idempotency via flags on `game_events.{id}.notifications.{kickoff30Notified,lobbyNotified}`, automatic prune of invalid tokens via `arrayRemove`. Web Push requires VAPID key (`VITE_FIREBASE_VAPID_KEY`), dedicated Service Worker `public/firebase-messaging-sw.js`, `useFCM` hook for opt-in/opt-out wired into ProfiloPersonale
+- FCM notifications 30 minutes pre-kickoff and on lobby opening ✅ closed Phase 2 (May 2026): `notifyKickoff` CF cron 5 min on `europe-west1`, two windows (kickoff-30min, lobby-open ±5min), idempotency via flags on `game_events.{id}.notifications.{kickoff30Notified,lobbyNotified}`, automatic prune of invalid tokens via `arrayRemove`. Web Push uses the VAPID **public** key hardcoded in `src/hooks/useFCM.ts` (the public key is served to every browser inside the bundle anyway — the security invariant lives on the matching private key, which stays on FCM servers). Dedicated Service Worker `public/firebase-messaging-sw.js`, `useFCM` hook for opt-in/opt-out wired into ProfiloPersonale.
 - SHA-256 hash check of P2P transferred files (anti-corruption)
 
 **MIGRATION.md** at the repo root documents the Phase 2 plan for quiz generators, Cloud Functions, and module extension to future Concepts C/D/E.

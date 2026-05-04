@@ -380,11 +380,11 @@ Photo-trivia multiplayer real-time con sincronizzazione host-driven via Firestor
 **Architettura pluggable per i generators automatici** (`/src/utils/quizGenerators.ts`) — **Fase 2 chiusa al 4/5 (Maggio 2026):**
 ```typescript
 export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
-  guess_who,      // ✅ distrattori = 3 authorName distinti dal pool
-  guess_year,     // ✅ distrattori = 3 decadi (pool + fallback ±10y/±20y)
-  guess_place,    // ⏳ ancora null — richiede reverse-geocoding (Fase 2.5)
-  guess_caption,  // ✅ distrattori = 3 caption di altri post
-  chronology,     // ✅ 4 permutazioni di decadi, una è quella ordinata
+  guess_who,      // ✅ Fase 2 — 3 authorName distinti dal pool
+  guess_year,     // ✅ Fase 2 — 3 decadi (pool + fallback ±10y/±20y)
+  guess_place,    // ✅ Fase 2.5 — reverse-geocoding Nominatim + Firestore cache
+  guess_caption,  // ✅ Fase 2 — 3 caption di altri post
+  chronology,     // ✅ Fase 2 — 4 permutazioni di decadi, una ordinata
 };
 ```
 - **Determinismo:** seeded RNG `mulberry32(hashString(post.id))` → stesso `(post, pool)` → stesso output. Permette test asseribili e UX consistente se l'host re-rolla.
@@ -395,7 +395,7 @@ export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
 
 **Rotazione Host (rotateHost === true):** ogni round, l'host uscente calcola il prossimo `currentHostId` ordinando i `participants.status === 'joined'` per `userId` (immutabile, deterministico) e prendendo il successivo con wrap-around. Solo l'host uscente, l'organizer o il Root possono scrivere il nuovo `currentHostId` (rule via `diff().affectedKeys()` + `exists()` check sul nuovo host come da §3 e §10). Edge case: se `joinedPlayers.length === 0`, fallback automatico a `organizerId`.
 
-**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded da `post.location`, ⏳ Fase 2.5), `guess_caption` (4 didascalie tra cui quella reale), `chronology` (4 decadi da ordinare). Ogni tipo ha un generatore dedicato che produce `{questionText, options[4], correctIndex}` partendo da un `Post` — implementazione 4/5 chiusa in Fase 2 (Maggio 2026), `guess_place` resta manuale finché non si aggiunge il reverse-geocoding.
+**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded da `post.location` via Nominatim + cache `places_cache/{geoKey}`), `guess_caption` (4 didascalie tra cui quella reale), `chronology` (4 decadi da ordinare). Ogni tipo ha un generatore dedicato che produce `{questionText, options[4], correctIndex}` partendo da un `Post` — **implementazione 5/5 chiusa: Fase 2 (Maggio 2026) per 4 generators, Fase 2.5 (Maggio 2026) per `guess_place` con reverse-geocoding via `src/lib/reverseGeocode.ts`**. Tutti i generators con signature `Promise<...>`.
 
 ### 4.9 AR Capture Layer — Architettura Tecnica
 
@@ -691,7 +691,7 @@ Nessuna dipendenza npm aggiunta — il delta è puro codice React + utility Type
 - Validazione server-side della distanza Haversine sulla cattura (verifica che `collectedAtLat/Lng` sia entro `captureRadius` da `lat/lng` dell'item)
 - Cleanup degli eventi `active` da > 24h (passaggio automatico a `aborted` con notifica organizer)
 - Cleanup periodico dei documenti `signaling/*` orfani (>60s inattivi)
-- Notifiche FCM 30 minuti pre-kickoff e all'apertura della lobby ✅ chiuso Fase 2 (Maggio 2026): `notifyKickoff` CF cron 5 min su `europe-west1`, due window (kickoff-30min, lobby-open ±5min), idempotency via flag su `game_events.{id}.notifications.{kickoff30Notified,lobbyNotified}`, prune automatica dei token invalidi via `arrayRemove`. Web Push richiede VAPID key (`VITE_FIREBASE_VAPID_KEY`), Service Worker dedicato `public/firebase-messaging-sw.js`, hook `useFCM` per opt-in/opt-out gestito in ProfiloPersonale
+- Notifiche FCM 30 minuti pre-kickoff e all'apertura della lobby ✅ chiuso Fase 2 (Maggio 2026): `notifyKickoff` CF cron 5 min su `europe-west1`, due window (kickoff-30min, lobby-open ±5min), idempotency via flag su `game_events.{id}.notifications.{kickoff30Notified,lobbyNotified}`, prune automatica dei token invalidi via `arrayRemove`. Web Push usa la VAPID **public** key hardcoded in `src/hooks/useFCM.ts` (chiave pubblica, viene comunque servita nel bundle a ogni client — il segreto vero è la private key che resta sui server FCM). Service Worker dedicato `public/firebase-messaging-sw.js`, hook `useFCM` per opt-in/opt-out gestito in ProfiloPersonale.
 - Hash check SHA-256 dei file trasferiti via P2P (anti-corruption)
 
 **MIGRATION.md** alla root del repo documenta il piano della Fase 2 per i quiz generators, le Cloud Functions, e l'estensione del modulo a futuri Concept C/D/E.
