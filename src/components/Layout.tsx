@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3, RefreshCw } from 'lucide-react';
+import { Home, Camera, Map as MapIcon, TreeDeciduous, LogOut, Award, ChevronUp, ShieldAlert, Mountain, Moon, Sun, Flame, UserCircle, Film, BookOpen, Trophy, Disc3, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRBAC } from '../hooks/useRBAC';
 import { Avatar } from './ui';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { SW_UPDATE_EVENT } from '../main';
+import { SW_UPDATE_EVENT, JUST_UPDATED_KEY, triggerUpdateReload } from '../main';
 
 export default function Layout() {
   const { user, profile, isRoot, isAdminOrRoot, isPending, isGuest } = useRBAC();
@@ -75,6 +75,22 @@ export default function Layout() {
     return () => window.removeEventListener(SW_UPDATE_EVENT, handler);
   }, []);
 
+  // Post-reload confirmation toast: if `triggerUpdateReload()` set the
+  // sessionStorage flag before reloading, the new page picks it up here on
+  // first paint, shows a green "App aggiornata" toast for 4s, then clears
+  // the flag. sessionStorage scopes to the tab and dies with it, so a
+  // browser-driven refresh later won't accidentally re-trigger the toast.
+  const [updateConfirmed, setUpdateConfirmed] = useState(false);
+  useEffect(() => {
+    let didUpdate = false;
+    try { didUpdate = sessionStorage.getItem(JUST_UPDATED_KEY) === '1'; } catch { /* private mode */ }
+    if (!didUpdate) return;
+    try { sessionStorage.removeItem(JUST_UPDATED_KEY); } catch {}
+    setUpdateConfirmed(true);
+    const t = setTimeout(() => setUpdateConfirmed(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
      if (!user || !profile) return;
      if (isAdminOrRoot) {
@@ -117,11 +133,34 @@ export default function Layout() {
               Nuova versione disponibile
             </span>
             <button
-              onClick={() => window.location.reload()}
+              onClick={triggerUpdateReload}
               className="ml-1 px-3 py-1 rounded-full bg-[#0A0A0F] text-[#FFA000] text-[11px] font-bold uppercase tracking-widest hover:bg-[#1a1a24] transition-colors"
             >
               Aggiorna
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post-reload confirmation toast. Auto-dismisses after 4s; covers both
+          the silent-when-hidden reload and the explicit pill click — anything
+          that goes through `triggerUpdateReload()` lights this up on the next
+          paint of the new bundle. */}
+      <AnimatePresence>
+        {updateConfirmed && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 250 }}
+            role="status"
+            aria-live="polite"
+            className="fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-[#2D5A27] text-white rounded-full px-4 py-2 shadow-lg shadow-[#2D5A27]/40 border border-[#42a83a]/30"
+          >
+            <CheckCircle2 size={16} className="shrink-0" />
+            <span className="text-xs font-bold tracking-tight whitespace-nowrap">
+              App aggiornata all'ultima versione
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

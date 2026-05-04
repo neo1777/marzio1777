@@ -12,6 +12,24 @@ import { registerSW } from 'virtual:pwa-register';
 // doesn't need to magic-string-match.
 export const SW_UPDATE_EVENT = 'sw:update-ready';
 
+// Set in sessionStorage right before a reload that we know is caused by
+// a SW update — survives the page reload (sessionStorage persists for the
+// tab lifetime), gone on tab close. Layout reads it on first paint and
+// shows a one-shot "App aggiornata" confirmation toast, then clears it.
+export const JUST_UPDATED_KEY = 'marzio1777:just-updated';
+
+/**
+ * Reload while flagging the cause: the post-reload code path can then tell
+ * "the user just got a new bundle" apart from "fresh tab" / "manual refresh".
+ * Used both by the silent visibility-gated reload below and by the manual
+ * "Aggiorna" pill in Layout. Centralised so the flag-set and the reload can't
+ * drift out of sync.
+ */
+export function triggerUpdateReload() {
+  try { sessionStorage.setItem(JUST_UPDATED_KEY, '1'); } catch { /* private mode etc. */ }
+  window.location.reload();
+}
+
 if ('serviceWorker' in navigator) {
   registerSW({
     immediate: true,
@@ -33,7 +51,7 @@ if ('serviceWorker' in navigator) {
   let updateReady = false;
   const tryAutoReload = () => {
     if (updateReady && document.visibilityState === 'hidden') {
-      window.location.reload();
+      triggerUpdateReload();
     }
   };
   navigator.serviceWorker.addEventListener('controllerchange', () => {
