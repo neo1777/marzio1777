@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useRBAC } from '../hooks/useRBAC';
 import { db } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle, Loader2 } from 'lucide-react';
+import { Camera, Award, ChevronUp, MapPin, Edit3, Settings2, Save, Cpu, HardDrive, UserCircle, Loader2, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GestioneArchivio from '../components/GestioneArchivio';
 import { Avatar } from '../components/ui';
 import { useUserGagliardetti } from '../hooks/useUserGagliardetti';
 import type { GagliardettoState } from '../lib/gagliardetti';
+import { useFCM } from '../hooks/useFCM';
 
 export default function ProfiloPersonale() {
   const { user, profile, isAdminOrRoot } = useRBAC();
@@ -73,6 +74,8 @@ export default function ProfiloPersonale() {
   // (collection-group queries cached 1h in localStorage). Replaces the old
   // hardcoded `badges` array that only fired on raw `points` thresholds.
   const { states: gagliardetti, loading: gagliardettiLoading } = useUserGagliardetti(user?.uid, points, profile.metrics);
+
+  const fcm = useFCM();
 
   // For the "next milestone" progress bar at the top of the Gamification
   // panel: pick the unearned gagliardetto with the smallest `target -
@@ -249,15 +252,45 @@ export default function ProfiloPersonale() {
                             <h5 className="text-sm font-bold text-[#1a2e16] dark:text-[#e2e8f0] flex items-center gap-2"><MapPin size={16} className={shareLiveLocation ? 'text-emerald-500' : 'text-slate-400'}/> Condivisione Posizione in Tempo Reale</h5>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">Permette agli altri utenti di vederti in tempo reale sulla "Mappa" tramite un'icona quando hai l'app aperta.</p>
                          </div>
-                         <button 
+                         <button
                             onClick={async () => {
                                const newVal = !shareLiveLocation;
                                setShareLiveLocation(newVal);
                                if (user) await updateDoc(doc(db, 'users', user.uid), { shareLiveLocation: newVal });
-                            }} 
+                            }}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLiveLocation ? 'bg-[#2D5A27] dark:bg-[#42a83a]' : 'bg-slate-300 dark:bg-slate-700'}`}
                          >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLiveLocation ? 'translate-x-6' : 'translate-x-1'}`} />
+                         </button>
+                      </div>
+
+                      {/* FCM Push Notifications */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-slate-200 dark:border-[#24352b] rounded-xl bg-white dark:bg-[#1a261f]">
+                         <div>
+                            <h5 className="text-sm font-bold text-[#1a2e16] dark:text-[#e2e8f0] flex items-center gap-2">
+                               {fcm.enabled
+                                  ? <Bell size={16} className="text-emerald-500" />
+                                  : <BellOff size={16} className="text-slate-400" />}
+                               Notifiche Push (Inviti agli eventi)
+                            </h5>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+                               Ti avvisa 30 minuti prima dell'inizio di una caccia o quiz a cui sei stato invitato e quando si apre la lobby. Funziona anche con app chiusa (PWA installata).
+                            </p>
+                            {fcm.error && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{fcm.error}</p>}
+                            {fcm.supported === false && (
+                               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Notifiche non supportate su questo browser/dispositivo.</p>
+                            )}
+                            {fcm.permission === 'denied' && (
+                               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Permesso negato dal browser. Abilita le notifiche dalle impostazioni del sito.</p>
+                            )}
+                         </div>
+                         <button
+                            onClick={() => (fcm.enabled ? fcm.disable() : fcm.enable())}
+                            disabled={fcm.busy || fcm.supported === false || fcm.permission === 'denied'}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fcm.enabled ? 'bg-[#2D5A27] dark:bg-[#42a83a]' : 'bg-slate-300 dark:bg-slate-700'}`}
+                            aria-label={fcm.enabled ? 'Disattiva notifiche push' : 'Attiva notifiche push'}
+                         >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${fcm.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                          </button>
                       </div>
 

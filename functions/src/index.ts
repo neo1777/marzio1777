@@ -41,6 +41,7 @@
 
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
@@ -293,6 +294,161 @@ export const cleanupOrphanSessions = onSchedule(
     }
     logger.info(`cleanupOrphanSessions: closed ${closed} orphan sessions`);
   }
+);
+
+// ─── notifyKickoff ─────────────────────────────────────────────────────────
+//
+// Every 5 minutes scan game_events that fall in two windows:
+//   - 30-minute pre-kickoff (kickoff in [now+25min, now+35min])
+//   - lobby open (kickoff in [now-5min, now+5min])
+// Send a multicast FCM push to every invited user that has at least one
+// fcmTokens[] entry on their user doc. Idempotency via a flag on the
+// event doc itself: once a window has been notified for that event, the
+// flag stays set forever and the next cron tick skips it.
+
+async function sendKickoffNotification(opts: {
+   eventId: string;
+   title: string;
+   body: string;
+   tokens: string[];
+}) {
+   const { eventId, title, body, tokens } = opts;
+   if (tokens.length === 0) return { successCount: 0, failureCount: 0, invalidTokens: [] as string[] };
+   const messaging = getMessaging();
+   const res = await messaging.sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      webpush: {
+         fcmOptions: {
+            link: `https://neo1777.github.io/marzio1777/dashboard/giochi/${eventId}/lobby`,
+         },
+         notification: { icon: '/marzio1777/icon.svg', badge: '/marzio1777/icon.svg' },
+      },
+   });
+   // Collect tokens that failed permanently (user uninstalled the PWA,
+   // revoked permission, or the token was rotated). The cron ticks
+   // following this one will read the same fcmTokens[] from the user
+   // doc — so we strip the dead ones at source.
+   const invalidTokens: string[] = [];
+   res.responses.forEach((r, i) => {
+      if (r.success) return;
+      const code = r.error?.code;
+      if (
+         code === 'messaging/registration-token-not-registered' ||
+         code === 'messaging/invalid-registration-token' ||
+         code === 'messaging/invalid-argument'
+      ) {
+         invalidTokens.push(tokens[i]);
+      }
+   });
+   return { successCount: res.successCount, failureCount: res.failureCount, invalidTokens };
+}
+
+async function pruneInvalidTokens(invalidTokens: string[]) {
+   if (invalidTokens.length === 0) return;
+   // Find each user that holds at least one of the bad tokens and strip
+   // them via arrayRemove. We can't query "array contains any" on the
+   // tokens themselves with `in` over more than 30 values, so chunk.
+   for (let i = 0; i < invalidTokens.length; i += 30) {
+      const chunk = invalidTokens.slice(i, i + 30);
+      const snap = await db.collection('users').where('fcmTokens', 'array-contains-any', chunk).get();
+      for (const doc of snap.docs) {
+         try {
+            await doc.ref.update({ fcmTokens: FieldValue.arrayRemove(...chunk) });
+         } catch (e) {
+            logger.warn('pruneInvalidTokens: failed to strip', { uid: doc.id, e });
+         }
+      }
+   }
+}
+
+export const notifyKickoff = onSchedule(
+   { schedule: 'every 5 minutes', region: 'europe-west1', timeZone: 'Europe/Rome' },
+   async () => {
+      const now = Date.now();
+      // Two windows. Picking ±5min around the target instant gives every
+      // event roughly 1 cron tick to be matched (tick frequency = 5 min).
+      const win30Lo = Timestamp.fromMillis(now + 25 * 60 * 1000);
+      const win30Hi = Timestamp.fromMillis(now + 35 * 60 * 1000);
+      const winLobbyLo = Timestamp.fromMillis(now - 5 * 60 * 1000);
+      const winLobbyHi = Timestamp.fromMillis(now + 5 * 60 * 1000);
+
+      const queries = [
+         {
+            label: 'kickoff30',
+            query: db
+               .collection('game_events')
+               .where('status', 'in', ['scheduled', 'lobby'])
+               .where('scheduledKickoff', '>=', win30Lo)
+               .where('scheduledKickoff', '<=', win30Hi),
+            flagField: 'notifications.kickoff30Notified',
+            title: 'Tra 30 minuti si gioca! 🎯',
+            bodyTemplate: (eventTitle: string) => `Pronto per "${eventTitle}"? La lobby apre presto.`,
+         },
+         {
+            label: 'lobby',
+            query: db
+               .collection('game_events')
+               .where('status', 'in', ['scheduled', 'lobby'])
+               .where('scheduledKickoff', '>=', winLobbyLo)
+               .where('scheduledKickoff', '<=', winLobbyHi),
+            flagField: 'notifications.lobbyNotified',
+            title: 'Lobby aperta! ⛺',
+            bodyTemplate: (eventTitle: string) => `"${eventTitle}" sta per iniziare. Entra nella lobby.`,
+         },
+      ];
+
+      let totalSent = 0;
+      const allInvalid: string[] = [];
+
+      for (const w of queries) {
+         const snap = await w.query.get();
+         for (const doc of snap.docs) {
+            const data = doc.data();
+            // Idempotency: skip if already notified for this window.
+            const flagPath = w.flagField.split('.');
+            const already = flagPath.reduce<any>((acc, k) => (acc ? acc[k] : undefined), data);
+            if (already === true) continue;
+
+            const invitedIds: string[] = Array.isArray(data.invitedUserIds) ? data.invitedUserIds : [];
+            if (invitedIds.length === 0) continue;
+
+            // Pull tokens for the invited users. Firestore `in` cap is 30,
+            // so chunk if there are more.
+            const tokens: string[] = [];
+            for (let i = 0; i < invitedIds.length; i += 30) {
+               const chunk = invitedIds.slice(i, i + 30);
+               const usersSnap = await db.collection('users').where('uid', 'in', chunk).get();
+               usersSnap.forEach(u => {
+                  const arr = u.data().fcmTokens;
+                  if (Array.isArray(arr)) tokens.push(...arr.filter(t => typeof t === 'string'));
+               });
+            }
+            const uniqueTokens = Array.from(new Set(tokens));
+            if (uniqueTokens.length === 0) {
+               // No tokens — still flag so we don't retry on every tick.
+               await doc.ref.update({ [w.flagField]: true });
+               continue;
+            }
+
+            const result = await sendKickoffNotification({
+               eventId: doc.id,
+               title: w.title,
+               body: w.bodyTemplate(typeof data.title === 'string' ? data.title : 'Evento Marzio'),
+               tokens: uniqueTokens,
+            });
+            totalSent += result.successCount;
+            allInvalid.push(...result.invalidTokens);
+            await doc.ref.update({ [w.flagField]: true });
+         }
+      }
+
+      if (allInvalid.length > 0) {
+         await pruneInvalidTokens(Array.from(new Set(allInvalid)));
+      }
+
+      logger.info(`notifyKickoff: sent ${totalSent} pushes; pruned ${allInvalid.length} invalid tokens`);
+   }
 );
 
 // ─── auditMassSkip — SKELETON ──────────────────────────────────────────────

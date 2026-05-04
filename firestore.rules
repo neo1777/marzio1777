@@ -147,6 +147,16 @@ service cloud.firestore {
          // path, no points bump.
          (request.auth.uid == userId &&
           incoming().diff(existing()).affectedKeys().hasOnly(['metrics', 'updatedAt'])) ||
+         // FCM Web Push tokens. The owner manages their own
+         // fcmTokens[] (arrayUnion on enable, arrayRemove on disable
+         // or after pruning by the notifyKickoff CF). Cap the array at
+         // 20 entries — typical multi-device user has 2-3 tokens; 20
+         // protects against accidental accumulation if rotation goes
+         // wrong and the prune CF is delayed.
+         (request.auth.uid == userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['fcmTokens', 'updatedAt']) &&
+          incoming().get('fcmTokens', []) is list &&
+          incoming().get('fcmTokens', []).size() <= 20) ||
          (isRoot() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'accountStatus'])) ||
          (isAdminOrRoot() && !isRoot() && existing().role != 'Root' && incoming().role != 'Root' && (
             // Admin can approve pending to Guest
