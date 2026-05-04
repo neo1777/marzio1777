@@ -32,7 +32,21 @@
   - `scoring.calculateQuizPoints` decay floor universale a 1pt
   - 24 nuovi test rule (cap, self-claim, queue immutable, leaderboard, participants)
   - `audioEngine.test.ts` riscritto con verifiche concrete (vs smoke `expect(true)`)
-- ⏳ Cloud Functions tutte rimandate a Fase 2 (vedi sotto)
+- ✅ **Cloud Functions hardening — Fase 2 (Maggio 2026, codice in `functions/`)**: 5 CF
+  scritte e pronte al deploy. **Richiede passaggio Firebase Blaze plan** dal lato
+  operatore + `firebase deploy --only functions` manuale. Implementate:
+  `validateCaptureDistance` (Haversine server-side, chiude #14 Teleporter),
+  `enforceQueuePerUserLimit` (count effettivo doc attivi, chiude residuo #24),
+  `cleanupOrphanSignaling` (cron 5 min), `cleanupStuckEvents` (cron giornaliero),
+  `cleanupOrphanSessions` (cron giornaliero). Skeleton per Fase 2.5:
+  `validateP2PTransferIntegrity` (richiede `blobSha256` field), `auditMassSkip`
+  (richiede `audit_state/{sessionId}`). Wiring client già pronto in
+  `useGameEvents.captureItemTransaction` e `useAudioQueue.proposeTrack` con
+  fallback graceful "CF non deployata → legacy fast-path". Rule
+  `items.update` accetta sia path server-validated (con `serverValidatedAt`
+  ≤ 30s) sia legacy (audit log via `collectedAtLat/Lng`). Nuova rule
+  `audit_log/{}` (read-only Root, write CF-only). `notifyKickoff` (FCM)
+  rimandata a sessione dedicata (richiede VAPID + UI permessi + dedicated SW).
 - ✅ **Quiz auto-generators (4/5) — chiusi in Fase 2 (Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` resta `null` con commento esplicito (richiede reverse-geocoding via Nominatim + caching, deferred a Fase 2.5). Wizard `QuizHostCreateRound.tsx` step 3 ora usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)`. 14 test unit verdi.
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
 - ✅ **Gagliardetti pesati da snapshot — Fase 2 (Maggio 2026)**: catalogo

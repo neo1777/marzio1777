@@ -314,6 +314,14 @@ service cloud.firestore {
           && request.resource.data.points >= 1
           && request.resource.data.points <= 200;
 
+        // Item capture (transition 'spawned' → 'collected'). Two paths:
+        // (1) legacy fast-path — kept for backward compat with clients that
+        //     don't yet call the validateCaptureDistance Cloud Function.
+        //     Audit log via collectedAtLat/Lng. Tolerated for the
+        //     community-trust threat model, replaced by path (2) below.
+        // (2) server-validated path — closes Sporca #14 The Teleporter.
+        //     The CF wrote `serverValidatedAt` ≤ 30s ago after running a
+        //     server-side Haversine; the rule trusts that stamp here.
         allow update: if isEventParticipant(eventId)
           && isEventActive(eventId)
           && isWithinTimeWindow(eventId)
@@ -326,7 +334,18 @@ service cloud.firestore {
           && request.resource.data.templateId == resource.data.templateId
           && (request.resource.data.get('collectedAtLat', null) == null || request.resource.data.collectedAtLat is number)
           && (request.resource.data.get('collectedAtLng', null) == null || request.resource.data.collectedAtLng is number)
-          && request.resource.data.collectedAt == request.time;
+          && request.resource.data.collectedAt == request.time
+          && (
+              // Path (2): server-validated. The CF stamped validation
+              // within the last 30 seconds — accept the capture.
+              (resource.data.get('serverValidatedAt', null) is timestamp
+               && (request.time.toMillis() - resource.data.serverValidatedAt.toMillis()) < 30000)
+              ||
+              // Path (1): legacy fast-path. No serverValidatedAt yet on
+              // this item; audit log is the only mitigation. Phased out
+              // when all clients ship with the CF wiring.
+              (resource.data.get('serverValidatedAt', null) == null)
+          );
 
         allow delete: if (isEventOrganizer(eventId) || isRoot())
           && getEventDoc(eventId).status in ['draft', 'scheduled', 'aborted'];
@@ -416,6 +435,15 @@ service cloud.firestore {
           allow delete: if false;
         }
       }
+    }
+
+    // --- AUDIT LOG ---
+    // Written exclusively by Cloud Functions (admin SDK bypasses rules).
+    // Read access restricted to Root for forensic review of capture
+    // anomalies, mass-skip incidents, etc. Phase 2 §15.A.
+    match /audit_log/{logId} {
+      allow read: if isRoot();
+      allow write: if false; // CF-only via admin SDK
     }
 
     // --- AINULINDALE HELPERS ---

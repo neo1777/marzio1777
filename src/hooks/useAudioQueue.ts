@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
+import { db, functions } from '../lib/firebase';
 import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../contexts/AuthContext';
 import { QueueItem, AudioSession } from '../types/audio';
 import { LocalTrack } from '../types/audio';
@@ -48,13 +49,33 @@ export function useAudioQueue(sessionId: string) {
     }
     
     if (!session.rules.allowDuplicates) {
-       const isDuplicate = queue.some(q => 
-          q.trackTitle.toLowerCase() === track.title.toLowerCase() && 
+       const isDuplicate = queue.some(q =>
+          q.trackTitle.toLowerCase() === track.title.toLowerCase() &&
           q.trackArtist.toLowerCase() === track.artist.toLowerCase()
        );
        if (isDuplicate) {
           throw new Error('Questo brano è già in coda e la sessione non ammette duplicati.');
        }
+    }
+
+    // Phase 2 hardening (§15.A.2): server-side count of active queue
+    // items by this proposer. The DSL rule already validates the
+    // `effectiveMaxAtCreate` snapshot of the bonus formula, but Firestore
+    // can't count documents — only a Cloud Function can. If the CF isn't
+    // deployed (Spark plan, pre-deploy), fall back to the client-side
+    // count above; the rule's snapshot validation remains the safety net.
+    try {
+       const enforceLimit = httpsCallable<{ sessionId: string }, { ok: boolean; active: number; limit: number }>(
+          functions, 'enforceQueuePerUserLimit'
+       );
+       await enforceLimit({ sessionId });
+    } catch (e: any) {
+       if (e?.code === 'functions/resource-exhausted') {
+          throw new Error(e?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
+       }
+       // CF unavailable → fall through to setDoc, the rule will still
+       // validate effectiveMaxAtCreate against the formula.
+       console.warn('enforceQueuePerUserLimit unavailable, falling back to client-side check', e);
     }
     
     const itemId = doc(collection(db, 'audio_sessions', sessionId, 'queue')).id;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp, runTransaction, increment, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { GameItem } from './useNearestItem';
 
@@ -228,11 +229,38 @@ export async function createGameItem(eventId: string, itemData: Omit<GameItem, '
 }
 
 export async function captureItemTransaction(eventId: string, itemId: string, userId: string, userDisplayName: string, itemName: string, itemPoints: number, eventMultiplier: number, playerLat?: number, playerLng?: number) {
+   // Phase 2 hardening (§15.A.1): if the player provided coordinates, ask
+   // the Cloud Function `validateCaptureDistance` to do a server-side
+   // Haversine + write `serverValidatedAt` on the item. The rule then
+   // accepts the transition. If the CF isn't deployed yet (Spark plan,
+   // pre-deploy state), the call throws `not-found` / `unavailable` and
+   // we fall back to the legacy fast-path — the rule still accepts
+   // captures on items without `serverValidatedAt`.
+   if (typeof playerLat === 'number' && typeof playerLng === 'number') {
+      try {
+         const validate = httpsCallable<
+            { eventId: string; itemId: string; playerLat: number; playerLng: number },
+            { ok: boolean; distanceMeters: number }
+         >(functions, 'validateCaptureDistance');
+         await validate({ eventId, itemId, playerLat, playerLng });
+      } catch (e: any) {
+         // `out-of-range` from the CF means the player was too far;
+         // surface that to the user instead of swallowing it.
+         if (e?.code === 'functions/out-of-range') {
+            throw new Error(e?.message || 'Sei troppo distante per catturare questo oggetto.');
+         }
+         // Any other error (CF not deployed, network, etc.) → fall back
+         // to the legacy fast-path silently. Audit log via collectedAtLat/Lng
+         // remains the mitigation in this branch.
+         console.warn('validateCaptureDistance unavailable, falling back to legacy capture path', e);
+      }
+   }
+
    await runTransaction(db, async (tx) => {
       const itemRef = doc(db, `game_events/${eventId}/items/${itemId}`);
       const itemSnap = await tx.get(itemRef);
       if (!itemSnap.exists()) throw new Error("Item non trovato");
-      
+
       const itemData = itemSnap.data();
       if (itemData.status !== 'spawned') throw new Error("Oggetto già catturato da qualcun altro!");
 

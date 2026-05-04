@@ -6,6 +6,7 @@ import {
   persistentMultipleTabManager,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -26,6 +27,12 @@ export const db = initializeFirestore(app, {
 });
 
 export const storage = getStorage(app);
+
+// Cloud Functions client. Region must match the one declared in
+// `functions/src/index.ts` (europe-west1). If the operator hasn't
+// deployed the functions yet, callable invocations throw `not-found`
+// or `unavailable` — callers degrade gracefully (see captureItemTransaction).
+export const functions = getFunctions(app, 'europe-west1');
 
 // Thin wrapper: profile creation is owned by AuthContext.onAuthStateChanged.
 // Writing the user doc here would either duplicate that logic or, worse, write a
