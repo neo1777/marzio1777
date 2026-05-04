@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { AudioSession } from '../types/audio';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { Avatar } from '../components/ui';
 
 export function AudioSessionsList() {
    const { sessions, loading } = useAudioSessionsList();
@@ -98,10 +99,10 @@ function SessionCard({ session, idx }: { session: AudioSession, idx: number }) {
             <CardContent className="flex-1 flex flex-col justify-end space-y-6">
                
                <div className="flex items-center space-x-3 bg-secondary/30 p-3 rounded-lg">
-                  <img src={session.djPhotoURL} alt={session.djName} className="w-10 h-10 rounded-full border-2 border-primary/20" />
+                  <Avatar photoURL={session.djPhotoURL} name={session.djName} size="md" ringClass="ring-2 ring-primary/20" />
                   <div className="flex flex-col">
                      <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Curatore</span>
-                     <span className="text-sm font-medium">{session.djName}</span>
+                     <span className="text-sm font-medium">{session.djName || 'Anonimo'}</span>
                   </div>
                </div>
 

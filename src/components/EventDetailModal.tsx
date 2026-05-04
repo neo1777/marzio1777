@@ -174,7 +174,10 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
             timestamp: serverTimestamp()
          });
          setNewItem('');
-      } catch (err) { console.error(err); }
+      } catch (err: any) {
+         console.error(err);
+         alert(`Aggiunta non riuscita: ${err?.message || 'errore di rete'}`);
+      }
    };
 
    const toggleAssign = async (item: any) => {
@@ -184,7 +187,10 @@ function ShoppingList({ eventId, user }: { eventId: string, user: any }) {
             assignedTo: isMine ? null : user.uid,
             assignedName: isMine ? null : user.displayName
          });
-      } catch (err) { console.error(err); }
+      } catch (err: any) {
+         console.error(err);
+         alert(`Aggiornamento non riuscito: ${err?.message || 'errore di rete'}`);
+      }
    };
 
    const deleteItem = async (id: string) => {
@@ -288,7 +294,10 @@ function WalletSection({ eventId, user, attendees }: { eventId: string, user: an
          });
          setDesc('');
          setAmount('');
-      } catch (err) { console.error(err); }
+      } catch (err: any) {
+         console.error(err);
+         alert(`Spesa non registrata: ${err?.message || 'errore di rete'}`);
+      }
    };
 
    // Calc logic: Total / valid attendees

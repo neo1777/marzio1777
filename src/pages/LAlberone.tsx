@@ -101,7 +101,10 @@ export default function LAlberone() {
       setNewMessage('');
       setSelectedImage(null);
       setShowEmojiPicker(false);
-    } catch(e) { console.error(e); }
+    } catch(e: any) {
+      console.error(e);
+      alert(`Messaggio non inviato: ${e?.message || 'errore di rete'}`);
+    }
   };
 
   return (

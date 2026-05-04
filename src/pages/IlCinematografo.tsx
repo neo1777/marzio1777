@@ -214,13 +214,19 @@ export default function IlCinematografo() {
         setRevealed(true);
         try {
            await updateDoc(doc(db, 'users', user.uid), { points: increment(5) });
-        } catch (e) { console.error(e); }
+        } catch (e: any) {
+           console.error(e);
+           alert(`Punti non accreditati: ${e?.message || 'errore di rete'}`);
+        }
      } else {
         setGuessResult('incorrect');
         setRevealed(true);
         try {
            await updateDoc(doc(db, 'users', user.uid), { points: increment(-2) });
-        } catch (e) { console.error(e); }
+        } catch (e: any) {
+           console.error(e);
+           alert(`Penalità non registrata: ${e?.message || 'errore di rete'}`);
+        }
      }
   };
 
@@ -238,18 +244,19 @@ export default function IlCinematografo() {
 
      try {
         if (isLiked) {
-           await updateDoc(doc(db, 'posts', currentPost.id), { 
+           await updateDoc(doc(db, 'posts', currentPost.id), {
               likesCount: increment(-1),
               likedBy: arrayRemove(user.uid)
            });
         } else {
-           await updateDoc(doc(db, 'posts', currentPost.id), { 
+           await updateDoc(doc(db, 'posts', currentPost.id), {
               likesCount: increment(1),
               likedBy: arrayUnion(user.uid)
            });
         }
-     } catch(err) {
+     } catch(err: any) {
         console.error(err);
+        alert(`Like non salvato: ${err?.message || 'errore di rete'}`);
      }
   };
 

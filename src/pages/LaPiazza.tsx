@@ -307,8 +307,9 @@ function CommentsSection({ postId, user }: { postId: string, user: any }) {
       await updateDoc(doc(db, 'users', user.uid), { points: increment(2) });
       
       setText('');
-    } catch(err) {
+    } catch(err: any) {
       console.error(err);
+      alert(`Commento non pubblicato: ${err?.message || 'errore di rete'}`);
     }
   };
 
