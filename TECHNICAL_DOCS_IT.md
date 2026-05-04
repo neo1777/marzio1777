@@ -377,21 +377,25 @@ Photo-trivia multiplayer real-time con sincronizzazione host-driven via Firestor
 - Step 4: recap + slider tempo risposta + pulsante "🚀 Lancia Round!"
 - Auto-save bozza in `localStorage` con chiave `marzio1777:quiz-draft:{eventId}` (resilienza a refresh)
 
-**Architettura pluggable per i generators automatici** (`/src/utils/quizGenerators.ts`):
+**Architettura pluggable per i generators automatici** (`/src/utils/quizGenerators.ts`) — **Fase 2 chiusa al 4/5 (Maggio 2026):**
 ```typescript
 export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
-  guess_who: (post, pool) => null,      // TODO Fase 2
-  guess_year: (post, pool) => null,     // TODO Fase 2
-  guess_place: (post, pool) => null,    // TODO Fase 2
-  guess_caption: (post, pool) => null,  // TODO Fase 2
-  chronology: (post, pool) => null,     // TODO Fase 2
+  guess_who,      // ✅ distrattori = 3 authorName distinti dal pool
+  guess_year,     // ✅ distrattori = 3 decadi (pool + fallback ±10y/±20y)
+  guess_place,    // ⏳ ancora null — richiede reverse-geocoding (Fase 2.5)
+  guess_caption,  // ✅ distrattori = 3 caption di altri post
+  chronology,     // ✅ 4 permutazioni di decadi, una è quella ordinata
 };
 ```
-In MVP tutti ritornano `null` (composizione manuale forzata). In Fase 2, sostituendo il body di ognuno con la logica di generazione automatica, la UI di `QuizHostCreateRound` mostra automaticamente il pulsante "Genera" (gated by `isAutoGenerationAvailable(type)`). **Nessuna migration dello schema necessaria** — il campo `sourcePostId` su `quizRounds/{roundId}` è già pronto a ricevere sia la selezione manuale sia l'output automatico.
+- **Determinismo:** seeded RNG `mulberry32(hashString(post.id))` → stesso `(post, pool)` → stesso output. Permette test asseribili e UX consistente se l'host re-rolla.
+- **Wiring UI:** `QuizHostCreateRound.tsx` step 3 ha il pulsante "Genera distrattori" wired a `questionGenerators[type](source, posts)`. Disabled se manca source o tipo, oppure se `isAutoGenerationAvailable(type) === false` (= solo per `guess_place` in MVP). Click → popola `questionText`/`options`/`correctIndex` nel draft.
+- **Fallback graceful:** se il generator ritorna `null` (pool insufficiente, es. < 3 autori distinti), `alert()` invita a un altro post + composizione manuale.
+- **Test:** 14 unit test in `src/__tests__/games/utils.test.ts` (`Quiz Generators — Phase 2`).
+- **Nessuna migration dello schema necessaria** — il campo `sourcePostId` su `quizRounds/{roundId}` era già pronto da B7.
 
 **Rotazione Host (rotateHost === true):** ogni round, l'host uscente calcola il prossimo `currentHostId` ordinando i `participants.status === 'joined'` per `userId` (immutabile, deterministico) e prendendo il successivo con wrap-around. Solo l'host uscente, l'organizer o il Root possono scrivere il nuovo `currentHostId` (rule via `diff().affectedKeys()` + `exists()` check sul nuovo host come da §3 e §10). Edge case: se `joinedPlayers.length === 0`, fallback automatico a `organizerId`.
 
-**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded da `post.location`), `guess_caption` (4 didascalie tra cui quella reale), `chronology` (4 foto da ordinare). Ogni tipo ha un generatore dedicato che produce `{questionText, options[4], correctIndex}` partendo da un `Post` — implementazione in Fase 2.
+**5 Question Types:** `guess_who`, `guess_year`, `guess_place` (reverse-geocoded da `post.location`, ⏳ Fase 2.5), `guess_caption` (4 didascalie tra cui quella reale), `chronology` (4 decadi da ordinare). Ogni tipo ha un generatore dedicato che produce `{questionText, options[4], correctIndex}` partendo da un `Post` — implementazione 4/5 chiusa in Fase 2 (Maggio 2026), `guess_place` resta manuale finché non si aggiunge il reverse-geocoding.
 
 ### 4.9 AR Capture Layer — Architettura Tecnica
 

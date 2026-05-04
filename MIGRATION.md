@@ -33,7 +33,7 @@
   - 24 nuovi test rule (cap, self-claim, queue immutable, leaderboard, participants)
   - `audioEngine.test.ts` riscritto con verifiche concrete (vs smoke `expect(true)`)
 - ⏳ Cloud Functions tutte rimandate a Fase 2 (vedi sotto)
-- ⏳ Quiz auto-generators rimandati a Fase 2 (architettura pluggable già pronta)
+- ✅ **Quiz auto-generators (4/5) — chiusi in Fase 2 (Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` resta `null` con commento esplicito (richiede reverse-geocoding via Nominatim + caching, deferred a Fase 2.5). Wizard `QuizHostCreateRound.tsx` step 3 ora usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)`. 14 test unit verdi.
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
 - ⏳ **Per-user count delle proposte queue attive** rimandato a CF Fase 2:
   il DSL Firestore non può contare documenti, quindi la formula bonus è
@@ -42,49 +42,48 @@
 
 ---
 
-## Fase 2 — Quiz Auto-Generators
+## Fase 2 — Quiz Auto-Generators ✅ chiuso (Maggio 2026, 4/5)
 
-Il Quiz del Bivacco è funzionante con creazione round manuale. L'host
-compone domanda + 4 opzioni + corretta tramite il wizard 4-step in
-`QuizHostCreateRound.tsx`. Tempo medio target: < 30 secondi per round.
+**Stato:** 4 generators su 5 sono `auto`-available. `guess_place` resta
+manuale (`null`) finché non si implementa il reverse-geocoding (Fase 2.5).
 
-**Architettura pluggable già in place:**
-- `/src/utils/quizGenerators.ts` contiene il `Record<QuestionType, QuestionGenerator>`
-  con tutti e 5 i type registrati (`guess_who`, `guess_year`, `guess_place`,
-  `guess_caption`, `chronology`). Tutti ritornano `null` per ora.
-- Il documento `quizRounds/{roundId}` ha già il campo `sourcePostId: string | null`
-  pronto a ricevere sia la selezione manuale dell'host (MVP) sia l'output
-  automatico del generator (Fase 2).
-- `isAutoGenerationAvailable(type)` ritorna sempre `false` in MVP.
+**Implementazione (`/src/utils/quizGenerators.ts`):**
 
-**Steps per implementare la Fase 2 (zero migration richiesta):**
+- **`guess_who`**: distrattori = 3 `authorName` distinti dal pool, pickati
+  via `pickUniqueSeeded(pool, 3, p => p.authorName, post.id)`. Shuffle
+  Fisher-Yates con `mulberry32(hashString(post.id + ':who'))`. Ritorna
+  `null` se il pool ha < 3 autori distinti diversi dal source.
+- **`guess_year`**: distrattori = 3 decadi distinte. Prima fonte: decadi
+  presenti nel pool; fallback: candidati sintetici a `±10y, ±20y` dal
+  source. Output formato come "Anni 70" / "Anni 2000".
+- **`guess_place`**: ❌ ancora `null`. Reverse-geocoding (Nominatim free
+  tier 1 req/s) richiede cache lato Firestore + post-processing dei
+  risultati per garantire distrattori distinguibili. Fase 2.5 dedicata.
+- **`guess_caption`**: distrattori = 3 caption di altri post (length ≥ 5),
+  pickate con il solito seeded shuffle.
+- **`chronology`**: collect 4 decadi distinte (sourceDecade + 3 random dal
+  pool). Output: 4 stringhe "Anni X → Anni Y → ..." con una sola
+  ordinata cronologicamente.
 
-1. Sostituire il body di ogni generator in `quizGenerators.ts`:
-   - `guess_who`: estrai `taggedPeople[]` o `authorName` dal post sorgente,
-     pesca 3 distrattori da `poolPosts` filtrando per persone diverse.
-   - `guess_year`: usa `decade` dal post, distrattori sono altri 3 decenni
-     con range ±20 anni.
-   - `guess_place`: reverse-geocode `location` (richiede API esterna o
-     cache lato Firestore); distrattori sono località vicine ma diverse.
-   - `guess_caption`: usa `caption` reale, distrattori sono caption di
-     altri 3 post + leggera permutazione semantica.
-   - `chronology`: pesca 4 post da decadi diverse, output è la sequenza
-     ordinata corretta.
+**Determinismo:** tutti i generators usano `mulberry32(hashString(post.id))`
+come seed. Risultato: lo stesso `(post, pool)` produce sempre lo stesso
+output. UX consistente se l'host re-rolla, test unit asseribili senza
+flakiness.
 
-2. Aggiornare `isAutoGenerationAvailable()` per leggere quali generators
-   sono effettivamente implementati (es. set di type abilitati o probe
-   con post di test).
+**Wiring UI (`src/components/QuizHostCreateRound.tsx`):**
+- Step 2: badge "Auto" verde su 4 tipi disponibili, "Manuale" su `guess_place`.
+- Step 3: pulsante "Genera distrattori" abilitato se
+  `selectedPost && draft.questionType && isAutoGenerationAvailable(draft.questionType)`.
+  Click → `questionGenerators[type](source, posts)` → popola
+  `questionText`/`options`/`correctIndex` nel draft. Se il generator
+  ritorna `null` (pool insufficiente), `alert()` invita a un altro post.
 
-3. Verificare che `QuizHostCreateRound.tsx` mostri il badge verde
-   "Auto disponibile" + pulsante "Genera" sui type che ritornano true.
-   La UI è già pronta per riceverlo, NON va modificata.
+**Test:** 14 nuovi test in `src/__tests__/games/utils.test.ts`
+(`Quiz Generators — Phase 2`). Coprono: source senza dati, pool < 3
+distrattori, output 4-options con source-as-correct, determinismo,
+fallback synthetic per pool thin, formato 2-digit / 4-digit decade.
 
-4. (Opzionale) Cloud Function `validateQuizScore` per chiudere la
-   limitazione corrente sul decay scoring server-side.
-
-**Schema dati:** invariato. Nessun campo aggiunto, nessuna migration
-Firestore necessaria. La transizione avviene live, on the fly, senza
-downtime e senza touch dei round già giocati.
+**Schema dati:** invariato (era pronto da B7). Nessuna migration.
 
 ---
 

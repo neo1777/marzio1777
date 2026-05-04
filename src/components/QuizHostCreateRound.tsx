@@ -78,6 +78,26 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
 
   const selectedPost = posts.find(p => p.id === draft.sourcePostId);
 
+  const canAutoGenerate = !!selectedPost && !!draft.questionType && isAutoGenerationAvailable(draft.questionType);
+
+  const handleAutoGenerate = () => {
+    if (!selectedPost || !draft.questionType) return;
+    const generator = questionGenerators[draft.questionType];
+    const generated = generator(selectedPost, posts);
+    if (!generated) {
+      alert(
+        'Generatore non disponibile per questo post (pool insufficiente o dati mancanti). ' +
+        'Prova con un altro post o compila manualmente.'
+      );
+      return;
+    }
+    handleUpdateDraft({
+      questionText: generated.questionText,
+      options: generated.options,
+      correctIndex: generated.correctIndex,
+    });
+  };
+
   const handleLaunch = async () => {
     if (draft.correctIndex === null) return;
     
@@ -274,7 +294,25 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <label className="block text-sm font-bold text-slate-500">Opzioni (seleziona la corretta)</label>
-                    <button disabled className="text-xs font-bold flex items-center gap-1 text-slate-400" title="Disponibile in Fase 2">
+                    <button
+                      type="button"
+                      onClick={handleAutoGenerate}
+                      disabled={!canAutoGenerate}
+                      className={`text-xs font-bold flex items-center gap-1 transition-colors min-h-[44px] px-2 rounded-md ${
+                        canAutoGenerate
+                          ? 'text-[#2D5A27] hover:bg-[#2D5A27]/10'
+                          : 'text-slate-400 cursor-not-allowed'
+                      }`}
+                      title={
+                        !selectedPost
+                          ? 'Seleziona prima una foto sorgente'
+                          : !draft.questionType
+                          ? 'Seleziona prima un tipo di domanda'
+                          : !isAutoGenerationAvailable(draft.questionType)
+                          ? 'Tipo di domanda solo manuale (richiede reverse-geocoding)'
+                          : 'Compila domanda + opzioni dal post sorgente e dal pool'
+                      }
+                    >
                       <Sparkles size={12} /> Genera distrattori
                     </button>
                   </div>

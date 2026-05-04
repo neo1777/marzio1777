@@ -3,6 +3,18 @@ import { haversineDistance, bearing } from '../../utils/geo';
 import { generateUniformPointsInRadius } from '../../utils/spawning';
 import { calculateQuizPoints } from '../../utils/scoring';
 import { validStatusTransition } from '../../utils/eventState';
+import { questionGenerators, isAutoGenerationAvailable } from '../../utils/quizGenerators';
+import type { Post } from '../../types';
+
+function fakePost(over: Partial<Post>): Post {
+  return {
+    id: over.id || 'p_default',
+    authorName: 'Default Author',
+    decade: '1970',
+    caption: 'Default caption goes here',
+    ...over,
+  } as Post;
+}
 
 describe('Geo Utils', () => {
   it('haversineDistance calculates correctly', () => {
@@ -171,5 +183,154 @@ describe('Spawning Utils — edge cases', () => {
      // With zero radius the algorithm degrades; we just want the call to
      // return without exploding and to not exceed the requested count.
      expect(pts.length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('Quiz Generators — Phase 2', () => {
+  describe('isAutoGenerationAvailable', () => {
+    it('flags 4 generators as auto-available, leaves guess_place manual', () => {
+      expect(isAutoGenerationAvailable('guess_who')).toBe(true);
+      expect(isAutoGenerationAvailable('guess_year')).toBe(true);
+      expect(isAutoGenerationAvailable('guess_caption')).toBe(true);
+      expect(isAutoGenerationAvailable('chronology')).toBe(true);
+      // Reverse-geocoding deferred to Phase 2.5
+      expect(isAutoGenerationAvailable('guess_place')).toBe(false);
+    });
+  });
+
+  describe('guess_who', () => {
+    it('returns null if the source post has no author', () => {
+      const r = questionGenerators.guess_who(fakePost({ id: 's', authorName: '' }), []);
+      expect(r).toBeNull();
+    });
+
+    it('returns null if the pool has < 3 distinct other authors', () => {
+      const source = fakePost({ id: 's', authorName: 'Mario' });
+      const pool = [fakePost({ id: 'a', authorName: 'Mario' }), fakePost({ id: 'b', authorName: 'Luigi' })];
+      expect(questionGenerators.guess_who(source, pool)).toBeNull();
+    });
+
+    it('produces a valid 4-option question with the source author as correct', () => {
+      const source = fakePost({ id: 's', authorName: 'Mario' });
+      const pool = [
+        fakePost({ id: 'a', authorName: 'Luigi' }),
+        fakePost({ id: 'b', authorName: 'Anna' }),
+        fakePost({ id: 'c', authorName: 'Giovanna' }),
+        fakePost({ id: 'd', authorName: 'Carlo' }),
+      ];
+      const r = questionGenerators.guess_who(source, pool);
+      expect(r).not.toBeNull();
+      expect(r!.options).toHaveLength(4);
+      expect(r!.options[r!.correctIndex]).toBe('Mario');
+      expect(r!.postId).toBe('s');
+      // Distractors must all be from the pool, none equal to 'Mario'
+      r!.options.forEach((opt, i) => {
+        if (i !== r!.correctIndex) expect(opt).not.toBe('Mario');
+      });
+    });
+
+    it('is deterministic by post.id', () => {
+      const source = fakePost({ id: 'stable_id', authorName: 'Mario' });
+      const pool = [
+        fakePost({ id: 'a', authorName: 'Luigi' }),
+        fakePost({ id: 'b', authorName: 'Anna' }),
+        fakePost({ id: 'c', authorName: 'Giovanna' }),
+        fakePost({ id: 'd', authorName: 'Carlo' }),
+      ];
+      const r1 = questionGenerators.guess_who(source, pool);
+      const r2 = questionGenerators.guess_who(source, pool);
+      expect(r1).toEqual(r2);
+    });
+  });
+
+  describe('guess_year', () => {
+    it('returns null if the source has no parsable decade', () => {
+      const r = questionGenerators.guess_year(fakePost({ id: 's', decade: 'foo' }), []);
+      expect(r).toBeNull();
+    });
+
+    it('produces 4 unique decade strings with the source decade as correct', () => {
+      const source = fakePost({ id: 's', decade: '1970' });
+      const pool = [
+        fakePost({ id: 'a', decade: '1960' }),
+        fakePost({ id: 'b', decade: '1980' }),
+        fakePost({ id: 'c', decade: '1990' }),
+      ];
+      const r = questionGenerators.guess_year(source, pool);
+      expect(r).not.toBeNull();
+      expect(r!.options).toHaveLength(4);
+      expect(new Set(r!.options).size).toBe(4); // all distinct
+      expect(r!.options[r!.correctIndex]).toBe('Anni 70');
+    });
+
+    it('falls back to synthetic ±20y candidates when the pool is thin', () => {
+      const source = fakePost({ id: 's', decade: '1970' });
+      const r = questionGenerators.guess_year(source, []);
+      // Even with empty pool, synthetic offsets [-20,-10,+10,+20] give us 4 candidates.
+      expect(r).not.toBeNull();
+      expect(r!.options).toHaveLength(4);
+      expect(r!.options[r!.correctIndex]).toBe('Anni 70');
+    });
+
+    it('handles 2-digit decade format', () => {
+      const source = fakePost({ id: 's', decade: '70' });
+      const r = questionGenerators.guess_year(source, []);
+      expect(r).not.toBeNull();
+      expect(r!.options[r!.correctIndex]).toBe('Anni 70');
+    });
+  });
+
+  describe('guess_place', () => {
+    it('returns null in MVP (reverse-geocoding deferred to Phase 2.5)', () => {
+      const r = questionGenerators.guess_place(fakePost({ id: 's' }), [fakePost({ id: 'a' })]);
+      expect(r).toBeNull();
+    });
+  });
+
+  describe('guess_caption', () => {
+    it('returns null on too-short captions', () => {
+      const r = questionGenerators.guess_caption(fakePost({ id: 's', caption: 'hi' }), []);
+      expect(r).toBeNull();
+    });
+
+    it('produces 4 captions, source as correct, others from pool', () => {
+      const source = fakePost({ id: 's', caption: 'La pizza più buona del paese' });
+      const pool = [
+        fakePost({ id: 'a', caption: 'Tramonto sulla diga' }),
+        fakePost({ id: 'b', caption: 'Carnevale del 1985' }),
+        fakePost({ id: 'c', caption: 'Festa patronale Ferragosto' }),
+      ];
+      const r = questionGenerators.guess_caption(source, pool);
+      expect(r).not.toBeNull();
+      expect(r!.options).toHaveLength(4);
+      expect(r!.options[r!.correctIndex]).toBe('La pizza più buona del paese');
+    });
+  });
+
+  describe('chronology', () => {
+    it('returns null if pool has < 4 distinct decades', () => {
+      const source = fakePost({ id: 's', decade: '1970' });
+      const pool = [fakePost({ id: 'a', decade: '1980' }), fakePost({ id: 'b', decade: '1980' })];
+      expect(questionGenerators.chronology(source, pool)).toBeNull();
+    });
+
+    it('produces 4 distinct permutations, one is the chronological order', () => {
+      const source = fakePost({ id: 's', decade: '1970' });
+      const pool = [
+        fakePost({ id: 'a', decade: '1960' }),
+        fakePost({ id: 'b', decade: '1980' }),
+        fakePost({ id: 'c', decade: '1990' }),
+        fakePost({ id: 'd', decade: '2000' }),
+      ];
+      const r = questionGenerators.chronology(source, pool);
+      expect(r).not.toBeNull();
+      expect(r!.options).toHaveLength(4);
+      expect(new Set(r!.options).size).toBe(4); // all distinct permutations
+      // The correct option must contain ascending decades joined by ' → '
+      const correct = r!.options[r!.correctIndex];
+      const decades = correct.split(' → ').map(s => parseInt(s.match(/\d+/)![0], 10));
+      const sorted = [...decades].sort((a, b) => a - b);
+      expect(decades).toEqual(sorted);
+    });
   });
 });

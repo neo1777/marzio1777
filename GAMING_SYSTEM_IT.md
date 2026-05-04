@@ -306,30 +306,38 @@ points = max(0, round(maxPoints × (1 - timeMs/maxTimeMs)))
 
 Il calcolo avviene lato client al momento del reveal, ma la **rule Firestore valida il risultato**: `pointsAwarded ∈ [0, maxPointsPerRound]` e, se `pointsAwarded > 0`, `selectedIndex == correctIndex`. Un cheat che cerca di assegnarsi 9999pt su risposta sbagliata viene respinto a livello DB.
 
-### 5.6 Architettura Pluggable per i Generators Automatici
+### 5.6 Generators Automatici — Fase 2 chiusa al 4/5 (Maggio 2026)
 
-L'MVP forza la composizione manuale. Ma l'architettura è già predisposta per i generators automatici di Fase 2, senza alcuna migration di schema:
+L'MVP era a composizione manuale forzata. La Fase 2 (Maggio 2026) ha implementato 4 dei 5 generators in `/src/utils/quizGenerators.ts`:
 
 ```typescript
-// /src/utils/quizGenerators.ts
 export const questionGenerators: Record<QuestionType, QuestionGenerator> = {
-  guess_who: (post, pool) => null,      // TODO Fase 2
-  guess_year: (post, pool) => null,     // TODO Fase 2
-  guess_place: (post, pool) => null,    // TODO Fase 2
-  guess_caption: (post, pool) => null,  // TODO Fase 2
-  chronology: (post, pool) => null,     // TODO Fase 2
+  guess_who,      // ✅ distrattori = 3 authorName distinti dal pool
+  guess_year,     // ✅ distrattori = 3 decadi (pool + fallback ±10y/±20y)
+  guess_place,    // ⏳ ancora null — Fase 2.5 (richiede reverse-geocoding)
+  guess_caption,  // ✅ distrattori = 3 caption di altri post
+  chronology,     // ✅ 4 permutazioni di decadi, una è quella ordinata
 };
 
+const AUTO_AVAILABLE: Record<QuestionType, boolean> = {
+  guess_who: true, guess_year: true, guess_place: false,
+  guess_caption: true, chronology: true,
+};
 export function isAutoGenerationAvailable(type: QuestionType): boolean {
-  return questionGenerators[type](null, []) !== null;
+  return AUTO_AVAILABLE[type] ?? false;
 }
 ```
 
-In Fase 2, sostituendo il body di ognuno con la logica di generazione automatica dal pool dei posts:
-- Il wizard `QuizHostCreateRound` nello Step 2 mostra automaticamente il pulsante "🪄 Genera" per i tipi disponibili
-- L'admin può scegliere "Genera" o "Componi manualmente" per ogni round
-- Il campo `sourcePostId` su `quizRounds/{roundId}` è già pronto a ricevere sia la selezione manuale sia l'output automatico
-- Nessuna modifica alle rule Firestore, nessun cambio di indici
+**Comportamento UI (`QuizHostCreateRound.tsx`):**
+- Step 2: badge "Auto" verde su 4 tipi, "Manuale" su `guess_place`.
+- Step 3: pulsante "Genera distrattori" abilitato se source post + tipo selezionato + tipo auto-available. Click → `questionGenerators[type](source, posts)` → popola domanda + opzioni + corretta nel draft. Se ritorna `null` (pool insufficiente, es. < 3 autori distinti per `guess_who`), `alert()` invita a un altro post + composizione manuale.
+- L'admin può comunque sempre comporre manualmente (button "Genera" è additivo, non sostitutivo).
+
+**Determinismo:** seeded RNG `mulberry32(hashString(post.id))`. Stesso `(post, pool)` → stesso output. Permette test asseribili e consistenza UX se l'host re-rolla.
+
+**Schema invariato:** il campo `sourcePostId` su `quizRounds/{roundId}` era già pronto da B7. Zero migration. Zero cambio di rule Firestore. Zero cambio di indici.
+
+**`guess_place` Fase 2.5:** reverse-geocoding via Nominatim (free tier, rate-limit 1 req/s) richiede cache lato Firestore + post-processing per garantire distrattori distinguibili. Stretch goal di Fase 2.5, l'MVP attuale lascia il tipo manuale.
 
 ### 5.7 Modalità "Quiz a distanza"
 
