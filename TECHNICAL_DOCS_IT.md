@@ -691,7 +691,7 @@ Nessuna dipendenza npm aggiunta — il delta è puro codice React + utility Type
 - Validazione server-side della distanza Haversine sulla cattura (verifica che `collectedAtLat/Lng` sia entro `captureRadius` da `lat/lng` dell'item)
 - Cleanup degli eventi `active` da > 24h (passaggio automatico a `aborted` con notifica organizer)
 - Cleanup periodico dei documenti `signaling/*` orfani (>60s inattivi)
-- Notifiche FCM 30 minuti pre-kickoff e all'apertura della lobby
+- Notifiche FCM 30 minuti pre-kickoff e all'apertura della lobby ✅ chiuso Fase 2 (Maggio 2026): `notifyKickoff` CF cron 5 min su `europe-west1`, due window (kickoff-30min, lobby-open ±5min), idempotency via flag su `game_events.{id}.notifications.{kickoff30Notified,lobbyNotified}`, prune automatica dei token invalidi via `arrayRemove`. Web Push richiede VAPID key (`VITE_FIREBASE_VAPID_KEY`), Service Worker dedicato `public/firebase-messaging-sw.js`, hook `useFCM` per opt-in/opt-out gestito in ProfiloPersonale
 - Hash check SHA-256 dei file trasferiti via P2P (anti-corruption)
 
 **MIGRATION.md** alla root del repo documenta il piano della Fase 2 per i quiz generators, le Cloud Functions, e l'estensione del modulo a futuri Concept C/D/E.

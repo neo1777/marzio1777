@@ -119,7 +119,7 @@
 | Capture without being in radius | The Teleporter (#14) | Games | `collectedAtLat/Lng` audit log | Phase 2 Cloud Function |
 | Desktop browser GPS spoofing | The Speed Demon (#20) | Games | Rule rejects accuracy >100m | — (community-level trust) |
 | Host sees correctIndex pre-reveal | inherent in design | Games | Transparent UX (banner "Host sees") | Phase 2 Cloud Function |
-| Pre-event FCM notifications | not implemented | Cross-cutting | none | Phase 2 |
+| Pre-event FCM notifications | ✅ closed Phase 2 (May 2026) — `notifyKickoff` CF on `europe-west1`, `users.{uid}.fcmTokens[]` capped at 20, dedicated Service Worker, opt-in UI in ProfiloPersonale | Cross-cutting | — | — |
 | DJ skip burst | The Mass Skipper (#29) | Audio | Root can intervene | Audit log + alert in Phase 2 |
 | Orphan signaling | The Signaling Spammer (#30) | Audio | Closed sub-collection rule (proposer/DJ-only) + Firebase project quotas | Periodic cleanup Cloud Function `cleanupOrphanSignaling` (Phase 2) |
 | Queue stuffer count | The Queue Stuffer (#24) | Audio | Rule validates `effectiveMaxAtCreate` snapshot of bonus formula | Cloud Function `enforceQueuePerUserLimit` for actual count (Phase 2) |

@@ -1,5 +1,14 @@
 # MIGRATION — Marzio1777
 
+**Stato (Maggio 2026, post-batch B7 + Fase 2 + Fase 2.5):**
+
+Aggiornamento finale Maggio 2026: TUTTI i punti della roadmap originale di
+Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
+(3 di 4 gagliardetti continuous-tracking). Resta in Fase 3:
+- L'Ospite Perfetto (richiede CF heartbeat host)
+- Concept C/D/E nuovi giochi
+- Crossfade/karaoke/video chat audio extension
+
 **Stato MVP (Maggio 2026, post-batch B7):**
 - ✅ Il Campo dei Giochi (Concept A — Caccia, Concept B — Quiz) funzionante
 - ✅ L'Ainulindalë Fase 1 (Biblioteca personale + Walkman) funzionante
@@ -32,34 +41,49 @@
   - `scoring.calculateQuizPoints` decay floor universale a 1pt
   - 24 nuovi test rule (cap, self-claim, queue immutable, leaderboard, participants)
   - `audioEngine.test.ts` riscritto con verifiche concrete (vs smoke `expect(true)`)
-- ✅ **Cloud Functions hardening — Fase 2 (Maggio 2026, codice in `functions/`)**: 5 CF
-  scritte e pronte al deploy. **Richiede passaggio Firebase Blaze plan** dal lato
-  operatore + `firebase deploy --only functions` manuale. Implementate:
-  `validateCaptureDistance` (Haversine server-side, chiude #14 Teleporter),
-  `enforceQueuePerUserLimit` (count effettivo doc attivi, chiude residuo #24),
-  `cleanupOrphanSignaling` (cron 5 min), `cleanupStuckEvents` (cron giornaliero),
-  `cleanupOrphanSessions` (cron giornaliero). Skeleton per Fase 2.5:
-  `validateP2PTransferIntegrity` (richiede `blobSha256` field), `auditMassSkip`
-  (richiede `audit_state/{sessionId}`). Wiring client già pronto in
-  `useGameEvents.captureItemTransaction` e `useAudioQueue.proposeTrack` con
-  fallback graceful "CF non deployata → legacy fast-path". Rule
-  `items.update` accetta sia path server-validated (con `serverValidatedAt`
-  ≤ 30s) sia legacy (audit log via `collectedAtLat/Lng`). Nuova rule
-  `audit_log/{}` (read-only Root, write CF-only). `notifyKickoff` (FCM)
-  rimandata a sessione dedicata (richiede VAPID + UI permessi + dedicated SW).
+- ✅ **Cloud Functions hardening + FCM — Fase 2 (Maggio 2026, deployate)**: 7 CF
+  attive su `europe-west1`, runtime `nodejs22`. Codice in `functions/src/index.ts`,
+  deploy via `firebase deploy --only functions,firestore:rules,firestore:indexes`.
+  **Richiede Firebase Blaze plan** (già attivo).
+  - `validateCaptureDistance` (callable, Haversine server-side, chiude #14 Teleporter)
+  - `enforceQueuePerUserLimit` (callable, count effettivo doc attivi, chiude residuo #24)
+  - `notifyKickoff` (cron 5 min, FCM Web Push 30-min pre-kickoff + lobby open)
+  - `cleanupOrphanSignaling` (cron 5 min)
+  - `cleanupStuckEvents` (cron daily 04:00 Rome)
+  - `cleanupOrphanSessions` (cron daily 04:15 Rome)
+  - `auditMassSkip` (Firestore onUpdate, skeleton per Fase 3)
+  - `validateP2PTransferIntegrity` (callable skeleton, ritorna `unimplemented`
+    finché non c'è `blobSha256` field — Fase 3)
+
+  Wiring client: `useGameEvents.captureItemTransaction` e
+  `useAudioQueue.proposeTrack` chiamano le CF con fallback graceful
+  ("CF non deployata → legacy fast-path"). Rule `items.update` accetta
+  sia path server-validated (`serverValidatedAt` ≤ 30s) sia legacy.
+  Nuove collection `audit_log/{}` (Root read, CF-only write) e
+  `places_cache/{}` (cache reverse-geocoding pubblica).
+  Hook `useFCM` + `public/firebase-messaging-sw.js` + UI opt-in in
+  `ProfiloPersonale`. Token gestiti via `users.{uid}.fcmTokens[]` (cap 20).
 - ✅ **Quiz auto-generators (4/5) — chiusi in Fase 2 (Maggio 2026)**: `guess_who`, `guess_year`, `guess_caption`, `chronology` implementati con seeded RNG (mulberry32 keyed off `post.id`) per output deterministico. `guess_place` resta `null` con commento esplicito (richiede reverse-geocoding via Nominatim + caching, deferred a Fase 2.5). Wizard `QuizHostCreateRound.tsx` step 3 ora usa il pulsante "Genera distrattori" wired a `questionGenerators[type](source, pool)`. 14 test unit verdi.
 - ⏳ FCM notifiche pre-evento rimandate a Fase 2
-- ✅ **Gagliardetti pesati da snapshot — Fase 2 (Maggio 2026)**: catalogo
-  completo 13 gagliardetti in `src/lib/gagliardetti.ts` (4 historical
-  point-based + 4 giochi + 5 audio). Hook `useUserGagliardetti` calcola
-  metriche con 6 collection-group queries (cached 1h in localStorage).
-  ProfiloPersonale mostra earned + progress per ognuno, raggruppati per
-  categoria. Indici composti `COLLECTION_GROUP` aggiunti a
-  `firestore.indexes.json` per `participants`, `leaderboard`, `queue`,
-  `audio_sessions`, `answers`. 7 nuovi unit test. **Gagliardetti che
-  richiedono tracking continuo (5 risposte consecutive, 10 sessioni Host
-  senza disconnessioni, 5 skip consecutivi) deferiti a Fase 2.5 con
-  contatori denormalizzati su `users/{uid}.{metric}`.**
+- ✅ **Gagliardetti pesati da snapshot — Fase 2 + Fase 2.5 (Maggio 2026)**:
+  catalogo completo 16 gagliardetti in `src/lib/gagliardetti.ts`:
+  - **Fase 2** (13): 4 historical point-based + 4 giochi (Cacciatore di
+    Ricordi, Cacciatore Esperto, Sindaco del Quiz, Veggente quiz-correct)
+    + 5 audio (Cantore, Sub-Creatore, Conduttore, Maestro del Coro,
+    Voci di Ilúvatar). Calcolati via 6 collection-group queries
+    (`useUserGagliardetti`, cache localStorage 1h).
+  - **Fase 2.5** (3): Veggente del Bivacco (5 risposte consecutive),
+    Pellegrino delle Polaroid (3 cacce legacy_posts), Discordante (5
+    skip consecutivi). Counter su `users.{uid}.metrics` aggiornati in
+    `claimMyAnswerPoints`, `useAudioQueue` listener, `captureItemTransaction`.
+  - **Fase 3** (rimanente): Ospite Perfetto (10 host senza disconnessioni)
+    — richiede heartbeat host CF dedicata.
+
+  Indici `COLLECTION_GROUP` aggiunti a `firestore.indexes.json` per
+  `participants`, `queue`, `audio_sessions`, `answers`. 11 nuovi unit
+  test. Rule `users.update` ammette branch metrics-only (cap +1000/tx
+  invariato). UI in `ProfiloPersonale` raggruppata per categoria con
+  earned/progress per ognuno.
 - ⏳ **Per-user count delle proposte queue attive** rimandato a CF Fase 2:
   il DSL Firestore non può contare documenti, quindi la formula bonus è
   validata in rule sul valore *snapshot* `effectiveMaxAtCreate` ma il count

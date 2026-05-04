@@ -119,7 +119,7 @@
 | Cattura senza essere nel raggio | The Teleporter (#14) | Giochi | Audit log `collectedAtLat/Lng` | Cloud Function Fase 2 |
 | GPS spoofing browser desktop | The Speed Demon (#20) | Giochi | Rule respinge accuracy >100m | — (community-level trust) |
 | Host vede correctIndex pre-reveal | inerente al design | Giochi | UX trasparente (banner "L'Host vede") | Cloud Function Fase 2 |
-| FCM notifiche pre-evento | non implementate | Trasversale | nessuna | Fase 2 |
+| FCM notifiche pre-evento | ✅ chiuso Fase 2 (Maggio 2026) — `notifyKickoff` CF su `europe-west1`, `users.{uid}.fcmTokens[]` cap 20, Service Worker dedicato, opt-in UI in ProfiloPersonale | Trasversale | — | — |
 | Skip burst del DJ | The Mass Skipper (#29) | Audio | Root può intervenire | Audit log + alert in Fase 2 |
 | Signaling orfani | The Signaling Spammer (#30) | Audio | Rule sub-collection chiusa (proposer/DJ-only) + Project quotas Firebase | Cloud Function `cleanupOrphanSignaling` in Fase 2 |
 | Queue stuffer count | The Queue Stuffer (#24) | Audio | Rule valida `effectiveMaxAtCreate` snapshot della formula bonus | Cloud Function `enforceQueuePerUserLimit` per il count effettivo (Fase 2) |
