@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Code, FileText, Shield, Globe, Gamepad2, Mic2 } from 'lucide-react';
+import { BookOpen, Code, FileText, Shield, Gamepad2, ClipboardList } from 'lucide-react';
 import readmeContentIT from '../../README_IT.md?raw';
 import readmeContentEN from '../../README_EN.md?raw';
 import techDocsContentEN from '../../TECHNICAL_DOCS_EN.md?raw';
@@ -9,16 +9,23 @@ import securityDocsContentEN from '../../security_spec_EN.md?raw';
 import securityDocsContentIT from '../../security_spec_IT.md?raw';
 import gamingSystemContentEN from '../../GAMING_SYSTEM_EN.md?raw';
 import gamingSystemContentIT from '../../GAMING_SYSTEM_IT.md?raw';
+import statoProgettoContent from '../../STATO_PROGETTO.md?raw';
+
+// STATO_PROGETTO.md is authored only in Italian (project working language).
+// English readers see an inline note + the IT body so the content is at
+// least scannable rather than being hidden behind an empty tab.
+const STATO_EN_NOTICE = '> _The project status log is maintained in Italian only. Original content follows below._\n\n';
 
 export default function Istruzioni() {
-  const [activeTab, setActiveTab] = useState<'readme' | 'tech' | 'security' | 'gaming'>('readme');
+  const [activeTab, setActiveTab] = useState<'readme' | 'tech' | 'security' | 'gaming' | 'stato'>('readme');
   const [lang, setLang] = useState<'it' | 'en'>('it');
 
   const contentMap = {
      readme: { it: readmeContentIT, en: readmeContentEN },
      tech: { it: techDocsContentIT, en: techDocsContentEN },
      security: { it: securityDocsContentIT, en: securityDocsContentEN },
-     gaming: { it: gamingSystemContentIT, en: gamingSystemContentEN }
+     gaming: { it: gamingSystemContentIT, en: gamingSystemContentEN },
+     stato: { it: statoProgettoContent, en: STATO_EN_NOTICE + statoProgettoContent }
   };
 
   return (
@@ -67,23 +74,23 @@ export default function Istruzioni() {
                >
                   <Code size={16} /> Tech Specs
                </button>
-               <button 
+               <button
                   onClick={() => setActiveTab('security')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'security' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
                >
                   <Shield size={16} /> Security
                </button>
-               <button 
-                  onClick={() => setActiveTab('readme')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'readme' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
-               >
-                  <Gamepad2 size={16} /> Game Design
-               </button>
-               <button 
+               <button
                   onClick={() => setActiveTab('gaming')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'gaming' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
                >
-                  <Mic2 size={16} /> Gaming System
+                  <Gamepad2 size={16} /> {lang === 'it' ? 'Sistema Giochi' : 'Gaming System'}
+               </button>
+               <button
+                  onClick={() => setActiveTab('stato')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all focus:outline-none ${activeTab === 'stato' ? 'bg-[#2D5A27] text-white shadow-md' : 'bg-slate-100 dark:bg-[#24352b] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#2c4033]'}`}
+               >
+                  <ClipboardList size={16} /> {lang === 'it' ? 'Stato Progetto' : 'Project Status'}
                </button>
             </div>
          </div>
