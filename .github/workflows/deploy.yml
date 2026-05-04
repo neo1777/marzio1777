@@ -31,19 +31,28 @@ jobs:
       - name: Installa le dipendenze
         run: npm install
 
+      - name: Scrivi .env.production (build-time replacement deterministico)
+        # Vite con `loadEnv(mode, '.', '')` in vite.config.ts legge le env
+        # da file. Le var del processo CI passate via `env:` non sempre
+        # vengono iniettate in `import.meta.env.VITE_*` (dipende dal mode
+        # e dal precedence ordering di Rollup `define`). Scrivere
+        # esplicitamente `.env.production` rende il replacement
+        # deterministico — stessa fonte sia in dev locale che in CI.
+        # `.env.production` è gitignored, quindi il file vive solo
+        # nel runner e viene scartato a fine job.
+        run: |
+          cat > .env.production <<EOF
+          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_VAPID_KEY=${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+          EOF
+
       - name: Compila il progetto
         run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          # FCM Web Push (Phase 2 §15.A.3). Optional: if the secret is unset
-          # the build still succeeds, but useFCM will surface "VAPID non
-          # configurata" when a user clicks the toggle.
-          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
