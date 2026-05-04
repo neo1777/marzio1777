@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { LocalTrack } from '../../types/audio';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, ChevronDown, ListPlus, Volume2, SlidersHorizontal, Moon } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, ChevronDown, ListPlus, Volume2, SlidersHorizontal, Moon, X } from 'lucide-react';
 import Visualizer from './Visualizer';
 import Equalizer from './Equalizer';
 import { getAudioEngine } from '../../utils/audioEngine';
@@ -24,6 +24,7 @@ interface Props {
   onToggleRepeat: () => void;
   onToggleBgPlayback: () => void;
   onClose: () => void;
+  onStop: () => void;
 }
 
 function formatTime(s: number) {
@@ -51,16 +52,26 @@ export default function FullScreenPlayer(props: Props) {
     >
       {/* Header */}
       <div className="flex justify-between items-center py-4 sm:py-6">
-        <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors">
+        <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors" aria-label="Riduci a icona">
           <ChevronDown size={28} />
         </button>
         <span className="text-xs font-bold tracking-widest text-[#879b8f] uppercase">In Riproduzione</span>
-        <button className="p-2 text-slate-400 hover:text-white transition-colors opacity-50 cursor-not-allowed group relative">
-          <ListPlus size={24} />
-          <div className="absolute top-full right-0 mt-2 bg-[#24352b] text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
-            Aggiungi alla coda della Sessione (Disponibile in fase 2)
-          </div>
-        </button>
+        <div className="flex items-center gap-1">
+          <button className="p-2 text-slate-400 transition-colors opacity-50 cursor-not-allowed group relative">
+            <ListPlus size={24} />
+            <div className="absolute top-full right-0 mt-2 bg-[#24352b] text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+              Aggiungi alla coda della Sessione (Disponibile in fase 2)
+            </div>
+          </button>
+          <button
+            onClick={props.onStop}
+            className="p-2 text-slate-400 hover:text-red-300 transition-colors"
+            aria-label="Ferma e chiudi"
+            title="Ferma e chiudi il player"
+          >
+            <X size={24} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col max-w-md mx-auto w-full justify-center">

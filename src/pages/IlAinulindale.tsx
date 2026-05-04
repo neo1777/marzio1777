@@ -83,19 +83,20 @@ function IlAinulindaleLayout() {
       {/* Flow Players */}
       <AnimatePresence>
          {player.currentTrack && !showFullPlayer && (
-            <MiniPlayer 
+            <MiniPlayer
                track={player.currentTrack}
                isPlaying={player.isPlaying}
                progressPercent={(player.currentTime / (player.duration || 1)) * 100}
                onPlayPause={player.togglePlay}
                onExpand={() => setShowFullPlayer(true)}
+               onClose={player.stop}
             />
          )}
       </AnimatePresence>
 
       <AnimatePresence>
          {showFullPlayer && player.currentTrack && (
-            <FullScreenPlayer 
+            <FullScreenPlayer
                track={player.currentTrack}
                isPlaying={player.isPlaying}
                currentTime={player.currentTime}
@@ -113,6 +114,7 @@ function IlAinulindaleLayout() {
                onToggleRepeat={player.toggleRepeat}
                onToggleBgPlayback={player.toggleBgPlayback}
                onClose={() => setShowFullPlayer(false)}
+               onStop={() => { player.stop(); setShowFullPlayer(false); }}
             />
          )}
       </AnimatePresence>

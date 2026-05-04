@@ -181,7 +181,7 @@ export function AudioSessionDJ() {
                <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">{session.title}</h1>
                <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center"><Users className="w-4 h-4 mr-1" /> {session.participantCount}</span>
-                  <span className="flex items-center"><Settings className="w-4 h-4 mr-1" /> {session.mode.toUpperCase()}</span>
+                  <span className="flex items-center"><Settings className="w-4 h-4 mr-1" /> {(session.mode ?? 'auto').toUpperCase()}</span>
                   <span className="flex items-center px-2 py-0.5 rounded bg-primary/10 text-primary uppercase text-xs tracking-wider">{engineState}</span>
                </div>
             </div>

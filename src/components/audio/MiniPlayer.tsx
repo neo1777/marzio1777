@@ -1,6 +1,6 @@
 import React from 'react';
 import { LocalTrack } from '../../types/audio';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface Props {
@@ -9,13 +9,14 @@ interface Props {
   progressPercent: number;
   onPlayPause: () => void;
   onExpand: () => void;
+  onClose: () => void;
 }
 
-export default function MiniPlayer({ track, isPlaying, progressPercent, onPlayPause, onExpand }: Props) {
+export default function MiniPlayer({ track, isPlaying, progressPercent, onPlayPause, onExpand, onClose }: Props) {
   if (!track) return null;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       exit={{ y: 100 }}
@@ -23,9 +24,9 @@ export default function MiniPlayer({ track, isPlaying, progressPercent, onPlayPa
       onClick={onExpand}
     >
        {/* Background progress bar */}
-       <div 
-         className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#FFA000] to-[#C2410C] transition-all duration-300 pointer-events-none" 
-         style={{ width: `${progressPercent}%` }} 
+       <div
+         className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#FFA000] to-[#C2410C] transition-all duration-300 pointer-events-none"
+         style={{ width: `${progressPercent}%` }}
        />
 
        <div className="w-14 items-center justify-center flex bg-[#0A0A0F] border-r border-[#24352b] relative shrink-0">
@@ -41,12 +42,21 @@ export default function MiniPlayer({ track, isPlaying, progressPercent, onPlayPa
           <p className="text-xs text-[#879b8f] truncate">{track.artist}</p>
        </div>
 
-       <div className="px-3 flex items-center justify-center">
-          <button 
-             onClick={(e) => { e.stopPropagation(); onPlayPause(); }} 
+       <div className="flex items-center justify-center pr-1">
+          <button
+             onClick={(e) => { e.stopPropagation(); onPlayPause(); }}
              className="w-10 h-10 rounded-full hover:bg-[#24352b] flex items-center justify-center text-white transition-colors"
+             aria-label={isPlaying ? 'Pausa' : 'Riprendi'}
           >
              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+          </button>
+          <button
+             onClick={(e) => { e.stopPropagation(); onClose(); }}
+             className="w-8 h-8 rounded-full hover:bg-red-500/20 hover:text-red-300 flex items-center justify-center text-slate-400 transition-colors"
+             aria-label="Chiudi player"
+             title="Chiudi e ferma la riproduzione"
+          >
+             <X size={16} />
           </button>
        </div>
     </motion.div>

@@ -71,9 +71,13 @@ export function AudioSessionCreate() {
          // AudioSessionWrapper at /sessioni/:id will route the creator to the
          // DJ panel automatically (session.djId === user.uid).
          navigate(`/dashboard/ainulindale/sessioni/${sessionId}`);
-      } catch (e) {
+      } catch (e: any) {
          console.error(e);
          setLoading(false);
+         // Surface the failure: previously the batch could be denied by the
+         // rules engine and the user would see only the spinner reverting,
+         // making the button feel inert.
+         alert(`Apertura del coro fallita: ${e?.message || 'errore sconosciuto'}`);
       }
    };
 

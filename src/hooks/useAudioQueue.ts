@@ -6,8 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { QueueItem, AudioSession } from '../types/audio';
 import { LocalTrack } from '../types/audio';
 
-export function getMaxQueuedFor(points: number, rules: AudioSession['rules']) {
-  return rules.maxQueuedPerUser + Math.floor((points || 0) / 100) * rules.bonusPerHundredPoints;
+export function getMaxQueuedFor(points: number, rules: AudioSession['rules'] | undefined) {
+  // Legacy sessions or partially-loaded snapshots can have a missing `rules`
+  // object — fall back to the same defaults AudioSessionCreate writes for new
+  // sessions so the listener page renders instead of throwing.
+  const max = rules?.maxQueuedPerUser ?? 2;
+  const bonus = rules?.bonusPerHundredPoints ?? 1;
+  return max + Math.floor((points || 0) / 100) * bonus;
 }
 
 export function useAudioQueue(sessionId: string) {

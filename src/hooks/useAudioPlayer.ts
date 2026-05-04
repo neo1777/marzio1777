@@ -161,6 +161,23 @@ export function useAudioPlayer() {
     else engine.play();
   };
 
+  // Walkman "Stop" — pause playback, drop the current track and the queue,
+  // clear the MediaSession metadata so OS / lock-screen widgets disappear,
+  // and reset progress. Used by the X button on MiniPlayer / FullScreenPlayer
+  // so the user can dismiss the playback UI completely (the previous build
+  // had no way to make the floating card go away short of refreshing).
+  const stop = () => {
+    engine.pause();
+    setCurrentTrack(null);
+    setQueue([]);
+    setCurrentIndex(-1);
+    setDuration(0);
+    setCurrentTime(0);
+    if ('mediaSession' in navigator) {
+      try { navigator.mediaSession.metadata = null; } catch { /* unsupported */ }
+    }
+  };
+
   const seek = (time: number) => {
     engine.seek(time);
   };
@@ -216,6 +233,7 @@ export function useAudioPlayer() {
     toggleRepeat,
     toggleBgPlayback,
     playQueue,
+    stop,
     // Walkman pause helper (state-level). For raw engine access from the DJ
     // session, use useAudioEngineRaw() — this hook is reserved for the personal
     // library/Walkman experience.
