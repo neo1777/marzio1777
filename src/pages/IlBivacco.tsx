@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Users, Plus, ShoppingBag, Wallet, Clock, ChevronRight, Check, X, HelpCircle, Flame } from 'lucide-react';
@@ -210,19 +210,26 @@ function CreateEventModal({ onClose, user }: { onClose: () => void, user: any })
         location: location || 'Marzio',
         authorId: user.uid,
         authorName: user.displayName,
+        authorPhotoURL: user.photoURL || null,
         timestamp: serverTimestamp(),
         likesCount: 0,
-        commentsCount: 0
+        commentsCount: 0,
+        visibilityStatus: 'public',
       });
 
-      // Premiamo chi crea un evento
-      await updateDoc(doc(db, 'users', user.uid), { 
-         points: (user.points || 0) + 5 
+      // Premiamo chi crea un evento. Use Firestore `increment` rather
+      // than read-modify-write of the local user object: a stale local
+      // points value would either underflow the rule guard
+      // (`incoming().points >= existing().points`) or race against
+      // concurrent writes (e.g. a capture awarding points in another tab).
+      await updateDoc(doc(db, 'users', user.uid), {
+         points: increment(5)
       });
 
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(`Errore durante la creazione dell'appuntamento: ${err?.message ?? err}`);
     } finally {
       setLoading(false);
     }

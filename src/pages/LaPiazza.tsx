@@ -211,7 +211,7 @@ export default function LaPiazza() {
                   
                   {/* Author Row */}
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#24352b]">
-                    <Avatar name={post.authorName} size="sm" className="border border-slate-200 dark:border-[#24352b]" />
+                    <Avatar photoURL={post.authorPhotoURL} name={post.authorName} size="sm" className="border border-slate-200 dark:border-[#24352b]" />
                     <div>
                       <p className="font-bold text-sm text-[#1a2e16] dark:text-[#e2e8f0] font-sans">{post.authorName || 'Villeggiante Anonimo'}</p>
                       <p className="text-xs text-[#8C928D] dark:text-slate-500 font-sans">{post.timestamp ? formatDistanceToNow(post.timestamp.toDate(), { locale: it, addSuffix: true }) : 'In caricamento...'}</p>

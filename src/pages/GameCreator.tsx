@@ -178,9 +178,9 @@ export default function GameCreator() {
            }
         });
         setItems(legacyItems);
-     } catch(e) {
+     } catch(e: any) {
         console.error(e);
-        alert("Errore caricamento posts");
+        alert(`Errore caricamento posts: ${e?.message ?? e}`);
      } finally {
         setLoading(false);
      }
@@ -197,15 +197,31 @@ export default function GameCreator() {
       return;
     }
 
+    const kickoffDate = new Date(kickoff);
+    if (isNaN(kickoffDate.getTime())) {
+      alert("Data e ora non valide. Controlla il campo 'Data/Ora Inizio'.");
+      return;
+    }
+    // The rule (firestore.rules: game_events.create) requires
+    // `scheduledKickoff > request.time`. If the user picks a time that's
+    // already past by the time they hit Salva, Firestore returns
+    // PERMISSION_DENIED with no hint as to which guard failed. Catch it
+    // here with a clear message instead.
+    if (kickoffDate.getTime() <= Date.now() + 30_000) {
+      alert("La data di inizio deve essere nel futuro (almeno 30 secondi da ora).");
+      return;
+    }
+
+    const multiplier = parseFloat(pointsMultiplier);
+    const safeMultiplier = isNaN(multiplier) ? 1 : Math.max(0.5, Math.min(5, multiplier));
+
     setLoading(true);
     try {
-      const kickoffDate = new Date(kickoff);
-      
       const eventData: any = {
          title,
          description,
          type,
-         pointsMultiplier: parseFloat(pointsMultiplier),
+         pointsMultiplier: safeMultiplier,
          scheduledKickoff: kickoffDate,
          organizerId: user.uid,
          invitedUserIds: [], // MVP everyone
@@ -250,9 +266,10 @@ export default function GameCreator() {
 
       
       navigate('/dashboard/giochi');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Errore durante la creazione");
+      const msg = error?.message ?? String(error);
+      alert(`Errore durante la creazione: ${msg}`);
     } finally {
       setLoading(false);
     }

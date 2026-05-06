@@ -113,7 +113,8 @@ export default function IlBaule() {
       setVisibilityTime('');
     };
     reader.onerror = () => {
-      alert("Errore nella lettura del file.");
+      const err = reader.error;
+      alert(`Errore nella lettura del file: ${err?.message ?? 'sconosciuto'}`);
       setLoading(false);
       handleNextInQueue();
     };
@@ -179,9 +180,9 @@ export default function IlBaule() {
       const compressedBase64 = canvas.toDataURL('image/jpeg', compressionQuality);
       setImagePreview(compressedBase64);
       setStep('edit');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Errore durante l'elaborazione dell'immagine Originale.");
+      alert(`Errore durante l'elaborazione dell'immagine Originale: ${err?.message ?? err}`);
     }
     setLoading(false);
   };
@@ -200,9 +201,9 @@ export default function IlBaule() {
       );
       setImagePreview(croppedImageBase64);
       setStep('edit');
-    } catch(err) {
+    } catch(err: any) {
       console.error(err);
-      alert("Errore durante l'elaborazione dell'immagine.");
+      alert(`Errore durante l'elaborazione dell'immagine: ${err?.message ?? err}`);
     }
     setLoading(false);
   };
@@ -237,8 +238,9 @@ export default function IlBaule() {
       } else {
         alert('Indirizzo non trovato.');
       }
-    } catch(err) {
-      alert('Errore di ricerca.');
+    } catch(err: any) {
+      console.error(err);
+      alert(`Errore di ricerca: ${err?.message ?? err}`);
     }
     setIsSearchingLocation(false);
   };
@@ -267,9 +269,9 @@ export default function IlBaule() {
       if (response.text) {
          setCaption(response.text);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Errore nell'analisi AI. Controlla che le tue API Key siano valide.");
+      alert(`Errore nell'analisi AI: ${error?.message ?? 'Controlla che le tue API Key siano valide.'}`);
     } finally {
       setIsAiLoading(false);
     }
@@ -288,6 +290,7 @@ export default function IlBaule() {
       const postData: any = {
         authorId: user.uid,
         authorName: user.displayName,
+        authorPhotoURL: user.photoURL || null,
         imageUrl: downloadUrl,
         caption,
         decade,
@@ -311,9 +314,9 @@ export default function IlBaule() {
       });
 
       handleNextInQueue();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Errore durante l'archiviazione. Riprova.");
+      alert(`Errore durante l'archiviazione: ${e?.message ?? 'riprova'}`);
     } finally {
       setLoading(false);
     }

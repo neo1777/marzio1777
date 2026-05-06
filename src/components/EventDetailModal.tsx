@@ -33,8 +33,9 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
           guestCount: newAttendees[user.uid]?.guestCount || 0
        };
        await updateDoc(doc(db, 'events', event.id), { attendees: newAttendees });
-     } catch (err) {
+     } catch (err: any) {
        console.error(err);
+       alert(`Conferma non registrata: ${err?.message ?? err}`);
      }
   };
 
@@ -44,8 +45,9 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
        if (!newAttendees[user.uid]) return;
        newAttendees[user.uid].guestCount = count;
        await updateDoc(doc(db, 'events', event.id), { attendees: newAttendees });
-     } catch (err) {
+     } catch (err: any) {
        console.error(err);
+       alert(`Aggiornamento ospiti fallito: ${err?.message ?? err}`);
      }
   };
 

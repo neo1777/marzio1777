@@ -436,6 +436,92 @@ catena di bug interconnessi, tutti chiusi. **15 commit consecutivi** in
 
 ---
 
+## Sessione UX 2026-05-06 — scrollbar, salvataggio caccia, avatar autore, alert opachi
+
+L'utente segnala una raffica di difetti UX rendering + un blocker
+funzionale sul flusso di creazione caccia AR. L'audit ha trovato
+quattordici bug distinti riconducibili a quattro pattern. Tutti chiusi
+in un solo passaggio.
+
+### #1 — Scrollbar nera/grossa su tema scuro
+
+**Sintomo**: i container che dovrebbero scrollare senza barra (sidebar,
+liste, filtri swipeable) mostrano comunque la scrollbar di sistema, che
+nel tema notte appare come una grossa barra grigia chiara fuori
+palette. La classe `.scrollbar-hide` era usata in 9 file (`Layout.tsx`,
+`LaPiazza.tsx`, `IlBaule.tsx`, `IlBivacco.tsx`, `LAlberone.tsx`,
+`IlCampoDeiGiochi.tsx`, `ProfiloPersonale.tsx`, `AdminPanel.tsx`) ma
+**non era definita da nessuna parte** — niente plugin
+`tailwind-scrollbar-hide` in `package.json`, niente utility custom in
+`src/index.css`. Era una classe morta.
+
+**Fix**: aggiunta in `src/index.css` come utility `@layer utilities`
+con `scrollbar-width: none` (Firefox) + `::-webkit-scrollbar { display:
+none }`. In più, restyle globale slim+dark-friendly per le scrollbar
+che restano (form lunghi, Istruzioni): track trasparente, thumb 6px
+oro/verde su scuro / grigio su chiaro, hover lievemente più saturo.
+Zero deps nuove, ~30 LOC.
+
+### #2 — Salvataggio caccia AR fallisce silenziosamente
+
+**Sintomo**: dopo aver compilato titolo/descrizione/data e piazzato i
+punti sulla mappa, premendo "Salva" appare "Errore durante la
+creazione" — nessuna informazione sulla causa reale.
+
+**Diagnosi**: `GameCreator.handleSave` aveva `alert("Errore durante la
+creazione")` come catch-all. Confrontando il payload con
+`firestore.rules:282-291`, tre potenziali PERMISSION_DENIED erano
+mascherati: `scheduledKickoff > request.time` (kickoff già passato
+quando si clicca Salva), `pointsMultiplier` NaN se input vuoto, e
+`points is int` su payload float-like.
+
+**Fix in 4 punti** (`src/pages/GameCreator.tsx` +
+`src/hooks/useGameEvents.ts`):
+
+- Validazione client pre-call: kickoff > now+30s, multiplier clampato
+  a [0.5, 5.0].
+- Surface err.message: il catch-all del salvataggio mostra ora
+  `error?.message`.
+- `createGameItem` con `Math.floor(points)` + `spawnedAt:
+  serverTimestamp()`.
+- `handleGenerateLegacy` con err.message.
+
+### #3 — Avatar dell'autore sparito dai post nella Piazza
+
+**Diagnosi**: tre punti rotti in cascata. `Post` interface senza
+`authorPhotoURL`; `IlBaule.handleUpload` e
+`IlBivacco.CreateEventModal` non salvavano `user.photoURL`;
+`LaPiazza:214` non passava `photoURL` all'Avatar (Avatar degrada
+correttamente al fallback iniziale → fallback visibile sempre).
+
+**Fix**: `Post.authorPhotoURL?: string | null` opzionale
+(backward-compat post legacy), salvato in IlBaule e IlBivacco, letto
+in LaPiazza.
+
+### #4 — Race condition punti + alert opachi sparsi
+
+**Fix**:
+
+- `IlBivacco.tsx`: `(user.points || 0) + 5` → `increment(5)` (Firestore
+  atomic). La rule `incoming().points >= existing().points` avrebbe
+  potuto respingere il read-modify-write con valore locale stantio.
+- 7 alert silenziosi in `EventDetailModal`, `PhotoQuizPlay`,
+  `IlBaule` (×4), `AdminPanel` (×2): tutti surfaceano ora
+  `err.message`.
+
+### File toccati
+
+`src/index.css`, `src/types.ts`, `src/pages/GameCreator.tsx`,
+`src/hooks/useGameEvents.ts`, `src/pages/IlBaule.tsx`,
+`src/pages/IlBivacco.tsx`, `src/pages/LaPiazza.tsx`,
+`src/pages/PhotoQuizPlay.tsx`, `src/pages/AdminPanel.tsx`,
+`src/components/EventDetailModal.tsx`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` 11.48s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

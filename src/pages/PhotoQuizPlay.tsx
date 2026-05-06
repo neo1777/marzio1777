@@ -142,9 +142,9 @@ export default function PhotoQuizPlay() {
       if (hasAnswered || !eventId || !round || !profile) return;
       try {
          await submitQuizAnswer(eventId, round.id, user.uid, profile.displayName || 'Anonimo', index);
-      } catch (e) {
+      } catch (e: any) {
          console.error(e);
-         alert("Errore invio risposta");
+         alert(`Errore invio risposta: ${e?.message ?? e}`);
       }
    };
 

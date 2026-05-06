@@ -54,6 +54,10 @@ export interface Post {
    caption?: string;
    authorName?: string;
    authorId?: string;
+   // Snapshot of the author's photoURL at post creation time. Optional so
+   // legacy posts (created before the field existed) keep working — the
+   // <Avatar> component falls back to the initial-on-colored-bg when null.
+   authorPhotoURL?: string | null;
    decade?: string;
    timestamp?: any;
    // Optional geotag in {lat, lng} form. The legacy schema described it as a

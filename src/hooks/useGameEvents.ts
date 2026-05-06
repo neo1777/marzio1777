@@ -220,10 +220,17 @@ export async function advanceGameEventStatus(eventId: string, newStatus: GameEve
 
 export async function createGameItem(eventId: string, itemData: Omit<GameItem, 'id' | 'status' | 'collectedBy'>) {
    const itemRef = doc(collection(db, `game_events/${eventId}/items`));
+   // The rule `items.create` (firestore.rules:330) requires
+   // `request.resource.data.points is int`. JS Number doesn't distinguish
+   // int from float; if any code path ever produces a decimal points value
+   // (templates allow integers today, but keep this defensive) Firestore
+   // would reject the write with PERMISSION_DENIED. Floor at the boundary.
    await setDoc(itemRef, {
       ...itemData,
+      points: Math.floor(itemData.points),
       status: 'spawned',
-      collectedBy: null
+      collectedBy: null,
+      spawnedAt: serverTimestamp(),
    });
    return itemRef.id;
 }

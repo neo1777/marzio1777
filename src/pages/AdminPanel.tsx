@@ -65,9 +65,9 @@ export default function AdminPanel() {
 
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRole });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Errore nell'aggiornamento. Controlla i permessi Firebase.");
+      alert(`Errore nell'aggiornamento: ${error?.message ?? 'controlla i permessi Firebase.'}`);
     }
   };
 
@@ -83,9 +83,9 @@ export default function AdminPanel() {
             accountStatus: 'approved',
             role: asRole,
          });
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert("Errore nell'approvazione. Controlla i permessi Firebase.");
+         alert(`Errore nell'approvazione: ${error?.message ?? 'controlla i permessi Firebase.'}`);
       }
   };
 

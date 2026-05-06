@@ -44,6 +44,51 @@
   .spin-slow {
     animation: spin 6s linear infinite;
   }
+
+  /* Hide scrollbars on containers that scroll but shouldn't show a track.
+     Used in 9 places (Layout, LaPiazza, IlBaule, IlBivacco, ecc.). Without
+     this rule the chrome scrollbar would appear in dark mode as a heavy
+     light-grey track that clashes with the seppia/notte palette. */
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Global slim, theme-friendly scrollbar for the few containers that DO
+   benefit from a visible track (long forms, Istruzioni, Cropper aspect
+   strip on desktop). Mobile browsers honour `scrollbar-width` weakly so
+   the practical effect is desktop-only — exactly where the user said
+   the system bar is acceptable but the default light-grey one is ugly
+   on the seppia/notte palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(140, 146, 141, 0.4) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(66, 168, 58, 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(140, 146, 141, 0.4);
+  border-radius: 3px;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(66, 168, 58, 0.35);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(45, 90, 39, 0.6);
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(66, 168, 58, 0.6);
 }
 
 
