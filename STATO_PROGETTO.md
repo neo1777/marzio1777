@@ -742,6 +742,82 @@ build` 11.41s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 4) — GPS timeout tollerante
+
+L'utente sul deploy del round 3 vede sulla pagina di gioco AR:
+"GPS non disponibile / Timeout expired / Abilita la geolocalizzazione...".
+Il messaggio è quello che ho aggiunto al round 2, ma scattava troppo
+presto: il `watchPosition` con timeout 10s ha emesso un TIMEOUT prima
+che il browser desktop riuscisse a triangolare via Wi-Fi, e la mia UI
+trattava qualunque errore come fatale.
+
+### #1 — Distinguere errore permesso da errore transitorio
+
+L'API W3C Geolocation ha tre codici:
+1. `PERMISSION_DENIED` — l'utente ha negato e il browser non riproverà.
+2. `POSITION_UNAVAILABLE` — il device non riesce a determinare la
+   posizione (no GPS, network down).
+3. `TIMEOUT` — il fix non è arrivato in tempo, ma `watchPosition`
+   continua a tentare.
+
+Solo (1) è davvero fatale. (2) e (3) sono spesso transitori su desktop
+con triangolazione Wi-Fi/IP.
+
+**Fix in `src/hooks/useHighAccuracyPosition.ts`**:
+- L'hook ora restituisce `error: { code, message } | null` invece di
+  `string | null`. Espone il codice così i caller possono decidere
+  cosa fare (interface `GeoError` esportata).
+- Timeout del `watchPosition` portato da 10s a **30s** (i desktop
+  routinamente impiegano 10-20s per il primo fix). Timeout della
+  one-shot `getCurrentPosition` da 8s a **15s**.
+
+### #2 — Schermata d'errore solo dopo 20s sui transitori
+
+**Fix in `src/pages/TreasureHuntPlay.tsx`**:
+- Aggiunto `showGpsError` con `useEffect` dipendente da `gpsError`:
+  - Se `gpsError.code === 1` (PERMISSION_DENIED) → mostra errore
+    immediatamente.
+  - Altrimenti (TIMEOUT/UNAVAILABLE) → aspetta 20s prima di renderlo.
+    Se nel frattempo arriva una posizione, `setError(null)` viene
+    chiamato dall'hook e l'effect cancella il timer.
+- Spinner della schermata "Ricerca Satellite..." ora ha un sottotitolo
+  esplicito: "Sui desktop senza GPS può richiedere fino a mezzo
+  minuto" — così l'utente non pensa che sia bloccato.
+
+### #3 — Fallback "Continua senza GPS" con centro evento
+
+Anche se il GPS davvero non funziona, l'utente desktop dovrebbe poter
+*vedere* la mappa con i marker degli oggetti per capire dove si trova
+la caccia. Aggiunto `gpsBypass` come state opzionale + CTA "Continua
+senza GPS" nella schermata d'errore.
+
+In modalità `gpsBypass`:
+- La mappa renderizza centrata su `event.treasureHuntConfig.centerLat/Lng`
+  (il centro che l'organizzatore ha impostato durante la creazione)
+  con fallback Marzio se l'evento non ce l'ha.
+- I marker degli items spawned sono mostrati, ma il loro popup riporta
+  "Riattiva il GPS per catturare" invece del bottone CATTURA.
+- Banner ambra in alto: "Stai navigando senza GPS. Vedi gli oggetti ma
+  per catturarli serve la posizione attiva."
+- `handleOpenAR` con `position === null && gpsBypass` mostra alert
+  esplicito invece del no-op silente.
+
+Schermata errore aggiornata: tre opzioni distinte
+- (1) Riprova → `window.location.reload()`
+- (2) Continua senza GPS → `setGpsBypass(true)`
+- Messaggio differenziato per code 1 (istruzioni concrete su
+  permission re-grant) vs altri (spiegazione del comportamento
+  desktop).
+
+### File toccati
+
+`src/hooks/useHighAccuracyPosition.ts`, `src/pages/TreasureHuntPlay.tsx`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` 12.02s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

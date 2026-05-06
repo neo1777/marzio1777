@@ -39,10 +39,31 @@ export default function TreasureHuntPlay() {
   const { user, profile } = useAuth();
   const { event } = useGameEvent(eventId || '');
   const { position, error: gpsError } = useHighAccuracyPosition();
-  
+
   const [items, setItems] = useState<GameItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [activeArItem, setActiveArItem] = useState<GameItem | null>(null);
+  const [gpsBypass, setGpsBypass] = useState(false);
+  const [showGpsError, setShowGpsError] = useState(false);
+
+  // Forgive a transient TIMEOUT or POSITION_UNAVAILABLE for the first 20s.
+  // watchPosition keeps retrying after these errors and a fix often arrives
+  // shortly after; surfacing the fatal error immediately produced false
+  // negatives on desktops doing slow Wi-Fi triangulation. PERMISSION_DENIED
+  // (code 1) is shown immediately because it requires a browser-level action
+  // to recover and watchPosition won't retry on its own.
+  useEffect(() => {
+    if (!gpsError) {
+      setShowGpsError(false);
+      return;
+    }
+    if (gpsError.code === 1) {
+      setShowGpsError(true);
+      return;
+    }
+    const t = setTimeout(() => setShowGpsError(true), 20_000);
+    return () => clearTimeout(t);
+  }, [gpsError]);
 
   // Keeps the screen awake during an active hunt; auto re-acquires after
   // visibilitychange and degrades cleanly under restrictive permissions policy
@@ -80,7 +101,12 @@ export default function TreasureHuntPlay() {
   }
 
   const handleOpenAR = (item: GameItem) => {
-     if (!position) return;
+     if (!position) {
+        if (gpsBypass) {
+           alert("Senza GPS attivo non puoi catturare gli oggetti — la cattura richiede di essere fisicamente entro 15m. Riattiva la posizione per giocare.");
+        }
+        return;
+     }
      const dist = calculateDistance(position.lat, position.lng, item.lat, item.lng);
      // 15m capture radius matches the rule check on items.update
      // (collectedAtLat/Lng audit) and the CF Haversine guard. Keep the
@@ -193,7 +219,7 @@ export default function TreasureHuntPlay() {
               <div className="flex-1 relative w-full h-full">
                  <MapContainer center={[position.lat, position.lng]} zoom={18} zoomControl={false} className="w-full h-full absolute inset-0 font-sans" style={{ width: '100%', height: '100%', minHeight: '300px' }}>
                     <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                    
+
                     <MapController lat={position.lat} lng={position.lng} itemsCount={activeItems.length} arOpen={activeArItem !== null} status={event?.status} />
 
                     {activeItems.map(item => (
@@ -215,27 +241,69 @@ export default function TreasureHuntPlay() {
                     ))}
                  </MapContainer>
               </div>
-           ) : gpsError ? (
+           ) : gpsBypass ? (
+              // GPS-less view: read-only map centred on the event's configured
+              // centre (or Marzio fallback), shows where the items are. Capture
+              // is gated by handleOpenAR — without a position you can see them
+              // but not collect.
+              (() => {
+                 const cfg = (event as any)?.treasureHuntConfig;
+                 const fallbackCenter: [number, number] = cfg?.centerLat && cfg?.centerLng
+                    ? [cfg.centerLat, cfg.centerLng]
+                    : [45.9238, 8.8655];
+                 return (
+                    <div className="flex-1 relative w-full h-full">
+                       <div className="absolute top-2 left-2 right-2 z-[500] bg-amber-100/95 dark:bg-amber-900/40 backdrop-blur border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-lg px-3 py-2 text-xs font-medium pointer-events-none">
+                          Stai navigando senza GPS. Vedi gli oggetti ma per catturarli serve la posizione attiva.
+                       </div>
+                       <MapContainer center={fallbackCenter} zoom={16} className="w-full h-full absolute inset-0 font-sans" style={{ width: '100%', height: '100%', minHeight: '300px' }}>
+                          <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                          {activeItems.map(item => (
+                             <Marker key={item.id} position={[item.lat, item.lng]} icon={spawnedIcon}>
+                                <Popup className="font-sans">
+                                   <div className="text-center">
+                                      <p className="font-bold text-lg mb-1">{item.emoji}</p>
+                                      <p className="font-bold text-sm mb-2 text-slate-600">{item.points * (event.pointsMultiplier ?? 1)} pt</p>
+                                      <p className="text-xs text-slate-500">Riattiva il GPS per catturare</p>
+                                   </div>
+                                </Popup>
+                             </Marker>
+                          ))}
+                       </MapContainer>
+                    </div>
+                 );
+              })()
+           ) : showGpsError && gpsError ? (
               <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-6">
                  <div className="text-center max-w-md">
                     <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center">
                        <Crosshair size={32} />
                     </div>
-                    <p className="font-bold text-slate-700 dark:text-slate-200 text-base mb-2">GPS non disponibile</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{gpsError}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                       Abilita la geolocalizzazione dalle impostazioni del browser e ricarica la pagina.
+                    <p className="font-bold text-slate-700 dark:text-slate-200 text-base mb-2">
+                       {gpsError.code === 1 ? 'Permesso GPS negato' : 'GPS non disponibile'}
                     </p>
-                    <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#2D5A27] text-white rounded-lg font-bold text-sm">
-                       Ricarica
-                    </button>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{gpsError.message}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                       {gpsError.code === 1
+                          ? 'Concedi il permesso geolocalizzazione dalle impostazioni del sito (icona vicino alla URL) e ricarica.'
+                          : "Il browser non riesce a determinare la tua posizione. Su desktop senza GPS dedicato può capitare. Puoi continuare per dare un'occhiata alla mappa, ma per catturare oggetti serve essere fisicamente sul posto."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                       <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#2D5A27] text-white rounded-lg font-bold text-sm">
+                          Riprova
+                       </button>
+                       <button onClick={() => setGpsBypass(true)} className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">
+                          Continua senza GPS
+                       </button>
+                    </div>
                  </div>
               </div>
            ) : (
               <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
-                 <div className="text-center animate-pulse text-slate-400">
-                    <Crosshair size={48} className="mx-auto mb-4 opacity-50" />
-                    <p className="font-bold tracking-widest uppercase text-sm">Ricerca Satellite...</p>
+                 <div className="text-center text-slate-400">
+                    <Crosshair size={48} className="mx-auto mb-4 opacity-50 animate-pulse" />
+                    <p className="font-bold tracking-widest uppercase text-sm mb-2">Ricerca Satellite...</p>
+                    <p className="text-xs text-slate-500 max-w-xs">Sui desktop senza GPS può richiedere fino a mezzo minuto. Stiamo provando.</p>
                  </div>
               </div>
            )}

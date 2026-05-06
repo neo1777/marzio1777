@@ -9,13 +9,22 @@ export interface Position {
   timestamp: number;
 }
 
+// PositionError codes per the W3C Geolocation API:
+// 1 = PERMISSION_DENIED  → user said no, won't change without browser action
+// 2 = POSITION_UNAVAILABLE → device can't determine location (no GPS, etc.)
+// 3 = TIMEOUT → fix didn't arrive in time; watchPosition will keep retrying
+export interface GeoError {
+  code: 1 | 2 | 3;
+  message: string;
+}
+
 // `highAccuracy=false` returns a coarse fix quickly and tolerates ~1min stale
 // readings; right for the wizard map where the user just needs a sensible
 // initial centre. The default (true, fresh) is what the active-game HUD wants
 // because the capture radius check is 15m and accuracy matters.
 export function useHighAccuracyPosition(active = true, highAccuracy = true) {
   const [position, setPosition] = useState<Position | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<GeoError | null>(null);
   const watchId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -28,7 +37,7 @@ export function useHighAccuracyPosition(active = true, highAccuracy = true) {
     }
 
     if (!navigator.geolocation) {
-      setError('Geolocalizzazione non supportata');
+      setError({ code: 2, message: 'Geolocalizzazione non supportata' });
       return;
     }
 
@@ -50,17 +59,22 @@ export function useHighAccuracyPosition(active = true, highAccuracy = true) {
     navigator.geolocation.getCurrentPosition(
       setFromCoords,
       () => { /* swallow — watchPosition below will surface persistent errors */ },
-      { enableHighAccuracy: highAccuracy, timeout: 8000, maximumAge: highAccuracy ? 0 : 60_000 }
+      { enableHighAccuracy: highAccuracy, timeout: 15_000, maximumAge: highAccuracy ? 0 : 60_000 }
     );
 
+    // Bumped the watch timeout to 30s. Desktops doing IP/Wi-Fi triangulation
+    // routinely take 10-20s for the first fix; the previous 10s threshold
+    // produced a TIMEOUT error before the browser had a chance to deliver
+    // anything. The TIMEOUT is recoverable (watchPosition keeps retrying)
+    // so consumers can afford to wait a bit before surfacing it as fatal.
     watchId.current = navigator.geolocation.watchPosition(
       setFromCoords,
       (err) => {
-        setError(err.message);
+        setError({ code: err.code as 1 | 2 | 3, message: err.message });
       },
       {
         enableHighAccuracy: highAccuracy,
-        timeout: 10000,
+        timeout: 30_000,
         maximumAge: highAccuracy ? 0 : 60_000,
       }
     );
