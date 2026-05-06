@@ -21,6 +21,13 @@ export class DJEngine {
   private playBlob: (blob: Blob) => void;
   private stopAudio: () => void;
   private getServerTimestamp: () => unknown;
+  // Optional: read a track blob from the DJ's own IndexedDB. When provided,
+  // proposals authored by the DJ themself short-circuit the WebRTC handshake
+  // (the file is already on this device, transferring to ourselves would
+  // wedge — both peers share an UID, the signaling sub-collection collides,
+  // and the listener never produces an answer → status stuck at
+  // 'transferring' forever). See AudioSessionDJ wiring.
+  private getLocalTrackBlob: ((localTrackId: string) => Promise<Blob | null>) | null = null;
 
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private getAudioProgress: () => { currentTime: number, duration: number } | null;
@@ -36,6 +43,8 @@ export class DJEngine {
      // Returns a Firestore serverTimestamp() sentinel — injected to keep this
      // class free of firebase imports (DI for testability).
      getServerTimestamp: () => unknown;
+     // Optional fast-path lookup against the DJ's local IndexedDB.
+     getLocalTrackBlob?: (localTrackId: string) => Promise<Blob | null>;
   }) {
      this.onStateChange = deps.onStateChange;
      this.initiateTransfer = deps.initiateTransfer;
@@ -45,6 +54,7 @@ export class DJEngine {
      this.stopAudio = deps.stopAudio;
      this.getAudioProgress = deps.getAudioProgress;
      this.getServerTimestamp = deps.getServerTimestamp;
+     this.getLocalTrackBlob = deps.getLocalTrackBlob ?? null;
   }
 
   public updateState(queue: QueueItem[], session: AudioSession, eventMultiplier = 1) {
@@ -133,23 +143,42 @@ export class DJEngine {
      if (this.state !== 'playing') {
         this.setState('transferring');
      }
-     
-     this.initiateTransfer(item.id, item.proposedBy, (blob) => {
+
+     const onReady = (blob: Blob) => {
         this.pendingBlobs.set(item.id, blob);
         this.setItemStatus(item.id, 'ready', { transferCompletedAt: this.getServerTimestamp() });
-        
+
         // Auto-play if not already playing and mode is auto
         if (this.state === 'transferring' || (this.state === 'idle' && this.session?.mode === 'auto')) {
             const upItem = this.queue.find(q => q.id === item.id);
             if (upItem) this.playItem(upItem);
         }
-     }, (err) => {
+     };
+     const onFail = (err: string) => {
         this.failedItems.add(item.id);
         this.setItemStatus(item.id, 'failed', { transferFailureReason: err });
         if (this.state === 'transferring') {
            this.setState('idle');
         }
-     });
+     };
+
+     // Fast-path: the proposer is the DJ themself. The track blob is already
+     // in this device's IndexedDB — read it directly instead of negotiating a
+     // WebRTC connection to ourselves (which would wedge: both peers share
+     // an UID, the signaling sub-collection has a single doc address, and
+     // the listener never produces an answer → status stuck at 'transferring'
+     // forever).
+     if (this.getLocalTrackBlob && this.session && item.proposedBy === this.session.djId) {
+        this.getLocalTrackBlob(item.localTrackId)
+           .then((blob) => {
+              if (blob) onReady(blob);
+              else onFail('Brano non trovato nella biblioteca locale del DJ.');
+           })
+           .catch((e) => onFail(e?.message ?? 'Errore lettura biblioteca locale.'));
+        return;
+     }
+
+     this.initiateTransfer(item.id, item.proposedBy, onReady, onFail);
   }
 
   public forcePlayNext() {

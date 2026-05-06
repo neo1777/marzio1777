@@ -890,6 +890,83 @@ build` 11.34s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 6) — fast-path locale per DJ === proposer
+
+L'utente segnala che dopo aver aggiunto un brano al Coro e averlo
+eseguito, tornando alla sessione il brano resta bloccato in
+"caricamento" / `transferring`. Test in locale, file già in
+biblioteca, no problema di rete.
+
+### Diagnosi
+
+Quando il DJ propone una propria traccia (auto-prova della sua
+sessione) il flusso `proposeTrackToSession → DJEngine.startTransfer →
+initiateTransfer` chiama un handshake WebRTC con se stesso:
+
+- Il proposer (DJ stesso) aprirebbe un listener su
+  `audio_sessions/{id}/signaling/{auth.uid}` per ricevere l'offer.
+- Il DJ scrive l'offer sullo stesso path.
+- Sub-collection con un solo doc address per UID → conflitto: il
+  doc è scritto/letto dallo stesso UID; il proposer-side listener
+  non è nemmeno montato (chi propone via Library/FullScreenPlayer
+  non apre il pannello DJ); la connection RTCPeerConnection con sé
+  stesso non si stabilisce.
+- Il timeout 15s del `WebRTCTransfer` scatta → `setItemStatus
+  failed` invece di `ready`. **Ma** il `failed` viene scritto solo
+  se il flow arriva al timeout — se il caller non riceve mai né
+  success né error (caso self-signaling), l'item resta
+  `transferring` permanentemente. UI: "in caricamento" indefinito.
+
+Caso comune: stessa persona test in locale, oppure DJ che propone
+una propria traccia per arricchire la coda.
+
+### Fix in `src/utils/djEngine.ts` + `src/pages/AudioSessionDJ.tsx`
+
+`DJEngine` accetta una nuova dipendenza opzionale
+`getLocalTrackBlob: (localTrackId: string) => Promise<Blob | null>`.
+In `startTransfer`, se `item.proposedBy === this.session.djId`,
+salta l'`initiateTransfer` WebRTC e legge direttamente il blob
+dall'IndexedDB locale:
+
+```ts
+if (this.getLocalTrackBlob && this.session
+    && item.proposedBy === this.session.djId) {
+   this.getLocalTrackBlob(item.localTrackId)
+      .then((blob) => blob ? onReady(blob) : onFail('non trovato'))
+      .catch((e) => onFail(e?.message ?? 'errore'));
+   return;
+}
+```
+
+`AudioSessionDJ` wires la nuova dipendenza chiamando `getTrack` da
+`src/utils/indexedDB.ts`:
+
+```ts
+getLocalTrackBlob: async (localTrackId) => {
+   const t = await getLocalTrack(localTrackId);
+   return t?.blob ?? null;
+},
+```
+
+Effetto runtime:
+- DJ propone una propria traccia → `startTransfer` la marca
+  `transferring`, legge il blob da IndexedDB in <100ms, marca
+  `ready` + auto-play.
+- DJ propone una traccia di un altro participant → flusso WebRTC
+  immutato.
+- Difensivo: se la traccia non è in IndexedDB del DJ (es. l'aveva
+  cancellata localmente fra il propose e il play), `onFail`
+  produce un messaggio chiaro invece del timeout 15s.
+
+### File toccati
+
+`src/utils/djEngine.ts`, `src/pages/AudioSessionDJ.tsx`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` ~11s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

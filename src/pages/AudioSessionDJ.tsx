@@ -10,6 +10,7 @@ import { useWebRTCTransferDJ } from '../hooks/useWebRTCTransfer';
 import { DJEngine } from '../utils/djEngine';
 import { QueueItemCard } from '../components/audio/QueueItemCard';
 import { useAudioEngineRaw } from '../hooks/useAudioEngineRaw';
+import { getTrack as getLocalTrack } from '../utils/indexedDB';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { Button, Switch, Label, ScrollArea } from '../components/ui';
 import { LogOut, Play, SkipForward, Users, Settings } from 'lucide-react';
@@ -77,6 +78,13 @@ export function AudioSessionDJ() {
                return { currentTime: getCurrentTime(), duration: getDuration() };
             },
             getServerTimestamp: () => serverTimestamp(),
+            // Fast-path for proposals authored by the DJ themself: the blob
+            // is already in this device's IndexedDB. Skip WebRTC (which
+            // would wedge — see DJEngine comment).
+            getLocalTrackBlob: async (localTrackId: string) => {
+               const t = await getLocalTrack(localTrackId);
+               return t?.blob ?? null;
+            },
          });
          engineRef.current.startLoop();
       }
