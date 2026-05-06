@@ -11,6 +11,7 @@ import { DJEngine } from '../utils/djEngine';
 import { QueueItemCard } from '../components/audio/QueueItemCard';
 import { useAudioEngineRaw } from '../hooks/useAudioEngineRaw';
 import { getTrack as getLocalTrack } from '../utils/indexedDB';
+import { getAudioEngine } from '../utils/audioEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { Button, Switch, Label, ScrollArea } from '../components/ui';
 import { LogOut, Play, SkipForward, Users, Settings } from 'lucide-react';
@@ -92,6 +93,17 @@ export function AudioSessionDJ() {
       engineRef.current.updateState(queue, session, eventMultiplier);
 
    }, [session, queue, id, eventMultiplier]);
+
+   // Subscribe to the AudioEngine 'ended' event and route it to the engine's
+   // public handler. This is the source-of-truth for "track finished" — the
+   // polling fallback in DJEngine.tick() only catches the cases where this
+   // event doesn't fire (Safari iOS stalled buffers, etc.). Mounted once.
+   useEffect(() => {
+      const audioEngine = getAudioEngine();
+      const onEnded = () => engineRef.current?.handleTrackEnded();
+      audioEngine.on('ended', onEnded);
+      return () => audioEngine.off('ended', onEnded);
+   }, []);
 
    useEffect(() => {
       // Sync stats

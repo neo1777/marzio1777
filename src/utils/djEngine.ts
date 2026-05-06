@@ -14,6 +14,20 @@ export class DJEngine {
   private pendingBlobs = new Map<string, Blob>();
   private failedItems = new Set<string>();
 
+  // Wall-clock timestamp set in playItem(). Used by the polling fallback in
+  // tick() to ignore the first ~2s of playback — the HTMLAudioElement can
+  // briefly report stale duration/currentTime during a `src` swap, which
+  // before this guard caused the engine to misread "track just started" as
+  // "track just finished" and mark every queued item 'played' in rapid
+  // succession.
+  private playStartedAt: number | null = null;
+  // Re-entrancy guard for the end-of-track handler. The 'ended' event from
+  // the AudioEngine and the polling fallback in tick() can both fire near
+  // each other; without this, markCurrentPlayed could be invoked twice on
+  // the same item before the Firestore write lands (no-op in practice but
+  // produces noisy logs and a transient extra setState).
+  private isHandlingEnd = false;
+
   private onStateChange: (state: DJEngineState) => void;
   private initiateTransfer: (itemId: string, proposerId: string, onReady: (blob: Blob) => void, onFail: (err: string) => void) => void;
   private updateSession: (patch: Partial<AudioSession>) => void;
@@ -97,19 +111,27 @@ export class DJEngine {
         const prog = this.getAudioProgress();
         if (prog && prog.duration > 0) {
            const timeRemainingMs = (prog.duration - prog.currentTime) * 1000;
-           
-           if (timeRemainingMs <= 0) {
-              // Track finished
-              this.markCurrentPlayed();
-              if (mode === 'auto') {
-                 this.setState('idle'); // will pick up next immediately
-              } else {
-                 this.setState('paused');
-              }
+           const sinceStart = this.playStartedAt !== null ? Date.now() - this.playStartedAt : 0;
+
+           // End-of-track polling fallback. Source-of-truth is the AudioEngine
+           // 'ended' event (wired via handleTrackEnded() from AudioSessionDJ);
+           // this branch only catches the cases where 'ended' didn't fire
+           // (stalled buffer on Safari iOS, network-served sources, etc.).
+           // Triple-guarded against the spurious "track just ended" reading
+           // that produced the all-played-instantly bug:
+           //   - currentTime > 0  → the AudioElement is actually inside this
+           //     track, not still reporting the previous one's tail
+           //   - sinceStart >= 2000 → 2s of wall-clock time have passed since
+           //     playItem() ran; metadata has had time to settle
+           //   - timeRemainingMs <= 250 → genuinely close to the end (was 0,
+           //     but stale duration during a src swap could land at exactly
+           //     0 even on a fresh track)
+           if (prog.currentTime > 0 && sinceStart >= 2000 && timeRemainingMs <= 250) {
+              this.handleEndOfTrack();
               return;
            }
-           
-           if (mode === 'auto' && timeRemainingMs <= 30000) {
+
+           if (mode === 'auto' && timeRemainingMs <= 30000 && timeRemainingMs > 0) {
               // Pre-fetch next track 30s before end
               const nextItem = this.getNextItem();
               if (nextItem && !this.getTransferringItem() && !this.pendingBlobs.has(nextItem.id)) {
@@ -210,11 +232,12 @@ export class DJEngine {
   private playItem(item: QueueItem) {
      const blob = this.pendingBlobs.get(item.id);
      if (!blob) return;
-     
+
      this.currentItemId = item.id;
+     this.playStartedAt = Date.now();
      this.setState('playing');
      this.playBlob(blob);
-     
+
      this.setItemStatus(item.id, 'playing', { transferStartedAt: null }); // clear old data to save space if needed, actually keep it.
      
      this.updateSession({
@@ -245,5 +268,34 @@ export class DJEngine {
      this.setItemStatus(this.currentItemId, skipped ? 'skipped' : 'played', { pointsAwarded: pts });
      this.pendingBlobs.delete(this.currentItemId);
      this.currentItemId = null;
+     this.playStartedAt = null;
+  }
+
+  // Internal: handle "current track has finished playing". Funnels both the
+  // AudioEngine 'ended' event and the polling fallback in tick() through a
+  // single re-entrancy-guarded path so we never mark the same item 'played'
+  // twice in quick succession.
+  private handleEndOfTrack() {
+     if (this.isHandlingEnd) return;
+     if (this.state !== 'playing' || !this.currentItemId) return;
+     this.isHandlingEnd = true;
+     try {
+        this.markCurrentPlayed();
+        const mode = this.session?.mode;
+        if (mode === 'auto') {
+           this.setState('idle'); // tick() will pick the next ready item
+        } else {
+           this.setState('paused');
+        }
+     } finally {
+        this.isHandlingEnd = false;
+     }
+  }
+
+  // Public: AudioSessionDJ subscribes to engine.on('ended') and invokes this.
+  // Preferred source-of-truth over the polling fallback in tick() because it
+  // fires exactly when the audio actually ended, not 0-1s later.
+  public handleTrackEnded() {
+     this.handleEndOfTrack();
   }
 }

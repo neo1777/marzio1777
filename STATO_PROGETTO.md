@@ -967,6 +967,113 @@ build` ~11s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 7) — coda Coro: tutti gli item marcati 'played'
+
+L'utente segnala: dopo aver aggiunto vari brani al Coro e premuto
+play, tutti gli item della coda vengono marcati come 'played' in
+rapida successione (anche quelli non ancora effettivamente suonati).
+Ipotesi iniziale "stesso titolo": smentita (tutti gli item hanno
+`id` Firestore univoci, il match è per id non per titolo).
+
+### Diagnosi
+
+`DJEngine.tick()` aveva due problemi composti:
+
+1. **Polling-only end-of-track**: il check "brano finito" era
+   `prog.duration > 0 && timeRemainingMs <= 0`. L'`AudioEngine`
+   emetteva già un evento `'ended'` (registrato in
+   `audioEngine.ts:51`) ma **nessuno lo ascoltava** — il
+   `DJEngine` non era mai stato wired. Il polling era l'unico
+   meccanismo, ed è fragile.
+
+2. **Race "stale duration" durante `playBlob` swap**: quando il
+   DJEngine cambia traccia, `playBlob(blobNew)` triggera
+   `audioEl.src = newURL; audioEl.load()`. Per un breve istante
+   l'`HTMLAudioElement` può riportare:
+   - `currentTime = 0` (nuovo brano)
+   - `duration` = vecchio valore (cache pre-swap) o `NaN`
+
+   Il guard `prog.duration > 0` cattura il caso NaN, ma se
+   `duration` mostra ancora il valore del brano precedente, il
+   tick calcola `timeRemainingMs = (oldDuration - 0) * 1000` →
+   positivo, OK. **Ma** se per qualche tick consecutivo
+   `currentTime` sale rapidamente al valore precedente (replay
+   buffer interno) e `duration` resta fermo, può capitare che
+   `timeRemainingMs <= 0` scatti su un brano appena iniziato.
+   Risultato: `markCurrentPlayed` → `setState('idle')` → tick
+   successivo prende il prossimo `ready` item → `playItem(next)`
+   → si ripete a cascata. Effetto utente: tutta la coda diventa
+   `played` in 5-10 secondi.
+
+### Fix in `src/utils/djEngine.ts`
+
+Tre modifiche in concerto:
+
+1. **Source-of-truth = evento `'ended'`**. Aggiunto metodo
+   pubblico `handleTrackEnded()` che incanala l'evento `'ended'`
+   dell'`AudioEngine` nel handler centralizzato
+   `handleEndOfTrack()`. È wired da `AudioSessionDJ` con
+   `audioEngine.on('ended', () => engineRef.current?.handleTrackEnded())`.
+   Quando `'ended'` scatta sappiamo *con certezza* che il brano
+   è finito.
+
+2. **Polling fallback più conservativo**. Il check nel `tick()`
+   resta come backup (Safari iOS può perdere `'ended'` su
+   stalled buffer), ma con triplo guard:
+   - `prog.currentTime > 0` (non leggiamo lo stato durante una
+     transizione `src` swap dove il vecchio brano riporta tail)
+   - `Date.now() - playStartedAt >= 2000` (almeno 2s di
+     wall-clock dal `playItem()` che ha avviato il brano —
+     metadata HA avuto tempo di stabilizzarsi)
+   - `timeRemainingMs <= 250` (era `<= 0`, adesso un piccolo
+     margine per accogliere drift di `currentTime` vs `duration`
+     senza perdere veri end-of-track)
+
+   Plus: il pre-fetch a 30s dalla fine ora richiede
+   `timeRemainingMs > 0` per non scattare durante un transient
+   "duration negativa".
+
+3. **Re-entrancy guard `isHandlingEnd`**. Sia il `'ended'` event
+   che il polling possono in teoria sparare insieme. Il flag
+   protegge `handleEndOfTrack` da doppia chiamata (no-op in
+   pratica perché `markCurrentPlayed` controlla già
+   `currentItemId`, ma evita il transient extra `setState`).
+
+Plus: `playStartedAt` viene resettato in `markCurrentPlayed` per
+evitare che un `tick` post-`markCurrentPlayed` veda ancora
+`sinceStart >= 2000` su un brano che non sta più suonando.
+
+### Wiring in `src/pages/AudioSessionDJ.tsx`
+
+Nuovo `useEffect` (mounted once, indipendente dal lifecycle del
+DJEngine) che fa subscribe/unsubscribe del listener `'ended'`
+sull'`AudioEngine`. Routes l'evento a
+`engineRef.current?.handleTrackEnded()` — defensive optional
+chaining nel caso il DJEngine non sia ancora costruito (primo
+render con `session` ancora null).
+
+### Risultato runtime
+
+- **Brano finito naturalmente**: `'ended'` scatta → `handleTrackEnded()` →
+  `markCurrentPlayed()` → `setState('idle')`. Tick successivo
+  prende il prossimo ready. Esattamente come prima ma con
+  trigger affidabile.
+- **Polling-only fallback** (Safari iOS): scatta dopo che i tre
+  guard sono soddisfatti — almeno 2s dopo il `playItem` e con
+  `currentTime > 0`. Non più falsi positivi durante swap.
+- **Cambio brano via `forcePlayNext` (skip manuale)**: usa
+  `markCurrentPlayed(true)` come prima, marca `skipped` e parte
+  il prossimo. Comportamento immutato.
+
+### File toccati
+
+`src/utils/djEngine.ts`, `src/pages/AudioSessionDJ.tsx`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` ~11s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:
