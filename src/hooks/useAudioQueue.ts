@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, functions } from '../lib/firebase';
-import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp, increment, getDocs } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, updateDoc, writeBatch, query, where, orderBy, deleteDoc, serverTimestamp, increment, getDocs, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import type { User } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
@@ -174,6 +174,30 @@ export async function proposeTrackToSession(
    if (!user || !userData) throw new Error('Not authenticated');
    const sessionId = session.id;
 
+   // The queue.create rule requires `isSessionParticipant(sessionId)`. A user
+   // proposing from the Library or FullScreenPlayer hasn't necessarily ever
+   // opened that session as a listener, so they have no participant doc and
+   // the write would fail with PERMISSION_DENIED. Make sure the doc exists
+   // (status='joined') before posting to the queue. If a doc is already
+   // there with a different status (e.g. the user previously left), bump it
+   // back to joined within the rule's allowed update diff.
+   const pRef = doc(db, 'audio_sessions', sessionId, 'participants', user.uid);
+   const pSnap = await getDoc(pRef);
+   if (!pSnap.exists()) {
+      await setDoc(pRef, {
+         userId: user.uid,
+         displayName: user.displayName || 'Unknown',
+         photoURL: user.photoURL || '',
+         joinedAt: serverTimestamp(),
+         lastSeenAt: serverTimestamp(),
+         tracksProposed: 0,
+         tracksPlayed: 0,
+         status: 'joined',
+      });
+   } else if (pSnap.data().status !== 'joined') {
+      await updateDoc(pRef, { status: 'joined', lastSeenAt: serverTimestamp() });
+   }
+
    try {
       const enforceLimit = httpsCallable<{ sessionId: string }, { ok: boolean; active: number; limit: number }>(
          functions, 'enforceQueuePerUserLimit'
@@ -189,7 +213,11 @@ export async function proposeTrackToSession(
    const queueSnap = await getDocs(collection(db, 'audio_sessions', sessionId, 'queue'));
    const positions = queueSnap.docs.map(d => (d.data() as QueueItem).position ?? 0);
    const maxPos = positions.length > 0 ? Math.max(...positions) : 0;
-   const effectiveMaxAtCreate = getMaxQueuedFor(userData.points, session.rules);
+   // Force int. The rule helper effectiveMaxQueued() casts userPoints/100
+   // to int and the create rule asserts `effectiveMaxAtCreate is int`.
+   // JS Number is float; floor at the boundary so legacy points values
+   // can never produce a fractional result that mismatches the helper.
+   const effectiveMaxAtCreate = Math.floor(getMaxQueuedFor(userData.points, session.rules));
 
    const itemId = doc(collection(db, 'audio_sessions', sessionId, 'queue')).id;
    const newItem: Partial<QueueItem> = {

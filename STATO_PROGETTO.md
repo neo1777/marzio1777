@@ -818,6 +818,78 @@ build` 12.02s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 5) — add-to-queue blocked by participant rule
+
+L'utente prova ad aggiungere "Back In Black" — ACDC alla coda di un
+Coro chiamato "tyty" e riceve "Missing or insufficient permissions."
+Il flusso parte da `AddToSessionModal` (FullScreenPlayer / TrackCard
+"Aggiungi a un Coro") che chiama `proposeTrackToSession` standalone,
+introdotto nella sessione del 2026-05-04.
+
+### Diagnosi
+
+La rule `audio_sessions/{}/queue.create` (firestore.rules:537-543)
+richiede:
+
+```
+isApprovedUser() && isSessionParticipant(sessionId) && ...
+```
+
+`isSessionParticipant` controlla che esista
+`audio_sessions/{}/participants/{auth.uid}` con `status == 'joined'`.
+
+`proposeTrackToSession` faceva `setDoc` direttamente sul doc queue
+senza mai garantire l'esistenza di un participant doc. Funzionava per
+chi aveva già aperto la sessione come listener (perché un join
+precedente aveva creato il doc), ma falliva al primo proposing
+"cieco" da Library / FullScreenPlayer — l'esatto pattern che il modal
+abilita di proposito.
+
+### Fix in `src/hooks/useAudioQueue.ts`
+
+In `proposeTrackToSession`, prima del `setDoc` sulla queue, idempotently
+ensure che il proposer sia participant:
+
+```ts
+const pSnap = await getDoc(pRef);
+if (!pSnap.exists()) {
+   await setDoc(pRef, { /* schema completo: userId, displayName,
+                         photoURL, joinedAt, lastSeenAt, tracksProposed,
+                         tracksPlayed, status: 'joined' */ });
+} else if (pSnap.data().status !== 'joined') {
+   await updateDoc(pRef, { status: 'joined', lastSeenAt: serverTimestamp() });
+}
+```
+
+Schema partecipant rispecchia esattamente quello che `AudioSessionCreate`
+scrive per il DJ stesso (`userId`, `displayName`, `photoURL`, `joinedAt`,
+`lastSeenAt`, `tracksProposed: 0`, `tracksPlayed: 0`, `status: 'joined'`).
+Niente migrazione richiesta.
+
+Il branch `setDoc` è gating da `!pSnap.exists()` per non scontrarsi con
+la rule `participants.update` che restringe il diff a
+`['lastSeenAt', 'status', 'leftAt', 'tracksProposed', 'tracksPlayed']`
+— gli identity field sono immutabili post-create.
+
+### Bonus: `Math.floor` su `effectiveMaxAtCreate`
+
+La rule asserts `incoming().effectiveMaxAtCreate is int` e fa
+`session.rules.maxQueuedPerUser + (int(userPoints/100) * bonusPerHundredPoints)`.
+Il client calcolava lo stesso valore senza `Math.floor` esplicito al
+boundary. Per i casi attuali (`maxQueuedPerUser=2`, `bonus=1`) il
+risultato è sempre intero, ma una sessione con valori decimali nei
+rules avrebbe potuto produrre un mismatch. Floor difensivo al
+boundary chiude il caso.
+
+### File toccati
+
+`src/hooks/useAudioQueue.ts`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` 11.34s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:
