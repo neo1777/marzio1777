@@ -119,7 +119,7 @@
 | Capture without being in radius | The Teleporter (#14) | Games | ✅ closed Phase 2 (May 2026) — CF `validateCaptureDistance` server-side Haversine + `serverValidatedAt` ≤30s on `items.update` | — |
 | Desktop browser GPS spoofing | The Speed Demon (#20) | Games | Rule rejects accuracy >100m | — (community-level trust) |
 | Host sees correctIndex pre-reveal | inherent in design | Games | Transparent UX (banner "Host sees") | Phase 3 (would need a quiz CF orchestrator) |
-| Pre-event FCM notifications | ✅ closed Phase 2 (May 2026) — `notifyKickoff` CF on `europe-west1`, `users.{uid}.fcmTokens[]` capped at 20, dedicated Service Worker, opt-in UI in ProfiloPersonale | Cross-cutting | — | — |
+| Pre-event FCM notifications | feature gap | Cross-cutting | ✅ closed Phase 2 (May 2026) — `notifyKickoff` CF on `europe-west1`, `users.{uid}.fcmTokens[]` capped at 20, dedicated Service Worker, opt-in UI in ProfiloPersonale | — |
 | DJ skip burst | The Mass Skipper (#29) | Audio | Root can intervene + skeleton CF `auditMassSkip` deployed (no-op TODO) | Phase 3 (rolling-window counter on `audit_state/{sessionId}`) |
 | Orphan signaling | The Signaling Spammer (#30) | Audio | ✅ closed Phase 2 (May 2026) — CF `cleanupOrphanSignaling` cron 5 min on `europe-west1` with collectionGroup query + chunked batch delete | — |
 | Queue stuffer count | The Queue Stuffer (#24) | Audio | ✅ closed Phase 2 (May 2026) — CF `enforceQueuePerUserLimit` callable counts proposer's active docs; rule `effectiveMaxAtCreate` snapshot remains as a safety net | — |
@@ -131,6 +131,13 @@
 | Cross-participant kick | new vector identified in B7 audit | Games | **Closed (B7)** via `userId == auth.uid \|\| isEventOrganizer \|\| isRoot` on `participants.delete` | — (vector closed) |
 
 **May 2026 update:** Phase 2 closed at 100% for hardening CF (8 CF live on `europe-west1` / `nodejs22`). The remaining items in the table are either real Phase 3 limitations (skeleton callables already deployed, awaiting tracking fields that don't exist yet) or by-design trade-offs (Speed Demon, Host sees correctIndex).
+
+**May 2026 update (May 6 UX round):** a series of client-side hardenings, not security-critical but worth noting for clarity:
+- `useAudioQueue.proposeTrackToSession` (called from `AddToSessionModal` on Library/FullScreenPlayer) now idempotently auto-creates the `audio_sessions/{}/participants/{auth.uid}` doc before the queue `setDoc`. Pre-fix the `queue.create` rule rejected with `Missing or insufficient permissions` because `isSessionParticipant(sessionId)` failed when the proposer had never opened the session as a listener. Participant schema mirrors what `AudioSessionCreate` writes for the DJ. Doesn't open new vectors: the `participants.create` rule already requires `userId == request.auth.uid` and an open session.
+- `useGameEvents.createGameItem` now forces `Math.floor(itemData.points)` at the boundary, in line with `firestore.rules:330` `points is int`. Defensive: current templates produce integers, but the rule was silently rejecting any float-like payload.
+- `useAudioQueue.proposeTrackToSession` also `Math.floor`s `effectiveMaxAtCreate` at the boundary, consistent with the rule helper `effectiveMaxQueued()` using `int(userPoints / 100)`.
+- `useHighAccuracyPosition` now distinguishes the 3 W3C codes (`PERMISSION_DENIED`, `POSITION_UNAVAILABLE`, `TIMEOUT`) and returns `error: { code, message } | null` instead of a bare string. `TreasureHuntPlay` applies a 20s grace period on `TIMEOUT/UNAVAILABLE` before showing the error screen (PERMISSION_DENIED stays immediate), and offers an opt-in "Continua senza GPS" that shows the map centred on `event.treasureHuntConfig.centerLat/Lng` with capture disabled.
+- `setRSVP` now saves `displayName` and `photoURL` on the create branch of the `participants/{}` doc (the update rule doesn't allow them in the diff — they're identity fields, immutable post-create). GameLobby uses the standard `<Avatar>` component with those fields.
 
 ## 3. Test Runner
 

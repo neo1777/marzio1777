@@ -137,5 +137,21 @@ Puoi installarci facilmente senza intasare lo Store!
 
 ---
 
+## 📋 Aggiornamenti recenti — round UX 2026-05-06
+
+Sessione di stabilizzazione UX e bug-fix dopo i test utente in produzione. Cinque commit (`c98bb30 → c48ea8e`) di hardening client-side. Cose che vedi cambiate nell'app:
+
+- **Avatar reali nei post e nella lobby caccia.** L'avatar dell'autore (foto Google) ora appare nei post de La Piazza e nella lista partecipanti delle partite — finora era usato un fallback iniziale colorata. Per i post pubblicati prima di questa update il fallback rimane (no migration).
+- **Wizard creazione caccia più sicuro.** Il bottone "Avanti" ora è disabilitato finché non hai compilato titolo, descrizione e data; la data parte già pre-popolata a "ora + 10 minuti"; raggio e numero oggetti sono clampati a range sensati; il "Salva" sulla mappa è disabled finché non hai piazzato almeno un oggetto.
+- **Ricerca città/indirizzo** sulla mappa di placement: pulsante 🔍 in alto, modal con campo di testo + Nominatim, click su risultato pannella la mappa (utile quando il GPS è lento o sei lontano dal luogo del gioco).
+- **GPS più tollerante** durante il gioco AR: se il browser ci mette fino a 30 secondi a triangolare (tipico desktop senza GPS), non vedi più subito una schermata di errore; se davvero non funziona, hai un'opzione "Continua senza GPS" che ti mostra la mappa centrata sull'evento (visualizzazione, non cattura).
+- **Errori più chiari ovunque.** Le notifiche di errore generiche ("Errore durante la creazione…", "Errore caricamento…") ora riportano il messaggio reale di Firebase/Firestore — utile per debug e per capire cosa fare (es. "data nel passato", "permessi negati").
+- **Player audio più scopribile.** I controlli "Sfondo" (mantieni schermo attivo) e "EQ" (equalizzatore 3 bande, ±12dB) hanno ora pill chip etichettati nel FullScreenPlayer; bottone X per chiudere il player; "Aggiungi a un Coro" funziona dalla biblioteca e dal player a schermo intero (anche se non sei già listener della sessione, ti aggiunge automaticamente).
+- **Scrollbar in tema.** Le scrollbar di sistema su desktop sono ora sottili e in palette (verde scuro su dark, grigio su light); su mobile e nelle liste swipeable sono nascoste come previsto.
+
+Il dettaglio tecnico del round è in `STATO_PROGETTO.md` (visibile dalla pagina Istruzioni → tab "Stato Progetto").
+
+---
+
 *Ideato a Marzio, scritto con codice, sudore ed amato da Neo1777.*
 *Ultima riedizione del README: Maggio 2026, con l'arrivo del Campo dei Giochi e de L'Ainulindalë.*

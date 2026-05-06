@@ -1123,3 +1123,56 @@ Estetica: dark-flame (nero+ambra+crimson), vinyl spinning, waveform glow, vibe m
 Bundle delta: ~40KB. Compatible con la filosofia di Marzio: privata, locale, P2P quando si condivide, mai dati personali sul cloud più del necessario.
 
 *"E il Tema della Grande Musica fu il Bivacco e il Camino, e tutti coloro che vi sedevano." — non è di Tolkien, l'ha scritta Marzio1777 in una sessione di Ferragosto del 2026.* 🍺🔥🎸
+
+---
+
+## Aggiornamento — round UX 2026-05-06
+
+Cambiamenti al modulo audio nella sessione di stabilizzazione del 6 maggio (cinque commit `c98bb30 → c48ea8e`). Dettaglio completo (anche per le altre aree dell'app) in `STATO_PROGETTO.md`.
+
+### Add-to-Coro da Library / FullScreenPlayer — auto-join participant
+
+`useAudioQueue.proposeTrackToSession` (variante standalone usata da `AddToSessionModal` quando l'utente clicca "Aggiungi a un Coro" da `TrackCard` o dal player a schermo intero) ora **auto-crea idempotently** il doc `audio_sessions/{sessionId}/participants/{auth.uid}` prima del `setDoc` sulla queue.
+
+**Causa root**: la rule `audio_sessions/{}/queue.create` richiede `isSessionParticipant(sessionId)`, helper che verifica l'esistenza del doc participant con `status == 'joined'`. Se l'utente proponeva una traccia "cieco" da Library senza aver mai aperto la sessione come listener, il doc non esisteva e la rule respingeva con `Missing or insufficient permissions`.
+
+**Implementazione**:
+```ts
+const pSnap = await getDoc(pRef);
+if (!pSnap.exists()) {
+   await setDoc(pRef, {
+      userId, displayName, photoURL,
+      joinedAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
+      tracksProposed: 0, tracksPlayed: 0,
+      status: 'joined',
+   });
+} else if (pSnap.data().status !== 'joined') {
+   await updateDoc(pRef, { status: 'joined', lastSeenAt: serverTimestamp() });
+}
+```
+
+Schema partecipant identico a quello che `AudioSessionCreate` scrive per il DJ stesso. La rule `participants.update` restringe il diff a `['lastSeenAt', 'status', 'leftAt', 'tracksProposed', 'tracksPlayed']`, quindi gli identity field (userId, displayName, photoURL, joinedAt) sono immutabili post-create — il branch `setDoc` è gating da `!pSnap.exists()` per non scontrarsi con questo vincolo.
+
+**Difensivo**: `Math.floor(effectiveMaxAtCreate)` al boundary, in coerenza col rule helper `effectiveMaxQueued()` che usa `int(userPoints / 100)`.
+
+### FullScreenPlayer — controlli scopribili
+
+I controlli "Sfondo" (Wake Lock, schermo attivo durante la riproduzione) e "EQ" (equalizzatore 3 bande, ±12dB) sono ora **pill chip etichettati** invece delle vecchie icone Moon / SlidersHorizontal nude. Plus: bottone X per fermare il player + svuotare la queue, ListPlus apre `AddToSessionModal`, prop `onStop` per la sincronizzazione con Walkman state.
+
+### MiniPlayer — close button
+
+Aggiunto bottone X (icona Trash2) per chiudere il MiniPlayer e fermare la riproduzione.
+
+### TrackCard — "Aggiungi a un Coro"
+
+Il menu tre-puntini di `TrackCard` ha ora il bottone "Aggiungi a un Coro" abilitato (era "Aggiungi a Playlist" disabled). Apre `AddToSessionModal` con la lista delle sessioni open via `useAudioSessionsList`.
+
+### AudioSessionsList — Trash2 Root-only
+
+Aggiunto bottone Trash2 per cancellare audio_sessions. Visibile solo a Root. La rule `audio_sessions.delete` ammette già solo `isRoot()`. Sostituito `<img src={session.djPhotoURL}>` con `<Avatar>` offline-safe.
+
+### Componenti UI nuovi (4-5 maggio)
+
+- `src/components/audio/AddToSessionModal.tsx` — modal per il flusso "Aggiungi a un Coro" da Library / FullScreenPlayer.
+- `src/components/ErrorBoundary.tsx` — class component globale wrappato in `App.tsx` tra `<BrowserRouter>` e `<Suspense>`. Cattura render errors di tutti i moduli incluso L'Ainulindalë.

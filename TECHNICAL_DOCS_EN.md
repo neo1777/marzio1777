@@ -732,4 +732,75 @@ No npm dependency added — the delta is pure React code + local TypeScript util
 
 ---
 
+## Update — UX round 2026-05-06 (post user testing)
+
+Five commits (`c98bb30 → c48ea8e`) of UX stabilisation and client-side bug-fixes. Technical summary; per-commit detail is in `STATO_PROGETTO.md` (Italian, also surfaced inside the Istruzioni page).
+
+### CSS / UI primitives
+
+- `src/index.css` — new utility `@layer utilities { .scrollbar-hide { scrollbar-width: none } .scrollbar-hide::-webkit-scrollbar { display: none } }`. Was used in 9 files but never defined. Plus a global slim 6px restyle for system scrollbars (transparent track, thumb `#8c928d66` light / `#42a83a59` dark).
+
+### Data schema
+
+- `src/types.ts` — `Post.authorPhotoURL?: string | null` (new field, optional, no migration). Saved by `IlBaule.handleUpload` and `IlBivacco.CreateEventModal` (event-type post); read by `LaPiazza` to render the `<Avatar>` with the real author photo instead of the initial fallback.
+
+### GPS hook — `useHighAccuracyPosition(active=true, highAccuracy=true)`
+
+- Signature: new `highAccuracy` param (default `true`, doesn't break callers). One-shot `getCurrentPosition` in parallel to `watchPosition` for a 1-2s first fix on desktop (was 5-10s with watch alone). Watch timeout `10s → 30s`. Returns `error: GeoError | null` instead of `string | null`. New exported `interface GeoError { code: 1 | 2 | 3; message: string }`. GameCreator passes `highAccuracy=false` (coarse + `maximumAge: 60s`); TreasureHuntPlay stays `true`.
+
+### TreasureHuntPlay GPS UX
+
+- Error screen shown only after a 20s grace period on transient errors (TIMEOUT/UNAVAILABLE); PERMISSION_DENIED stays immediate.
+- "Continue without GPS" CTA → read-only mode with map centred on `event.treasureHuntConfig.centerLat/Lng` (Marzio fallback `45.9238, 8.8655`); markers visible, popup "Re-enable GPS to capture", `handleOpenAR` shows explicit alert.
+- Coloured `±Nm` accuracy badge in the radar HUD (green≤20, amber≤50, red>50).
+- `process.env.NODE_ENV !== 'development'` (no-op in Vite production) → `!import.meta.env.DEV`.
+
+### GameCreator wizard hardening
+
+- Step 1 → step 2: "Avanti" button validates `title/description/kickoff` before `setStep(2)`; disabled + amber hint when invalid. `kickoff` pre-populates to `now+10min` in local time (`defaultKickoffLocal()` helper).
+- Pre-call validation: `kickoff > now+30s`, `pointsMultiplier ∈ [0.5, 5.0]`. UI range guards: `radius ∈ [10, 5000]m`, `autoCount ∈ [1, 100]`.
+- Default map centre Marzio (`45.9238, 8.8655`); was Roma (`41.9028, 12.4964`).
+- `hasUserCentered` flag: once the user pans intentionally, GPS updates stop overwriting.
+- "Locate me" button — `LocateFixed` icon (was `Compass`), disabled when `userPosition === null`, explicit tooltip.
+- **City/address search** — `Search` button in the top bar, centred modal with input + Nominatim results list (`limit=5`, `Accept-Language: it`). Same OSM endpoint already used by `IlBaule`, zero new deps. Click result → `setCenter` + `hasUserCentered=true` + close.
+- "Save" disabled on step 2 when `items.length === 0`. Guard screen on step 2 with "Back to Event Details" CTA if base fields are missing.
+
+### Lobby + setRSVP identity
+
+- `setRSVP(eventId, userId, status, identity?)` — new optional `identity: { displayName?, photoURL? }`, written only on the create branch (the `participants.update` rule restricts the diff to `['status', 'respondedAt', 'shareLocationDuringEvent', 'leftAt']`).
+- `GameEventCard` passes `profile.displayName/photoURL` in its 4 setRSVP call sites.
+- `GameLobby` uses the standard `<Avatar>` component instead of the SVG placeholder, with `p.displayName` instead of the literal "Giocatore" in live and final leaderboards.
+
+### Defensive items.create
+
+- `useGameEvents.createGameItem` — `Math.floor(itemData.points)` + `spawnedAt: serverTimestamp()`.
+
+### geoUtils
+
+- `generateUniformPointsInRadius` — early return `[]` for `count<=0 || radiusMeters<=0`. Clamp `cos(centerLat) >= 0.01` for the poles.
+
+### useAudioQueue.proposeTrackToSession (standalone)
+
+- Idempotently upserts the `audio_sessions/{}/participants/{auth.uid}` doc before the queue `setDoc`. Pre-fix the `queue.create` rule rejected with `Missing or insufficient permissions` because `isSessionParticipant(sessionId)` failed when the proposer had never opened the session as a listener.
+- `Math.floor(effectiveMaxAtCreate)` for consistency with the rule helper `int(userPoints / 100)`.
+
+### Error handling: surface `err.message` everywhere user-initiated
+
+7 generic catches migrated to `alert(\`...: ${err?.message}\`)` in PhotoQuizPlay, IlBaule (×4: skip-crop, confirm-crop, enhance-AI, address-search, upload), AdminPanel (×2), EventDetailModal (×2). Plus IlBivacco uses `increment(5)` instead of `(user.points||0)+5` (race-safe).
+
+### New UI components (4-5 May)
+
+- `src/components/ErrorBoundary.tsx` — class component, fallback CTA, wraps the `<Suspense>` in `App.tsx`.
+- `src/components/audio/AddToSessionModal.tsx` — modal for "Aggiungi a un Coro" from Library / FullScreenPlayer.
+- `FullScreenPlayer` — labelled "Sfondo" and "EQ" pill chips, X button, ListPlus opens AddToSessionModal, `onStop` prop.
+- `MiniPlayer` — X button (Trash2 icon).
+- `TrackCard` — "Add to Choir" menu enabled (was disabled).
+- `AudioSessionsList` + `GameEventCard` — Root-only Trash2 button.
+
+### Build
+
+- Build script: `vite build && cp dist/index.html dist/404.html` for the SPA-on-Pages 404 trick.
+
+---
+
 *End of document. For player gameplay/design specification see `GAMING_SYSTEM_EN.md`. For the audio module's full blueprint see `AINULINDALE_TECHNICAL_SPEC.md`. For the defensive matrix see `security_spec_EN.md`.*

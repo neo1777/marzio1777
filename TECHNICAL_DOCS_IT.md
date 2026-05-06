@@ -737,4 +737,75 @@ Nessuna dipendenza npm aggiunta — il delta è puro codice React + utility Type
 
 ---
 
+## Aggiornamento — round UX 2026-05-06 (post-test utente)
+
+Cinque commit (`c98bb30 → c48ea8e`) di stabilizzazione UX e bug-fix client-side. Riassunto tecnico delle modifiche; il dettaglio per ogni commit è in `STATO_PROGETTO.md`.
+
+### CSS / UI primitives
+
+- `src/index.css` — nuova utility `@layer utilities { .scrollbar-hide { scrollbar-width: none } .scrollbar-hide::-webkit-scrollbar { display: none } }`. Era usata in 9 file ma non definita. Plus restyle globale slim 6px sulle scrollbar di sistema (track trasparente, thumb `#8c928d66` chiaro / `#42a83a59` scuro).
+
+### Schema dati
+
+- `src/types.ts` — `Post.authorPhotoURL?: string | null` (campo nuovo, opzionale, no migration). Salvato da `IlBaule.handleUpload` e `IlBivacco.CreateEventModal` (post type='event'); letto da `LaPiazza` per renderizzare l'`<Avatar>` con la foto reale invece del fallback iniziale.
+
+### Hook GPS — `useHighAccuracyPosition(active=true, highAccuracy=true)`
+
+- Signature: nuovo parametro `highAccuracy` (default `true`, non rompe i caller). One-shot `getCurrentPosition` in parallelo a `watchPosition` per primo fix in 1-2s su desktop (era 5-10s solo watch). Timeout watch `10s → 30s`. Ritorna `error: GeoError | null` invece di `string | null`. Nuova `interface GeoError { code: 1 | 2 | 3; message: string }` esportata. GameCreator passa `highAccuracy=false` (coarse + `maximumAge: 60s`); TreasureHuntPlay resta su `true`.
+
+### TreasureHuntPlay GPS UX
+
+- Schermata errore mostrata solo dopo 20s grace period su transient (TIMEOUT/UNAVAILABLE); PERMISSION_DENIED resta immediato.
+- CTA "Continua senza GPS" → modalità read-only con mappa centrata su `event.treasureHuntConfig.centerLat/Lng` (fallback Marzio `45.9238, 8.8655`); marker visibili, popup "Riattiva il GPS per catturare", `handleOpenAR` mostra alert esplicito.
+- Badge accuracy `±Nm` colorato nel HUD radar (verde≤20, ambra≤50, rosso>50).
+- `process.env.NODE_ENV !== 'development'` (no-op in Vite production) → `!import.meta.env.DEV`.
+
+### GameCreator wizard hardening
+
+- Step 1 → step 2: pulsante "Avanti" valida `title/description/kickoff` prima di `setStep(2)`; disabled + hint ambra. `kickoff` pre-popolato a `now+10min` in local time (helper `defaultKickoffLocal()`).
+- Validation pre-call: `kickoff > now+30s`, `pointsMultiplier ∈ [0.5, 5.0]`. Range guards UI: `radius ∈ [10, 5000]m`, `autoCount ∈ [1, 100]`.
+- Default centro mappa Marzio (`45.9238, 8.8655`); era Roma (`41.9028, 12.4964`).
+- `hasUserCentered` flag: una volta mosso il centro intenzionalmente, gli update GPS non sovrascrivono.
+- Pulsante "Centra su di me" — icona `LocateFixed` (era `Compass`), disabled se `userPosition === null`, tooltip esplicito.
+- **Ricerca città/indirizzo** — pulsante `Search` nella top-bar, modal centrata con input + lista risultati Nominatim (`limit=5`, `Accept-Language: it`). Stesso endpoint OSM già usato da `IlBaule`, zero deps. Click su risultato → `setCenter` + `hasUserCentered=true` + chiusura.
+- "Salva" step 2 disabled se `items.length === 0`. Guard screen step 2 con CTA "Torna ai Dettagli Evento" se base fields mancano.
+
+### Lobby + setRSVP identity
+
+- `setRSVP(eventId, userId, status, identity?)` — nuovo param opzionale `identity: { displayName?, photoURL? }`, salvato solo nel ramo create (la rule `participants.update` restringe il diff a `['status', 'respondedAt', 'shareLocationDuringEvent', 'leftAt']`).
+- `GameEventCard` passa `profile.displayName/photoURL` nelle 4 chiamate setRSVP.
+- `GameLobby` usa il componente `<Avatar>` standard al posto del placeholder svg, `p.displayName` invece del fisso "Giocatore" in live + final leaderboard.
+
+### items.create defensivo
+
+- `useGameEvents.createGameItem` — `Math.floor(itemData.points)` + `spawnedAt: serverTimestamp()`.
+
+### geoUtils
+
+- `generateUniformPointsInRadius` — early return `[]` per `count<=0 || radiusMeters<=0`. Clamp `cos(centerLat) >= 0.01` per i poli.
+
+### useAudioQueue.proposeTrackToSession (standalone)
+
+- Idempotently upserta il doc `audio_sessions/{}/participants/{auth.uid}` prima del `setDoc` sulla queue. Pre-fix la rule `queue.create` respingeva con `Missing or insufficient permissions` perché `isSessionParticipant(sessionId)` falliva quando il proposer non aveva mai aperto la sessione come listener.
+- `Math.floor(effectiveMaxAtCreate)` per coerenza col rule helper `int(userPoints / 100)`.
+
+### Error handling: surface `err.message` ovunque user-initiated
+
+7 catch generici migrati a `alert(\`...: ${err?.message}\`)` in PhotoQuizPlay, IlBaule (×4: skip-crop, confirm-crop, enhance-AI, address-search, upload), AdminPanel (×2), EventDetailModal (×2). Plus IlBivacco usa `increment(5)` invece di `(user.points||0)+5` (race-safe).
+
+### Componenti UI nuovi (4-5 maggio)
+
+- `src/components/ErrorBoundary.tsx` — class component, fallback CTA, wrappato in `App.tsx` tra `<BrowserRouter>` e `<Suspense>`.
+- `src/components/audio/AddToSessionModal.tsx` — modal per "Aggiungi a un Coro" da Library / FullScreenPlayer.
+- `FullScreenPlayer` — pill chip "Sfondo" e "EQ" etichettati, bottone X, ListPlus apre AddToSessionModal, prop `onStop`.
+- `MiniPlayer` — bottone X (Trash2).
+- `TrackCard` — menu "Aggiungi a un Coro" abilitato (era disabled).
+- `AudioSessionsList` + `GameEventCard` — bottone Trash2 Root-only.
+
+### Build
+
+- Script build: `vite build && cp dist/index.html dist/404.html` per il SPA-on-Pages 404 trick.
+
+---
+
 *Fine documento. Per la specifica gameplay/design dell'esperienza giocatore vedi `GAMING_SYSTEM_IT.md`. Per il blueprint completo del modulo audio vedi `AINULINDALE_TECHNICAL_SPEC.md`. Per la matrice difensiva vedi `security_spec_IT.md`.*

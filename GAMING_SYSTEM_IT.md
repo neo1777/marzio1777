@@ -733,4 +733,59 @@ I due moduli sono **complementari**, non sovrapposti. Una serata di Marzio potre
 
 ---
 
+## Aggiornamenti — round UX 2026-05-06
+
+Riassunto delle modifiche al modulo Giochi nella sessione di stabilizzazione UX del 6 maggio (cinque commit `c98bb30 → c48ea8e`). Per l'overview completa di tutte le aree toccate vedi `STATO_PROGETTO.md`; qui solo ciò che riguarda direttamente Concept A/B.
+
+### GameCreator wizard — validazione + UX
+
+- **Step 1 → step 2**: il pulsante "Avanti" valida ora `title/description/kickoff` prima di permettere il passaggio. Se mancanti: button **disabled** + hint testuale ambra. `kickoff` pre-popolato a `now+10min` in local time.
+- **Range guards**: `radius` clampato `[10, 5000]m`, `autoCount` clampato `[1, 100]`. Pre-fix valori 0/negativi facevano spinning di `generateUniformPointsInRadius` senza generare nulla.
+- **Default centro mappa**: Marzio (`45.9238, 8.8655`); era Roma (`41.9028, 12.4964`).
+- **Ricerca città/indirizzo**: nuovo pulsante `Search` in top-bar, modal con input + lista risultati Nominatim (5 limit, IT locale). Click su risultato pannella la mappa. Stesso endpoint OSM già in uso da IlBaule, zero deps.
+- **"Centra su di me"** ora con icona `LocateFixed`, disabled se `userPosition === null`, tooltip esplicito.
+- **"Salva" step 2** disabled se `items.length === 0`. Guard screen step 2 se i base fields mancano.
+- `handleSave` valida client-side: `kickoff > now+30s`, `pointsMultiplier ∈ [0.5, 5.0]`. Surface `err.message` reale negli alert.
+
+### `useGameEvents.createGameItem` defensivo
+
+- `Math.floor(itemData.points)` per matchare `firestore.rules:330` `points is int`.
+- Aggiunto `spawnedAt: serverTimestamp()` per coerenza con `firestore.indexes.json`.
+
+### Hook GPS — `useHighAccuracyPosition`
+
+- Nuova signature `(active=true, highAccuracy=true)`. GameCreator passa `false` (coarse + `maximumAge: 60s`); TreasureHuntPlay resta su `true`.
+- `getCurrentPosition` one-shot in parallelo a `watchPosition` per primo fix in 1-2s.
+- Timeout watch alzato `10s → 30s`. Ritorna `error: GeoError | null` con `interface GeoError { code: 1 | 2 | 3; message: string }` esportata.
+
+### TreasureHuntPlay — GPS UX
+
+- Schermata errore mostrata solo dopo **20s grace period** su transient (TIMEOUT/UNAVAILABLE); PERMISSION_DENIED resta immediato.
+- Nuova CTA **"Continua senza GPS"** → modalità read-only con mappa centrata su `event.treasureHuntConfig.centerLat/Lng` (fallback Marzio). Marker visibili, capture disabled.
+- Badge accuracy `±Nm` colorato nel HUD radar (verde≤20, ambra≤50, rosso>50).
+
+### GameLobby — identità reali dei partecipanti
+
+- `setRSVP(eventId, userId, status, identity?)` — nuovo param opzionale `{displayName, photoURL}`, salvato solo nel ramo create.
+- `GameEventCard` passa `profile.displayName/photoURL` in tutte le 4 chiamate `setRSVP`.
+- `GameLobby` usa il componente `<Avatar>` standard al posto del placeholder SVG, mostra `p.displayName` invece del fisso "Giocatore" in live e final leaderboard.
+
+### `geoUtils.generateUniformPointsInRadius`
+
+- Early return `[]` per `count<=0 || radiusMeters<=0`. Clamp `cos(centerLat) >= 0.01` per i poli.
+
+### Note compatibilità
+
+- I doc `participants/{}` creati prima di questa update non hanno `displayName/photoURL` — il render in `GameLobby` cade sul fallback. Nessuna migration richiesta.
+- I post `posts/{}` creati prima di questa update non hanno `authorPhotoURL` — `LaPiazza` mostra il fallback iniziale come prima. Nessuna migration richiesta.
+
+### Riferimento alle Sporche
+
+- **#14 Teleporter**: già chiusa Fase 2 (CF `validateCaptureDistance`).
+- **#17 Score Forger**: indurito B7.
+- **#20 Speed Demon**: nessun cambio; tollerato per design (community-trust).
+- Nuovi rischi introdotti dal round 2026-05-06: **nessuno** (le mitigazioni sono tutte difensive/UX).
+
+---
+
 *Documento parte della tetralogia di documentazione di Marzio1777, accompagnato da `README_IT.md` (overview narrativo), `TECHNICAL_DOCS_IT.md` (architettura tecnica), `security_spec_IT.md` (matrice difensiva) e `AINULINDALE_TECHNICAL_SPEC.md` (specifica del modulo audio). Per la versione inglese vedi `GAMING_SYSTEM_EN.md`.*

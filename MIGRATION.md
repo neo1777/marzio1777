@@ -1,10 +1,14 @@
 # MIGRATION — Marzio1777
 
-**Stato (Maggio 2026, post-batch B7 + Fase 2 + Fase 2.5):**
+**Stato (Maggio 2026, post-batch B7 + Fase 2 + Fase 2.5 + UX round 2026-05-06):**
 
 Aggiornamento finale Maggio 2026: TUTTI i punti della roadmap originale di
 Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
-(3 di 4 gagliardetti continuous-tracking). Resta in Fase 3:
+(3 di 4 gagliardetti continuous-tracking). Sessione di stabilizzazione UX
+del 6 maggio chiusa (cinque commit `c98bb30 → c48ea8e`, vedi
+`STATO_PROGETTO.md` per il changelog completo).
+
+Resta in Fase 3:
 - L'Ospite Perfetto (richiede CF heartbeat host)
 - Concept C/D/E nuovi giochi
 - Crossfade/karaoke/video chat audio extension
@@ -91,6 +95,97 @@ Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
   `resource-exhausted` se eccede il limite formula. Rule `effectiveMaxAtCreate`
   rimane come safety net. Wired in `useAudioQueue.proposeTrack` con fallback
   graceful (CF unavailable → client-side check + rule snapshot).
+
+### Sessione UX 2026-05-06 — stabilizzazione post-test utente (5 commit)
+
+Segnalazioni dell'utente in test desktop hanno aperto un round di
+stabilizzazione UX e bug-fix. Riassunto ad alto livello (dettaglio
+completo in `STATO_PROGETTO.md`):
+
+- **Scrollbar utility** (`c98bb30`): `.scrollbar-hide` era usata in 9
+  punti senza essere definita. Aggiunta utility custom in `src/index.css`
+  + restyle globale slim 6px palette-coerente per le scrollbar che
+  comunque appaiono su desktop (form lunghi, Istruzioni).
+- **Errori opachi** (`c98bb30`): 7 `alert()` generici tipo "Errore
+  durante la creazione" in PhotoQuizPlay, IlBaule, AdminPanel,
+  EventDetailModal ora mostrano `err.message` reale.
+- **Schema Post + IlBivacco** (`c98bb30`):
+  - `Post.authorPhotoURL?: string | null` (campo nuovo opzionale, no
+    migration). Salvato da IlBaule.handleUpload e
+    IlBivacco.CreateEventModal, letto da LaPiazza per mostrare l'avatar
+    dell'autore (era sempre fallback iniziale).
+  - `IlBivacco.CreateEventModal` usa `increment(5)` invece di
+    `(user.points||0)+5` per i 5pt al creatore (race-safe).
+- **GameCreator wizard hardening** (`b15b626`, `b868455`):
+  - Step 1 → step 2 ora valida `title/description/kickoff` prima di
+    permettere "Avanti" (button disabled + hint ambra).
+  - Range guards: `radius ∈ [10, 5000]m`, `autoCount ∈ [1, 100]`.
+  - Default `kickoff` pre-popolato a `now+10min` in local time.
+  - Default centro mappa = Marzio (`45.9238, 8.8655`); era Roma
+    (`41.9028, 12.4964`), causava jump visibile quando arrivava il GPS.
+  - Ricerca città/indirizzo nuova: pulsante `Search` nella top-bar
+    apre modal con input + lista risultati Nominatim (5 limit, IT
+    locale). Stesso endpoint OSM già usato da IlBaule, zero deps.
+  - Bottone "Centra su di me" ora `LocateFixed` icon, disabled se GPS
+    null, con tooltip esplicito.
+  - Guard screen step 2 se i base fields mancano (refresh, link
+    diretto): rimbalza a step 1 con CTA "Torna ai Dettagli Evento".
+- **Hook GPS** (`b868455`, `67c398d`):
+  - `useHighAccuracyPosition(active=true, highAccuracy=true)` — nuovo
+    parametro `highAccuracy` (default true, non rompe i caller).
+    GameCreator passa `false` (coarse + `maximumAge: 60s`) per fix
+    veloce; TreasureHuntPlay resta su true.
+  - Spara `getCurrentPosition` one-shot in parallelo a `watchPosition`
+    per primo fix in 1-2s (era 5-10s solo watch).
+  - Timeout watch alzato 10s → 30s (desktop Wi-Fi triangulation).
+  - Ritorna `error: { code, message } | null` con `interface GeoError`
+    esportata. Code 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE,
+    3=TIMEOUT.
+- **TreasureHuntPlay GPS UX** (`b15b626`, `67c398d`):
+  - Schermata errore mostrata solo dopo 20s grace period su transient
+    (TIMEOUT/UNAVAILABLE); PERMISSION_DENIED resta immediato.
+  - CTA "Continua senza GPS" → modalità read-only con mappa centrata
+    su `event.treasureHuntConfig.centerLat/Lng` (fallback Marzio) +
+    marker visibili, capture disabled (alert "serve GPS attivo").
+  - Badge accuracy `±Nm` colorato nel HUD radar (verde≤20, ambra≤50,
+    rosso>50).
+  - Spinner "Ricerca Satellite..." con sottotitolo esplicito sui
+    desktop senza GPS.
+  - Sostituito `process.env.NODE_ENV !== 'development'` (no-op in
+    Vite) con `!import.meta.env.DEV`.
+- **GameLobby identity dei partecipanti** (`b15b626`):
+  - `setRSVP(eventId, uid, status, identity?)` — nuovo param
+    opzionale `{displayName, photoURL}` salvato nel ramo create del
+    doc participant (la rule update non ammette identity nel diff).
+  - GameLobby usa `<Avatar>` standard al posto del `<svg>` placeholder
+    + mostra `p.displayName` invece del fisso "Giocatore".
+- **Items.create defensivo** (`c98bb30`):
+  - `useGameEvents.createGameItem` forza `Math.floor(itemData.points)`
+    (rule `points is int`, era silently respinto su payload float-like).
+  - Aggiunto `spawnedAt: serverTimestamp()` per coerenza con
+    `firestore.indexes.json:62-67`.
+- **geoUtils** (`b15b626`):
+  - `generateUniformPointsInRadius`: early return per `radius<=0 ||
+    count<=0` (evita infinite loop), clamp `cos(lat)>=0.01` per i poli.
+- **AddToSessionModal — auto-join participant** (`c48ea8e`):
+  - `proposeTrackToSession` standalone (chiamata dal flusso "Aggiungi
+    a un Coro" da Library / FullScreenPlayer) ora idempotently
+    upserta il doc `audio_sessions/{}/participants/{auth.uid}` prima
+    del `setDoc` sulla queue. Pre-fix la rule `queue.create` respingeva
+    con `Missing or insufficient permissions` perché
+    `isSessionParticipant(sessionId)` falliva quando il proposer non
+    aveva mai aperto la sessione come listener. Schema partecipant
+    identico a quello che `AudioSessionCreate` scrive per il DJ.
+  - `Math.floor(effectiveMaxAtCreate)` per coerenza con il rule
+    helper `int(userPoints / 100)`.
+
+**File toccati (totali)**: `src/index.css`, `src/types.ts`,
+`src/pages/{GameCreator, TreasureHuntPlay, GameLobby, IlBaule,
+IlBivacco, LaPiazza, PhotoQuizPlay, AdminPanel}.tsx`,
+`src/components/{EventDetailModal, GameEventCard}.tsx`,
+`src/hooks/{useGameEvents, useHighAccuracyPosition, useAudioQueue}.ts`,
+`src/lib/geoUtils.ts`. **Test**: 63/63 unit verdi su tutti i 5 round,
+build pulito, zero deps nuove.
 
 ---
 

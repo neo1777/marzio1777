@@ -137,5 +137,46 @@ You can install us easily without clogging the App Store!
 
 ---
 
+## 📋 Recent updates (May 2026 — UX round 2026-05-06)
+
+A round of UX stabilisation and bug-fixing after live user testing.
+Five commits (`c98bb30 → c48ea8e`) of client-side hardening. What
+you'll see different in the app:
+
+- **Real avatars in posts and hunt lobby.** The author's avatar
+  (Google photo) now shows up on La Piazza posts and in the hunt
+  participant list — until now a coloured initial fallback was used.
+  Posts published before this update keep the fallback (no migration).
+- **Safer hunt creation wizard.** The "Next" button is now disabled
+  until you fill in title, description and date; the date pre-fills
+  to "now + 10 minutes"; radius and item count are clamped to sane
+  ranges; "Save" on the placement map is disabled until you place at
+  least one item.
+- **City/address search** on the placement map: 🔍 button at the top,
+  modal with text input + Nominatim, click a result to pan the map
+  (useful when GPS is slow or you're remote from the play area).
+- **More forgiving GPS** during the AR game: if the browser takes up
+  to 30s to triangulate (typical desktop without GPS), you no longer
+  see an error screen straight away; if it really doesn't work, you
+  get a "Continue without GPS" option that shows you the map centred
+  on the event (read-only, no capture).
+- **Clearer errors everywhere.** Generic error toasts ("Error during
+  creation…", "Loading error…") now surface the actual
+  Firebase/Firestore message — useful for debugging and for knowing
+  what to do (e.g. "date in the past", "permission denied").
+- **More discoverable audio player.** "Sfondo" (keep screen awake)
+  and "EQ" (3-band equaliser, ±12dB) controls now have labelled pill
+  chips in the FullScreenPlayer; X button to close the player; "Add
+  to a Choir" works from the library and from the full-screen player
+  (and even if you're not yet a session listener, you get auto-joined).
+- **Theme-aware scrollbars.** System scrollbars on desktop are now
+  thin and palette-coherent (dark green on dark, grey on light); on
+  mobile and on swipeable lists they're hidden as intended.
+
+Full technical breakdown in `STATO_PROGETTO.md` (visible from the
+Istruzioni page → "Project Status" tab).
+
+---
+
 *Conceived in Marzio, written with code, sweat and love by Neo1777.*
 *Latest README revision: May 2026, with the arrival of The Game Field and L'Ainulindalë.*

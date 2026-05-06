@@ -733,4 +733,55 @@ The two modules are **complementary**, not overlapping. A Marzio evening might s
 
 ---
 
+## Updates — UX round 2026-05-06
+
+Summary of changes to the Game Field module in the May 6 UX stabilisation session (five commits `c98bb30 → c48ea8e`). Full overview across all touched areas in `STATO_PROGETTO.md` (Italian, also exposed inside the in-app Istruzioni page); here only what concerns Concepts A/B.
+
+### GameCreator wizard — validation + UX
+
+- **Step 1 → step 2**: the "Avanti" button now validates `title/description/kickoff` before allowing the transition. If missing: button **disabled** + amber text hint. Plus: `kickoff` pre-populated to `now+10min` in local time.
+- **Range guards**: `radius` clamped `[10, 5000]m`, `autoCount` clamped `[1, 100]`.
+- **Default map centre**: Marzio (`45.9238, 8.8655`); was Roma (`41.9028, 12.4964`).
+- **City/address search**: new `Search` button in the top bar, modal with input + Nominatim results list (5 limit, IT locale). Same OSM endpoint already used by IlBaule, zero new deps.
+- **"Locate me"** uses `LocateFixed` icon, disabled when `userPosition === null`.
+- **Step 2 "Save"** disabled when `items.length === 0`. Guard screen on step 2 if base fields are missing.
+- `handleSave` validates client-side: `kickoff > now+30s`, `pointsMultiplier ∈ [0.5, 5.0]`. Surface real `err.message` in alerts.
+
+### `useGameEvents.createGameItem` defensive
+
+- `Math.floor(itemData.points)` to match `firestore.rules:330` `points is int`.
+- Added `spawnedAt: serverTimestamp()` for consistency with `firestore.indexes.json`.
+
+### GPS hook — `useHighAccuracyPosition`
+
+- New signature `(active=true, highAccuracy=true)`. GameCreator passes `false` (coarse + `maximumAge: 60s`); TreasureHuntPlay stays `true`.
+- Fires one-shot `getCurrentPosition` parallel to `watchPosition` for 1-2s first fix.
+- Watch timeout `10s → 30s`. Returns `error: GeoError | null` with exported `interface GeoError { code: 1 | 2 | 3; message: string }`.
+
+### TreasureHuntPlay — GPS UX
+
+- Error screen shown only after **20s grace period** on transient errors; PERMISSION_DENIED stays immediate.
+- New **"Continue without GPS"** CTA → read-only mode with map centred on `event.treasureHuntConfig.centerLat/Lng` (Marzio fallback). Markers visible but capture disabled.
+- Coloured `±Nm` accuracy badge in the radar HUD (green≤20, amber≤50, red>50).
+
+### GameLobby — real participant identities
+
+- `setRSVP(eventId, userId, status, identity?)` — new optional `identity: { displayName?, photoURL? }`. Saved only on the create branch.
+- `GameEventCard` now passes `profile.displayName/photoURL` in all four `setRSVP` call sites.
+- `GameLobby` uses the standard `<Avatar>` component instead of the SVG placeholder, and displays `p.displayName` in live and final leaderboards.
+
+### Compatibility notes
+
+- `participants/{}` docs created before this update don't have `displayName/photoURL` — fallback Avatar (coloured initial). No migration.
+- `posts/{}` created before this update don't have `authorPhotoURL` — fallback initial in LaPiazza. No migration.
+
+### Sporche reference
+
+- **#14 Teleporter**: closed Phase 2 (`validateCaptureDistance` CF).
+- **#17 Score Forger**: hardened B7.
+- **#20 Speed Demon**: no change.
+- New risks introduced by the 2026-05-06 round: **none**.
+
+---
+
 *Document part of the Marzio1777 documentation tetralogy, accompanied by `README_EN.md` (narrative overview), `TECHNICAL_DOCS_EN.md` (technical architecture), `security_spec_EN.md` (defensive matrix) and `AINULINDALE_TECHNICAL_SPEC.md` (audio module specification). For the Italian version see `GAMING_SYSTEM_IT.md`.*
