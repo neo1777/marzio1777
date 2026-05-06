@@ -633,6 +633,115 @@ build` 11.58s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 3) — wizard pronto-all'uso
+
+Dopo il deploy del round 2 l'utente ha verificato che la mappa salva
+correttamente, e ha chiesto tre miglioramenti UX al wizard di
+creazione caccia: data di default già impostata, mappa centrata sulla
+sua posizione anche su desktop dove il GPS è lento, e una ricerca per
+città/indirizzo non invasiva. Plus: lentezza percepita nel raggiungere
+la pagina di gioco al primo tentativo.
+
+### #1 — Default `kickoff` = ora + 10 min
+
+Il campo `<input type="datetime-local">` partiva vuoto e l'utente
+doveva sempre digitare data + ora a mano. Pre-popolato a "ora locale +
+10 minuti", che è il minimo che soddisfa con margine il guard
+client-side (`kickoff > now+30s`) e la rule (`scheduledKickoff >
+request.time`). Helper dedicato `defaultKickoffLocal()` perché
+`Date.toISOString()` ritorna UTC e l'input vuole local time
+`YYYY-MM-DDTHH:mm`. Se l'utente vuole spostarla, modifica
+liberamente il campo come prima.
+
+### #2 — GPS veloce + centro mappa default su Marzio
+
+Due problemi combinati:
+
+- `useHighAccuracyPosition` chiamava solo `watchPosition` con
+  `enableHighAccuracy: true, maximumAge: 0`. Su desktop questa
+  configurazione può tardare 5-10s prima di emettere la prima callback
+  (Wi-Fi triangulation iniziale lenta), e nel frattempo `userPosition
+  === null`. Rifatto: una `getCurrentPosition` one-shot in parallelo
+  al `watchPosition`, così il primo fix arriva in 1-2s. Inoltre l'hook
+  ora accetta un secondo parametro `highAccuracy` (default `true` per
+  non rompere i caller esistenti); GameCreator lo passa a `false` —
+  la modalità coarse + `maximumAge: 60s` permette al browser di
+  servire una posizione fresca da cache invece di re-triangolare ogni
+  volta. Per TreasureHuntPlay (gameplay attivo) resta `true` perché
+  lì il radius di cattura è 15m e l'accuracy conta.
+- Il `[center]` iniziale era `[41.9028, 12.4964]` (Roma). All'arrivo
+  del primo fix la mappa "saltava" dalla capitale a Marzio, con re-pan
+  visibile. Cambiato il fallback a `[45.9238, 8.8655]` (Marzio) — già
+  usato come default in IlBaule per coerenza.
+
+Aggiunto `hasUserCentered` come flag: una volta che l'utente ha
+spostato il centro intenzionalmente (tap sulla mappa con "imposta
+centro", click su un risultato della ricerca città, click su "centra
+su di me"), il useEffect smette di sovrascrivere il centro con gli
+update GPS successivi. Prima del flag, ogni nuovo callback GPS poteva
+strappare via il centro che l'utente aveva appena selezionato.
+
+### #3 — Pulsante "Centra su di me" affidabile + indicator
+
+Il pulsante Compass nell'overlay sinistro chiamava
+`if(userPosition) setCenter(...)`. Se cliccato prima del fix GPS non
+faceva niente, senza feedback. Ora il pulsante usa l'icona
+`LocateFixed` (più chiara), è esplicitamente `disabled` quando
+`userPosition === null`, e ha tooltip + `aria-label` ("Centra su di
+me" / "GPS non ancora disponibile"). Il pulsante "Imposta centro
+mappa" (tap-to-place) ha analogamente tooltip e aria-label.
+
+Aggiunto un terzo stato alla pill di status in alto al centro: se
+`userPosition === null` mostra "Recupero posizione GPS..." con
+spinner, così l'utente capisce perché il pulsante "centra su di me"
+è disabled e che la ricerca è in corso.
+
+### #4 — Ricerca per città/indirizzo non invasiva
+
+Aggiunto un solo nuovo pulsante (icona `Search`) nella top bar dello
+step 2, allineato a "Indietro"/"Salva". Click → modal centrato a
+schermo (overlay scuro, click-outside chiude, Escape chiude via
+nativo `<button>`) con un campo di testo, bottone "Cerca", e lista
+risultati. Backend: `nominatim.openstreetmap.org/search?format=json`
+con header `Accept-Language: it`, `limit=5` — esattamente il pattern
+già usato da IlBaule per il geotag delle foto, zero deps nuove. Click
+su un risultato → `setCenter` immediato + `hasUserCentered = true` +
+chiusura modal.
+
+UX deliberatamente minima per rispettare il vincolo "la pagina è già
+piena di tasti": un solo pulsante in più nella top bar, niente
+dropdown live-search sopra la mappa, niente overlay flottanti. La
+modal vive su `z-[1100]` quindi galleggia sopra tutto incluso il pin
+"in setting" della mappa.
+
+### #5 — Lentezza percepita al primo accesso al gioco
+
+L'utente ha riferito di aver dovuto ricaricare più volte per
+arrivare alla pagina in gioco. Cause più probabili:
+- chunk lazy-loaded del routing → primo paint richiede fetch di
+  `GamePlayRouter` + `useGameEvents` + chunk Leaflet (~150 KB
+  combinato);
+- watchPosition lento su desktop (vedi #2);
+- service worker che serve cache stale dopo il deploy nuovo, finché
+  non arriva il pill "Aggiorna app" o l'auto-refresh visibility.
+
+Mitigato in questa sessione il punto GPS (#2). Per la cache, il flusso
+auto-update PWA esistente (commit `e50724f`) di solito copre il caso
+ma può richiedere un primo hard reload per scaricare il nuovo bundle.
+Non aggiungiamo prefetch aggressivo dei chunk gioco in questo round —
+sarebbe un cambiamento più strutturale; se la lentezza persiste anche
+sui prossimi accessi (cache calda, GPS rapido), apriamo un round
+dedicato.
+
+### File toccati
+
+`src/pages/GameCreator.tsx`, `src/hooks/useHighAccuracyPosition.ts`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` 11.41s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

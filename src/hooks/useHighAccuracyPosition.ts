@@ -9,7 +9,11 @@ export interface Position {
   timestamp: number;
 }
 
-export function useHighAccuracyPosition(active = true) {
+// `highAccuracy=false` returns a coarse fix quickly and tolerates ~1min stale
+// readings; right for the wizard map where the user just needs a sensible
+// initial centre. The default (true, fresh) is what the active-game HUD wants
+// because the capture radius check is 15m and accuracy matters.
+export function useHighAccuracyPosition(active = true, highAccuracy = true) {
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
   const watchId = useRef<number | null>(null);
@@ -28,25 +32,36 @@ export function useHighAccuracyPosition(active = true) {
       return;
     }
 
+    // Kick off a one-shot getCurrentPosition for a fast initial fix, then
+    // hand over to watchPosition for ongoing updates. On desktop, watch alone
+    // can take 5-10s to fire its first callback; the one-shot bypasses that.
+    const setFromCoords = (pos: GeolocationPosition) => {
+      setPosition({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        heading: pos.coords.heading,
+        speed: pos.coords.speed,
+        timestamp: pos.timestamp,
+      });
+      setError(null);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      setFromCoords,
+      () => { /* swallow — watchPosition below will surface persistent errors */ },
+      { enableHighAccuracy: highAccuracy, timeout: 8000, maximumAge: highAccuracy ? 0 : 60_000 }
+    );
+
     watchId.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setPosition({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          heading: pos.coords.heading,
-          speed: pos.coords.speed,
-          timestamp: pos.timestamp,
-        });
-        setError(null);
-      },
+      setFromCoords,
       (err) => {
         setError(err.message);
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: highAccuracy,
         timeout: 10000,
-        maximumAge: 0,
+        maximumAge: highAccuracy ? 0 : 60_000,
       }
     );
 
@@ -55,7 +70,7 @@ export function useHighAccuracyPosition(active = true) {
         navigator.geolocation.clearWatch(watchId.current);
       }
     };
-  }, [active]);
+  }, [active, highAccuracy]);
 
   return { position, error };
 }

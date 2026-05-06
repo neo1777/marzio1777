@@ -5,7 +5,7 @@ import { createGameEvent, createGameItem, advanceGameEventStatus } from '../hook
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createMarkerIcon } from '../lib/leafletIcons';
-import { Loader2, Save, MapPin, Trophy, Wand2, HelpCircle, Compass, ChevronRight } from 'lucide-react';
+import { Loader2, Save, MapPin, Trophy, Wand2, HelpCircle, Compass, ChevronRight, Search, X, LocateFixed } from 'lucide-react';
 import { serverTimestamp, collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { generateUniformPointsInRadius } from '../lib/geoUtils';
@@ -70,17 +70,37 @@ const PRESETS = [
 
 const customIcon = createMarkerIcon('gold');
 
+// Marzio centre — used as the map fallback when the browser hasn't yet
+// produced a GPS fix. Avoids the visible "Roma → Marzio" jump that happened
+// when the wizard mounted with a 41.9°N centre and then re-centred once GPS
+// arrived.
+const MARZIO_FALLBACK: [number, number] = [45.9238, 8.8655];
+
+// `<input type="datetime-local">` wants `YYYY-MM-DDTHH:mm` in local time, and
+// `Date.toISOString()` returns UTC, so format manually. +10 min from now is
+// the smallest reasonable default that comfortably clears the rule's
+// `scheduledKickoff > request.time` guard plus 30s client-side margin.
+function defaultKickoffLocal(): string {
+  const d = new Date(Date.now() + 10 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function GameCreator() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { position: userPosition } = useHighAccuracyPosition();
+  // Coarse GPS is plenty for "centre the placement map on me". The fast
+  // initial fix (one-shot getCurrentPosition + maximumAge=60s) lands in a
+  // second or two on desktop, vs the 5-10s you'd wait with watchPosition +
+  // enableHighAccuracy alone.
+  const { position: userPosition } = useHighAccuracyPosition(true, false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<0 | 1 | 2>(0);
 
   // Event Data
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [kickoff, setKickoff] = useState('');
+  const [kickoff, setKickoff] = useState<string>(() => defaultKickoffLocal());
   const [pointsMultiplier, setPointsMultiplier] = useState('1.0');
   const [type, setType] = useState<'treasure_hunt' | 'photo_quiz'>('treasure_hunt');
 
@@ -92,14 +112,26 @@ export default function GameCreator() {
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(PRESETS[0].id);
   const [itemTemplates, setItemTemplates] = useState<GameItemTemplate[]>(PRESETS[0].templates);
-  const [center, setCenter] = useState<[number, number]>([41.9028, 12.4964]); 
+  const [center, setCenter] = useState<[number, number]>(MARZIO_FALLBACK);
+  const [hasUserCentered, setHasUserCentered] = useState(false);
 
-  // Initialize center to user position
+  // City search modal state. Kept lean: one input, one fetch to Nominatim,
+  // a small list of results. Same pattern as IlBaule's address picker but
+  // wired to setCenter directly without the second-step manual map.
+  const [showCitySearch, setShowCitySearch] = useState(false);
+  const [cityQuery, setCityQuery] = useState('');
+  const [citySearching, setCitySearching] = useState(false);
+  const [cityResults, setCityResults] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+
+  // Auto-centre on user once we get a fix, but only if the user hasn't
+  // intentionally moved the map themselves (manual click on the map, city
+  // search, "set centre" tool). `hasUserCentered` flips on those interactions
+  // and stops fighting them with stale GPS updates.
   useEffect(() => {
-    if (userPosition && !isSettingCenter && items.length === 0) {
+    if (userPosition && !hasUserCentered && !isSettingCenter && items.length === 0) {
       setCenter([userPosition.lat, userPosition.lng]);
     }
-  }, [userPosition]);
+  }, [userPosition, hasUserCentered, isSettingCenter, items.length]);
 
   // Photo Quiz Specific
   const [totalRounds, setTotalRounds] = useState(10);
@@ -119,6 +151,7 @@ export default function GameCreator() {
     if (isSettingCenter) {
       setCenter([latlng.lat, latlng.lng]);
       setIsSettingCenter(false);
+      setHasUserCentered(true);
       return;
     }
     if (spawnMode !== 'manual' && spawnMode !== 'hybrid') return;
@@ -127,6 +160,39 @@ export default function GameCreator() {
       ...prev,
       { lat: latlng.lat, lng: latlng.lng, points: tmpl.points, templateId: tmpl.id, emoji: tmpl.emoji, label: tmpl.label }
     ]);
+  };
+
+  const handleCenterOnMe = () => {
+    if (!userPosition) return;
+    setCenter([userPosition.lat, userPosition.lng]);
+    setHasUserCentered(true);
+  };
+
+  const handleCitySearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cityQuery.trim()) return;
+    setCitySearching(true);
+    setCityResults([]);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(cityQuery)}`,
+        { headers: { 'Accept-Language': 'it' } }
+      );
+      const data = await res.json();
+      setCityResults(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      alert(`Ricerca fallita: ${err?.message ?? 'errore di rete'}`);
+    } finally {
+      setCitySearching(false);
+    }
+  };
+
+  const pickCityResult = (lat: string, lon: string) => {
+    setCenter([parseFloat(lat), parseFloat(lon)]);
+    setHasUserCentered(true);
+    setShowCitySearch(false);
+    setCityQuery('');
+    setCityResults([]);
   };
 
   function SetView({ center }: { center: [number, number] }) {
@@ -497,21 +563,29 @@ export default function GameCreator() {
 
   return (
     <div className="h-full flex flex-col pt-4">
-      <div className="flex items-center justify-between px-4 mb-4">
-         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">Posiziona gli item ({items.length})</h1>
-         <div className="flex gap-2">
+      <div className="flex items-center justify-between px-4 mb-4 gap-2">
+         <h1 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-200 truncate">Posiziona gli item ({items.length})</h1>
+         <div className="flex gap-2 shrink-0">
+            <button
+               onClick={() => setShowCitySearch(true)}
+               aria-label="Cerca città o indirizzo"
+               title="Cerca per città o indirizzo"
+               className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 transition-colors"
+            >
+               <Search size={16} />
+            </button>
             <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold text-sm">Indietro</button>
             <button onClick={handleSave} disabled={loading || items.length === 0} className="px-4 py-2 bg-[#2D5A27] disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm flex items-center gap-2">
                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salva
             </button>
          </div>
       </div>
-      
+
       {spawnMode !== 'manual' && (
          <div className="px-4 mb-4 flex justify-end gap-2">
             <button onClick={() => setItems([])} className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Resetta</button>
-            <button 
-               onClick={spawnMode === 'legacy_posts' ? handleGenerateLegacy : handleGenerateAuto} 
+            <button
+               onClick={spawnMode === 'legacy_posts' ? handleGenerateLegacy : handleGenerateAuto}
                className="px-3 py-1 bg-[#2D5A27] text-white rounded text-xs font-bold flex items-center gap-1"
             >
                <Wand2 size={14} /> Genera Ora
@@ -530,23 +604,85 @@ export default function GameCreator() {
                ))}
             </MapContainer>
          </div>
-         
+
          {/* Overlays */}
          <div className="absolute top-4 left-4 z-[400] flex flex-col gap-2">
-            <button onClick={() => { if(userPosition) setCenter([userPosition.lat, userPosition.lng]) }} className="p-3 bg-white rounded-full shadow-lg text-slate-700 pointer-events-auto"><Compass size={20} /></button>
-            <button onClick={() => setIsSettingCenter(!isSettingCenter)} className={`p-3 rounded-full shadow-lg pointer-events-auto ${isSettingCenter ? 'bg-[#2D5A27] text-white' : 'bg-white text-slate-700'}`}><MapPin size={20} /></button>
+            <button
+               onClick={handleCenterOnMe}
+               disabled={!userPosition}
+               aria-label="Centra la mappa sulla mia posizione"
+               title={userPosition ? 'Centra su di me' : 'GPS non ancora disponibile'}
+               className="p-3 bg-white rounded-full shadow-lg text-slate-700 pointer-events-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+               <LocateFixed size={20} />
+            </button>
+            <button
+               onClick={() => setIsSettingCenter(!isSettingCenter)}
+               aria-label="Imposta centro mappa con un tap"
+               title="Imposta il centro toccando la mappa"
+               className={`p-3 rounded-full shadow-lg pointer-events-auto ${isSettingCenter ? 'bg-[#2D5A27] text-white' : 'bg-white text-slate-700'}`}
+            >
+               <MapPin size={20} />
+            </button>
          </div>
 
-         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 text-sm font-bold text-slate-700 pointer-events-none flex items-center gap-2">
+         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 pointer-events-none flex items-center gap-2 max-w-[calc(100%-7rem)]">
             {isSettingCenter ? (
-                <><MapPin size={16} className="text-red-500" /> Tocca la mappa per impostare il centro</>
+                <><MapPin size={16} className="text-red-500 shrink-0" /> <span className="truncate">Tocca la mappa per impostare il centro</span></>
+            ) : !userPosition ? (
+                <><Loader2 size={14} className="animate-spin text-[#2D5A27] shrink-0" /> <span className="truncate">Recupero posizione GPS...</span></>
             ) : ( (spawnMode === 'manual' || spawnMode === 'hybrid') ? (
-               <><MapPin size={16} className="text-[#2D5A27]" /> Tocca mappa per spawn manuale</>
+               <><MapPin size={16} className="text-[#2D5A27] shrink-0" /> <span className="truncate">Tocca mappa per spawn manuale</span></>
             ) : (
-               <><Wand2 size={16} className="text-[#2D5A27]" /> Clicca Genera per {autoCount} oggetti</>
+               <><Wand2 size={16} className="text-[#2D5A27] shrink-0" /> <span className="truncate">Clicca Genera per {autoCount} oggetti</span></>
             ))}
          </div>
       </div>
+
+      {showCitySearch && (
+         <div className="fixed inset-0 z-[1100] flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCitySearch(false)}>
+            <div className="w-full max-w-md bg-white dark:bg-[#151e18] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#24352b] overflow-hidden mt-16 sm:mt-0" onClick={(e) => e.stopPropagation()}>
+               <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-[#24352b]">
+                  <h3 className="font-serif font-bold text-base text-[#1a2e16] dark:text-slate-200 flex items-center gap-2"><Search size={16} /> Cerca città o indirizzo</h3>
+                  <button onClick={() => setShowCitySearch(false)} aria-label="Chiudi" className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X size={18} /></button>
+               </div>
+               <form onSubmit={handleCitySearch} className="p-4 flex gap-2">
+                  <input
+                     type="text"
+                     value={cityQuery}
+                     onChange={(e) => setCityQuery(e.target.value)}
+                     placeholder="Es. Marzio, Varese, Piazza San Marco"
+                     autoFocus
+                     className="flex-1 bg-slate-50 dark:bg-[#111814] border border-slate-200 dark:border-[#24352b] text-slate-800 dark:text-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[#2D5A27]"
+                  />
+                  <button type="submit" disabled={citySearching || !cityQuery.trim()} className="px-4 py-2 bg-[#2D5A27] hover:bg-[#23471f] disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm flex items-center gap-1">
+                     {citySearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Cerca
+                  </button>
+               </form>
+               {cityResults.length > 0 && (
+                  <ul className="max-h-64 overflow-y-auto border-t border-slate-100 dark:border-[#24352b]">
+                     {cityResults.map((r, idx) => (
+                        <li key={idx}>
+                           <button
+                              type="button"
+                              onClick={() => pickCityResult(r.lat, r.lon)}
+                              className="w-full text-left px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1a261f] border-b border-slate-50 dark:border-[#24352b] last:border-0 flex items-start gap-2"
+                           >
+                              <MapPin size={14} className="text-[#2D5A27] mt-0.5 shrink-0" />
+                              <span className="line-clamp-2">{r.display_name}</span>
+                           </button>
+                        </li>
+                     ))}
+                  </ul>
+               )}
+               {!citySearching && cityResults.length === 0 && cityQuery && (
+                  <p className="px-4 pb-4 text-xs text-slate-400 dark:text-slate-500">
+                     Premi Cerca o invio. I risultati provengono da OpenStreetMap.
+                  </p>
+               )}
+            </div>
+         </div>
+      )}
     </div>
   );
 }
