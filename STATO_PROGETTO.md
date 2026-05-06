@@ -522,6 +522,117 @@ build` 11.48s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-06 (round 2) — flusso gioco AR end-to-end
+
+L'utente segnala che premendo "Salva" sulla mappa di placement degli
+items appare "Compila tutti i campi base" anche se in quella schermata
+non ci sono campi visibili. Chiede inoltre verifica completa del
+gioco AR (processo, GPS, cattura). Audit comprensivo eseguito da agent
+Explore + lettura diretta di `GameCreator`, `TreasureHuntPlay`,
+`GameLobby`, `useHighAccuracyPosition`, `useNearestItem`,
+`PermissionsGate`, `useGameEvents.setRSVP`, `lib/geoUtils`.
+
+### #1 — Wizard creazione caccia: validazione step 1 → 2 mancante
+
+Il pulsante "Avanti: Posiziona Elementi" (step 1 di GameCreator) faceva
+solo `setStep(2)` senza validare titolo/descrizione/data. Cliccandolo
+con i campi vuoti si arrivava allo step 2 (mappa di placement), e solo
+dopo aver piazzato gli oggetti il "Salva" mostrava "Compila tutti i
+campi base" su una schermata che — appunto — non mostrava più quei
+campi.
+
+**Fix in `src/pages/GameCreator.tsx`**:
+- Validazione esplicita nel click handler dell'Avanti: alert con la
+  lista dei campi mancanti, no `setStep(2)`.
+- Pulsante Avanti **disabled** se i base fields mancano + hint
+  testuale ambra sopra ("Compila titolo, descrizione e data prima di
+  posizionare gli elementi").
+- Anche il pulsante Crea Quiz (path photo_quiz) ora rispetta lo
+  stesso vincolo.
+- **Guardia di rispetto contratto** nello step 2: se per qualunque
+  motivo si renderizza con i base fields vuoti (refresh, ritorno da
+  history, link diretto), mostra una pagina dedicata con CTA "Torna
+  ai Dettagli Evento" invece di lasciar partire `handleSave`.
+- Il pulsante "Salva" del placement è ora disabled se `items.length
+  === 0` — UX coerente col check già presente lato handler.
+
+### #2 — Range guards su `radius` e `autoCount`
+
+`<input type="number" value={radius}>` accettava 0 o negativi. Combinato
+con `generateUniformPointsInRadius(radius=0, ...)`, il loop interno con
+`minSeparationMeters=8` collassava su candidati identici al centro e
+girava fino a `maxAttempts` senza generare nulla.
+
+**Fix in `src/pages/GameCreator.tsx`**:
+- `autoCount` clampato a `[1, 100]`.
+- `radius` clampato a `[10, 5000]` metri.
+
+**Fix in `src/lib/geoUtils.ts`**:
+- Early return `[]` per `count<=0 || radiusMeters<=0` (difesa lato
+  generatore — il clamp UI è solo la prima linea).
+- Clamp del `cos(centerLat)` a `>=0.01` per evitare divisioni quasi-zero
+  vicino ai poli (irrilevante per Marzio a ~46°, ma rende la funzione
+  riutilizzabile altrove).
+
+### #3 — TreasureHuntPlay: GPS denied non guidato + accuracy non visibile
+
+Se l'utente nega la permission GPS (o il device non ha GPS), la
+mappa mostrava perpetuamente "Ricerca Satellite..." senza alcun
+suggerimento su come uscire dal loop. Inoltre l'accuracy del GPS (nota
+fragile su desktop, può sfiorare i 50-100m) non era mostrata da nessuna
+parte — l'utente non aveva modo di sapere se la cattura sarebbe stata
+attendibile.
+
+**Fix in `src/pages/TreasureHuntPlay.tsx`**:
+- Letto anche l'`error` dal hook `useHighAccuracyPosition`.
+- Quando `position === null && gpsError`: schermata dedicata con
+  l'errore reale, istruzioni e bottone "Ricarica" (CTA esplicita
+  invece del loop).
+- HUD radar: aggiunto badge "GPS ±N m" colorato (verde ≤20m, ambra
+  ≤50m, rosso >50m). Sempre visibile durante il gioco.
+
+**Bonus**: l'`if (dist > 15 && process.env.NODE_ENV !== 'development')`
+non funzionava in Vite (Vite non popola `process.env.NODE_ENV` se non
+glielo dici). Cambiato a `import.meta.env.DEV` con commento esplicito.
+
+### #4 — Lobby: avatar partecipanti placeholder + nomi "Giocatore"
+
+`GameLobby.tsx` mostrava ogni partecipante come un'icona SVG generica
++ il testo "Giocatore" (o "Tu" per sé stessi). Causa root: `setRSVP`
+non salvava `displayName` né `photoURL` quando creava il doc
+`participants/{uid}`, quindi il client non aveva mai i dati identità
+disponibili.
+
+**Fix in `src/hooks/useGameEvents.ts`**:
+- `setRSVP` accetta ora un parametro opzionale `identity:
+  {displayName, photoURL}` e li scrive **solo nel ramo create** (la
+  rule `participants.update` restringe il diff a status/respondedAt/
+  shareLocationDuringEvent/leftAt — gli identity field sono
+  immutable post-create per design).
+
+**Fix in `src/components/GameEventCard.tsx`**:
+- Le 4 chiamate a `setRSVP` (Partecipo / Passo / Cambia idea /
+  Partecipa-da-declined) passano ora `profile.displayName` e
+  `profile.photoURL`.
+
+**Fix in `src/pages/GameLobby.tsx`**:
+- Render dei partecipanti riusa il componente `<Avatar>` standard
+  con `photoURL={p.photoURL}` + `name={p.displayName}`. Fallback
+  graceful se uno dei due è null.
+- Live leaderboard e final leaderboard mostrano `p.displayName`
+  invece del fisso "Giocatore".
+
+### File toccati
+
+`src/pages/GameCreator.tsx`, `src/pages/TreasureHuntPlay.tsx`,
+`src/pages/GameLobby.tsx`, `src/components/GameEventCard.tsx`,
+`src/hooks/useGameEvents.ts`, `src/lib/geoUtils.ts`.
+
+**Test**: `npm run lint` pulito, `npm test` 63/63 verdi, `npm run
+build` 11.58s, zero deps nuove.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

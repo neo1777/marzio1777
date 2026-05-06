@@ -412,12 +412,12 @@ export default function GameCreator() {
                     <div className="grid grid-cols-2 gap-4">
                        <div>
                           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Numero Oggetti</label>
-                          <input type="number" value={autoCount} onChange={(e) => setAutoCount(parseInt(e.target.value) || 1)} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
+                          <input type="number" min={1} max={100} value={autoCount} onChange={(e) => setAutoCount(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
                        </div>
                        {spawnMode !== 'legacy_posts' && (
                          <div>
                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Raggio (metri)</label>
-                            <input type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 100)} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
+                            <input type="number" min={10} max={5000} value={radius} onChange={(e) => setRadius(Math.min(5000, Math.max(10, parseInt(e.target.value) || 100)))} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
                          </div>
                        )}
                     </div>
@@ -440,29 +440,68 @@ export default function GameCreator() {
               </div>
               )}
 
-              {type === 'treasure_hunt' ? (
-                 <button onClick={() => setStep(2)} className="w-full py-3 mt-4 rounded-xl bg-[#2D5A27] hover:bg-[#23471f] text-white font-bold transition-colors">
-                    Avanti: Posiziona Elementi
-                 </button>
-              ) : (
-                 <button onClick={handleSave} disabled={loading} className="w-full flex items-center justify-center gap-2 py-3 mt-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors">
-                    {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                    Crea Quiz
-                 </button>
-              )}
+              {(() => {
+                 const baseFieldsValid = !!title && !!description && !!kickoff;
+                 const goNext = () => {
+                    if (!baseFieldsValid) {
+                       const missing: string[] = [];
+                       if (!title) missing.push('titolo');
+                       if (!description) missing.push('descrizione');
+                       if (!kickoff) missing.push('data di inizio');
+                       alert(`Compila prima: ${missing.join(', ')}.`);
+                       return;
+                    }
+                    setStep(2);
+                 };
+                 return type === 'treasure_hunt' ? (
+                    <>
+                       {!baseFieldsValid && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 -mb-2 mt-2">
+                             Compila titolo, descrizione e data prima di posizionare gli elementi.
+                          </p>
+                       )}
+                       <button onClick={goNext} disabled={!baseFieldsValid} className="w-full py-3 mt-4 rounded-xl bg-[#2D5A27] hover:bg-[#23471f] disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed disabled:text-slate-500 text-white font-bold transition-colors">
+                          Avanti: Posiziona Elementi
+                       </button>
+                    </>
+                 ) : (
+                    <button onClick={handleSave} disabled={loading || !baseFieldsValid} className="w-full flex items-center justify-center gap-2 py-3 mt-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold transition-colors">
+                       {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                       Crea Quiz
+                    </button>
+                 );
+              })()}
            </div>
         </div>
      );
   }
 
-  // Map step for treasure hunt
+  // Map step for treasure hunt. If we ever land here with the base fields
+  // empty (legacy state, refresh while on step 2, etc.) bounce the user
+  // back to step 1 instead of letting handleSave fail with a misleading
+  // "Compila tutti i campi base" alert from a screen that shows no fields.
+  if (!title || !description || !kickoff) {
+     return (
+        <div className="max-w-2xl mx-auto h-full flex flex-col items-center justify-center text-center p-6 gap-4">
+           <Trophy size={40} className="text-amber-500" />
+           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Mancano i dettagli dell'evento</h2>
+           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+              Devi prima compilare titolo, descrizione e data di inizio prima di posizionare gli elementi sulla mappa.
+           </p>
+           <button onClick={() => setStep(1)} className="mt-2 px-6 py-3 bg-[#2D5A27] hover:bg-[#23471f] text-white rounded-xl font-bold text-sm transition-colors">
+              Torna ai Dettagli Evento
+           </button>
+        </div>
+     );
+  }
+
   return (
     <div className="h-full flex flex-col pt-4">
       <div className="flex items-center justify-between px-4 mb-4">
          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">Posiziona gli item ({items.length})</h1>
          <div className="flex gap-2">
             <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold text-sm">Indietro</button>
-            <button onClick={handleSave} disabled={loading} className="px-4 py-2 bg-[#2D5A27] text-white rounded-lg font-bold text-sm flex items-center gap-2">
+            <button onClick={handleSave} disabled={loading || items.length === 0} className="px-4 py-2 bg-[#2D5A27] disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm flex items-center gap-2">
                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salva
             </button>
          </div>

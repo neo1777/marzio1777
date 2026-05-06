@@ -39,6 +39,16 @@ export function generateUniformPointsInRadius(
   count: number,
   minSeparationMeters: number = 8
 ): Array<{ lat: number; lng: number }> {
+  // Guard against degenerate inputs: count<=0 returns empty, radius<=0 would
+  // collapse all candidates to the centre and the min-separation check would
+  // spin until maxAttempts. Better fail fast.
+  if (count <= 0 || radiusMeters <= 0) return [];
+
+  // Clamp the longitude scale at extreme latitudes so we don't divide by ~0.
+  // Marzio sits at ~46° so this never bites in practice; the clamp protects
+  // future callers near the poles.
+  const cosLat = Math.max(0.01, Math.cos((centerLat * Math.PI) / 180));
+
   const result: Array<{ lat: number; lng: number }> = [];
   let attempts = 0;
   const maxAttempts = count * 50;
@@ -48,7 +58,7 @@ export function generateUniformPointsInRadius(
     const r = radiusMeters * Math.sqrt(Math.random());
     const θ = 2 * Math.PI * Math.random();
     const latOffset = (r * Math.cos(θ)) / 111_320;
-    const lngOffset = (r * Math.sin(θ)) / (111_320 * Math.cos((centerLat * Math.PI) / 180));
+    const lngOffset = (r * Math.sin(θ)) / (111_320 * cosLat);
     const candidate = { lat: centerLat + latOffset, lng: centerLng + lngOffset };
 
     const tooClose = result.some(

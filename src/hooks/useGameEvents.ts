@@ -137,11 +137,19 @@ export function useGameParticipants(eventId: string) {
   return { participants, currentUserParticipant };
 }
 
-export async function setRSVP(eventId: string, userId: string, status: 'joined' | 'declined') {
+export async function setRSVP(
+   eventId: string,
+   userId: string,
+   status: 'joined' | 'declined',
+   identity?: { displayName?: string | null; photoURL?: string | null }
+) {
   try {
      const pRef = doc(db, `game_events/${eventId}/participants/${userId}`);
      const pSnap = await getDoc(pRef);
      if (pSnap.exists()) {
+        // The participants.update rule restricts the diff to
+        // ['status', 'respondedAt', 'shareLocationDuringEvent', 'leftAt'] —
+        // identity fields can only be written on the create branch.
         await updateDoc(pRef, {
            status,
            respondedAt: serverTimestamp()
@@ -150,9 +158,11 @@ export async function setRSVP(eventId: string, userId: string, status: 'joined' 
         await setDoc(pRef, {
            userId,
            status,
+           displayName: identity?.displayName ?? null,
+           photoURL: identity?.photoURL ?? null,
            respondedAt: serverTimestamp(),
-           shareLocationDuringEvent: true, // Default
-           invitedAt: serverTimestamp() // Fallback if record didn't exist
+           shareLocationDuringEvent: true,
+           invitedAt: serverTimestamp()
         });
      }
   } catch (error) {

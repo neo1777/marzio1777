@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Trophy, ArrowLeft, Users, Loader2 } from 'lucide-react';
 import PermissionsGate from '../components/PermissionsGate';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Avatar } from '../components/ui';
 
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -120,20 +121,21 @@ export default function GameLobby() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                      <AnimatePresence>
-                        {joinedParticipants.map(p => (
-                           <motion.div 
-                              key={p.userId}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1a261f] rounded-xl border border-slate-100 dark:border-[#24352b]"
-                           >
-                              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                 {/* Assuming we might fetch full user profiles. If not, placeholder. */}
-                                 <svg className="w-full h-full text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                              </div>
-                              <span className="text-sm font-bold truncate text-slate-700 dark:text-slate-300">{p.userId === user?.uid ? 'Tu' : 'Giocatore'}</span>
-                           </motion.div>
-                        ))}
+                        {joinedParticipants.map(p => {
+                           const isMe = p.userId === user?.uid;
+                           const label = isMe ? 'Tu' : (p.displayName || 'Giocatore');
+                           return (
+                              <motion.div
+                                 key={p.userId}
+                                 initial={{ opacity: 0, scale: 0.9 }}
+                                 animate={{ opacity: 1, scale: 1 }}
+                                 className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1a261f] rounded-xl border border-slate-100 dark:border-[#24352b]"
+                              >
+                                 <Avatar photoURL={p.photoURL} name={p.displayName} size="md" />
+                                 <span className="text-sm font-bold truncate text-slate-700 dark:text-slate-300">{label}</span>
+                              </motion.div>
+                           );
+                        })}
                      </AnimatePresence>
                   </div>
                </div>
@@ -157,7 +159,7 @@ export default function GameLobby() {
                      {sortedParticipants.map(targetUser => (
                         <div key={targetUser.userId} className="flex items-center justify-between bg-white dark:bg-slate-700 p-2 rounded-lg">
                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                             {targetUser.userId === user?.uid ? 'Tu' : 'Giocatore'}
+                             {targetUser.userId === user?.uid ? 'Tu' : (targetUser.displayName || 'Giocatore')}
                            </span>
                            <span className="font-bold text-[#2D5A27] dark:text-[#42a83a]">{getScore(targetUser.userId)} pt</span>
                         </div>
@@ -186,7 +188,7 @@ export default function GameLobby() {
                         <div key={targetUser.userId} className="flex items-center justify-between bg-white/50 dark:bg-slate-800/50 p-2 rounded-lg">
                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2">
                              <span className="text-amber-500 font-extrabold w-4">{idx + 1}°</span>
-                             {targetUser.userId === user?.uid ? 'Tu' : 'Giocatore'}
+                             {targetUser.userId === user?.uid ? 'Tu' : (targetUser.displayName || 'Giocatore')}
                            </span>
                            <span className="font-bold text-[#2D5A27] dark:text-[#42a83a]">{getScore(targetUser.userId)} pt</span>
                         </div>

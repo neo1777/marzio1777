@@ -109,14 +109,14 @@ export default function GameEventCard({ event }: Props) {
            <div className="flex items-center gap-2">
              <motion.button 
                 whileTap={{ scale: 0.95 }}
-                onClick={() => user && setRSVP(event.id, user.uid, 'joined')}
+                onClick={() => user && setRSVP(event.id, user.uid, 'joined', { displayName: profile?.displayName, photoURL: profile?.photoURL })}
                 className="flex items-center gap-1.5 bg-[#2D5A27] hover:bg-[#23471f] text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm"
              >
                 <Check size={16} /> Partecipo
              </motion.button>
              <motion.button 
                 whileTap={{ scale: 0.95 }}
-                onClick={() => user && setRSVP(event.id, user.uid, 'declined')}
+                onClick={() => user && setRSVP(event.id, user.uid, 'declined', { displayName: profile?.displayName, photoURL: profile?.photoURL })}
                 className="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-[#24352b] dark:hover:bg-[#2c4033] text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
              >
                 <X size={16} /> Passo
@@ -128,7 +128,7 @@ export default function GameEventCard({ event }: Props) {
                  <CheckCircle2 size={16} /> Iscritto
               </span>
               <button 
-                 onClick={() => user && setRSVP(event.id, user.uid, 'declined')}
+                 onClick={() => user && setRSVP(event.id, user.uid, 'declined', { displayName: profile?.displayName, photoURL: profile?.photoURL })}
                  className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline underline-offset-2 ml-2"
               >
                  Cambia idea
@@ -138,7 +138,7 @@ export default function GameEventCard({ event }: Props) {
            <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Hai declinato l'invito.</span>
               <button 
-                 onClick={() => user && setRSVP(event.id, user.uid, 'joined')}
+                 onClick={() => user && setRSVP(event.id, user.uid, 'joined', { displayName: profile?.displayName, photoURL: profile?.photoURL })}
                  className="text-xs text-[#2D5A27] dark:text-[#42a83a] font-bold hover:underline underline-offset-2 ml-2"
               >
                  Partecipa

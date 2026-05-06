@@ -38,7 +38,7 @@ export default function TreasureHuntPlay() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { event } = useGameEvent(eventId || '');
-  const { position } = useHighAccuracyPosition();
+  const { position, error: gpsError } = useHighAccuracyPosition();
   
   const [items, setItems] = useState<GameItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
@@ -82,7 +82,12 @@ export default function TreasureHuntPlay() {
   const handleOpenAR = (item: GameItem) => {
      if (!position) return;
      const dist = calculateDistance(position.lat, position.lng, item.lat, item.lng);
-     if (dist > 15 && process.env.NODE_ENV !== 'development') { // Limit distance in production
+     // 15m capture radius matches the rule check on items.update
+     // (collectedAtLat/Lng audit) and the CF Haversine guard. Keep the
+     // bypass available only in Vite dev mode (uses import.meta.env.DEV;
+     // the previous `process.env.NODE_ENV` was never substituted in this
+     // bundle and effectively did nothing useful).
+     if (dist > 15 && !import.meta.env.DEV) {
         alert(`Sei troppo lontano! Avvicinati ancora di ${(dist - 15).toFixed(0)}m`);
         return;
      }
@@ -155,9 +160,19 @@ export default function TreasureHuntPlay() {
                     <p className={`font-bold ${radar.color}`}>{radar.label}</p>
                  </div>
               </div>
-              <div className="text-right">
-                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Rimasti</p>
-                 <p className="font-bold text-slate-800 dark:text-slate-200">{activeItems.length}</p>
+              <div className="flex items-center gap-3">
+                 {position && (
+                    <div className="text-right">
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GPS</p>
+                       <p className={`text-xs font-bold ${position.accuracy <= 20 ? 'text-emerald-600' : position.accuracy <= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                          ±{Math.round(position.accuracy)}m
+                       </p>
+                    </div>
+                 )}
+                 <div className="text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Rimasti</p>
+                    <p className="font-bold text-slate-800 dark:text-slate-200">{activeItems.length}</p>
+                 </div>
               </div>
            </div>
         </div>
@@ -199,6 +214,22 @@ export default function TreasureHuntPlay() {
                        </Marker>
                     ))}
                  </MapContainer>
+              </div>
+           ) : gpsError ? (
+              <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-6">
+                 <div className="text-center max-w-md">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center">
+                       <Crosshair size={32} />
+                    </div>
+                    <p className="font-bold text-slate-700 dark:text-slate-200 text-base mb-2">GPS non disponibile</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{gpsError}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                       Abilita la geolocalizzazione dalle impostazioni del browser e ricarica la pagina.
+                    </p>
+                    <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#2D5A27] text-white rounded-lg font-bold text-sm">
+                       Ricarica
+                    </button>
+                 </div>
               </div>
            ) : (
               <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
