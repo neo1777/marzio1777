@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, Search, Image as ImageIcon, Sparkles, ChevronRight, ChevronLeft, Calendar, MapPin, MessageCircle, Clock, User, CheckCircle2 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, setDoc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, updateDoc, serverTimestamp, getDoc, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { QuestionType, isAutoGenerationAvailable, questionGenerators } from '../utils/quizGenerators';
 import { Post } from '../types';
@@ -52,7 +52,15 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
       } catch(e) {}
     }
 
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    // Cap the post picker at the 50 most recent items. The wizard is a
+    // host-only flow (one DJ at a time per quiz) and the user is choosing a
+    // single source post from a visual grid; loading the entire `posts`
+    // collection on every wizard open scales linearly with community size and
+    // — at 1000+ posts — pulls each photo's base64 cover into memory along
+    // with the live onSnapshot subscription. 50 is generous for the picker
+    // (the user can scroll, the search box already filters client-side) and
+    // keeps the foreground listener bounded.
+    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'), limit(50));
     const unsub = onSnapshot(q, (snap) => {
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Post)));
     });

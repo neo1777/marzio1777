@@ -175,7 +175,14 @@ export default function LaMappa() {
        </header>
 
        <div className="flex-1 bg-white dark:bg-[#151e18] p-2 md:p-4 rounded-2xl shadow-lg border border-slate-200 dark:border-[#24352b] relative z-0 flex flex-col transition-colors">
-          <div className="absolute top-6 left-6 z-[400] bg-white/90 dark:bg-[#111814]/90 backdrop-blur border border-slate-200 dark:border-[#24352b] p-4 rounded-xl shadow-md transition-colors">
+          {/* Filter panel z-index. Leaflet's default panes layer at: tilePane=200,
+              shadowPane=500, markerPane=600, popupPane=700. The leaflet-control
+              container itself sits at z-index:1000 by Leaflet's own CSS. To
+              render reliably above markers + popups + zoom-control on small
+              viewports (where the filter overlaps the map content), bump this
+              panel to z-[1100]. The earlier z-[400] left the panel behind any
+              open Popup, which on mobile felt like a layout bug. */}
+          <div className="absolute top-6 left-6 z-[1100] bg-white/90 dark:bg-[#111814]/90 backdrop-blur border border-slate-200 dark:border-[#24352b] p-4 rounded-xl shadow-md transition-colors max-w-[calc(100%-3rem)]">
              <div 
                className="flex items-center justify-between gap-4 cursor-pointer" 
                onClick={() => setIsFilterOpen(!isFilterOpen)}

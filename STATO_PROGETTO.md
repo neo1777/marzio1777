@@ -1245,6 +1245,55 @@ I veri problemi erano nei figli:
 
 ---
 
+## Sessione UX 2026-05-07 (round 3) — z-index policy + memory leak posts
+
+**Contesto.** Audit segnalava "mappa con tasti sovrapposti su mobile" e
+"memory leak posts" da chiudere. Verificando il codice, il vero problema
+è circoscritto: il pannello filtro di `LaMappa` finisce sotto i popup di
+Leaflet e `QuizHostCreateRound` carica TUTTI i posts in memoria via
+`onSnapshot` senza limit.
+
+### Fix
+
+1. **`src/pages/LaMappa.tsx:178`** — z-index del filtro `z-[400] →
+   z-[1100]`. Leaflet stratifica i propri pane (`tilePane=200`,
+   `markerPane=600`, `popupPane=700`, control container 1000); a 400 il
+   pannello finiva dietro i popup aperti, percepito come bug di layout.
+   `z-[1100]` lo porta sopra a tutto. Aggiunto anche
+   `max-w-[calc(100%-3rem)]` per non sforare a destra su < 600px.
+   Commento di policy in-line.
+
+2. **`src/components/QuizHostCreateRound.tsx:55`** — `query(collection
+   'posts'), orderBy('timestamp','desc')` → aggiunto `limit(50)`. Era
+   una memory bomb a community size: ogni apertura del wizard aprivа un
+   listener `onSnapshot` su tutti i posts inclusi i cover base64 (≤50KB
+   per post). 50 è ampiamente sufficiente per il picker (l'utente cerca
+   client-side via box di ricerca; può aprire il wizard più volte se
+   serve un post più vecchio).
+
+### Note di test
+
+- `npm run lint` pulito.
+- `npm test` 63/63 unit verdi.
+- `npm run build` ~12s, bundle pulito.
+
+### Skip motivati (audit aveva segnalato falsi positivi)
+
+- **HUD `TreasureHuntPlay`** — già responsive (flex/text-xs/column-stack);
+  non viene coperto dalla bottom-nav perché il `<main>` di Layout ha
+  `pb-16 md:pb-0`.
+- **Header mobile sticky** — `Layout.tsx:252` è `absolute top-0` dentro
+  `<main>` (relative implicito); resta visivamente fisso perché lo scroll
+  sta nel div figlio (riga 289).
+
+### File toccati
+
+`src/pages/LaMappa.tsx`, `src/components/QuizHostCreateRound.tsx`.
+
+2 file, zero deps nuove. Niente migration di schema, niente rule changes.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:
