@@ -137,10 +137,25 @@ You can install us easily without clogging the App Store!
 
 ---
 
-## 📋 Recent updates (May 2026 — UX round 2026-05-06)
+## 📋 Recent updates
 
-A round of UX stabilisation and bug-fixing after live user testing.
-Five commits (`c98bb30 → c48ea8e`) of client-side hardening. What
+### UX round 2026-05-07 — post mobile user-test
+
+Five commits (R1→R5: `248b316`, `12131cf`, `b7126cd`, `f659c6b`, `f5c1cab`) following the first real-device test in production on mobile/desktop. What you'll see different in the app:
+
+- **AR hunt now works for the player who created it.** Before, an organizer testing their own hunt always got `Missing or insufficient permissions` on a capture tap. Now `createGameEvent` automatically adds the organizer as a "joined" participant.
+- **No more "AR icon wobbling".** The capture target had a constant decorative rotation that wobbled regardless of the gyroscope. Removed: the icon now drifts only if you rotate the device (gyro), otherwise it stays still with a quieter "pulse" effect.
+- **Clear desktop / no-gyro mode.** If you enter the AR capture from a device without a gyroscope (PC, old tablet), the icon stays centred with an amber microcopy "Modalità senza giroscopio: l'oggetto non si muove con il device" — no more deceptive fake-AR.
+- **Permissions asked of the organizer too.** Before, hunt creators skipped the permissions screen (camera/GPS/orientation); on iOS this meant the orientation prompt never fired. Now everyone goes through the gate, organizer included.
+- **Friendlier message if you start before kickoff.** If you flip "Start Game" before the scheduled kickoff and try to capture, you'll see `"L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm."` instead of a cryptic permissions error.
+- **Pages that scroll on small phones too.** Every creator/event/music page and modal now scrolls all the way to the bottom (including the last item, which used to slip under iPhone's home indicator) and modals adapt to Safari's URL bar collapsing/expanding mid-scroll.
+- **Map: "Memory Map" filter on top of pins.** The filter panel on the Map page no longer ends up behind an open pin popup.
+- **Quiz picker performance.** Opening the "Create quiz round" wizard on a community with many posts no longer pulls every memory into memory — only the 50 most recent, with the search box filtering further.
+- **IlBaule kinder to guests and to scheduled posts.** If you're a guest and land on the Baule by mistake, you get a "Torna al Paese" button. If you schedule a post but forget the date/time, the app tells you before saving.
+
+### UX round 2026-05-06 — post desktop user-test
+
+A previous round of UX stabilisation and bug-fixing after the first user testing. Five commits (`c98bb30 → c48ea8e`) of client-side hardening. What
 you'll see different in the app:
 
 - **Real avatars in posts and hunt lobby.** The author's avatar
@@ -173,10 +188,9 @@ you'll see different in the app:
   thin and palette-coherent (dark green on dark, grey on light); on
   mobile and on swipeable lists they're hidden as intended.
 
-Full technical breakdown in `STATO_PROGETTO.md` (visible from the
-Istruzioni page → "Project Status" tab).
+Full technical breakdown of every round is in `STATO_PROGETTO.md` (visible from the Istruzioni page → "Project Status" tab).
 
 ---
 
 *Conceived in Marzio, written with code, sweat and love by Neo1777.*
-*Latest README revision: May 2026, with the arrival of The Game Field and L'Ainulindalë.*
+*Latest README revision: May 2026, with the arrival of The Game Field, L'Ainulindalë and the UX stabilisation rounds 2026-05-06 and 2026-05-07.*

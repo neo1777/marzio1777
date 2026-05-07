@@ -26,7 +26,7 @@ Marzio1777 nasce come Piazza Comunale digitale. Il Campo dei Giochi è il suo co
 
 I principi sono tre, e ad essi ci atteniamo religiosamente quando scegliamo cosa includere e cosa lasciare fuori:
 
-**Principio 1 — Riuso, non Reinvenzione.** Tutto ciò che è già nell'app (archivio post, sistema punti, eventi del Bivacco, mappa, RSVP, ruoli RBAC, particelle dei like) viene riusato come carburante per il modulo giochi. Non costruiamo economie parallele, non duplichiamo flussi RSVP, non introduciamo nuove librerie pesanti. La filosofia "Zero-Dipendenze-Nuove" è un vincolo di design esplicito: il modulo gaming aggiunge ~30KB al bundle finale, tutto codice React + utility TypeScript pure. Lo stesso vincolo è stato mantenuto rigorosamente anche con l'arrivo di L'Ainulindalë (modulo audio): zero dipendenze npm aggiunte, +40KB di bundle. Totale post-MVP: ~70KB.
+**Principio 1 — Riuso, non Reinvenzione.** Tutto ciò che è già nell'app (archivio post, sistema punti, eventi del Bivacco, mappa, RSVP, ruoli RBAC, particelle dei like) viene riusato come carburante per il modulo giochi. Non costruiamo economie parallele e non duplichiamo flussi RSVP. La filosofia di base sulle dipendenze npm è "*preferire native, valutare il costo*": il modulo gaming è stato costruito senza nuove dep esterne (~30KB di bundle, codice React + utility TypeScript pure), e lo stesso vale per L'Ainulindalë (~40KB con Web Audio / WebRTC / IndexedDB nativi). Totale post-MVP: ~70KB. Questo non è un vincolo religioso ma il default che ha pagato in bundle leggero e funzionamento fluido anche su cellulari vecchi. Una nuova dipendenza è valutata caso per caso quando vale la pena (es. lib crittografiche, validation runtime, A11y avanzata, visualizer audio rich) e dopo che il costo runtime su mobile entry-level è verificato — vedi `CLAUDE.md` Convenzione 1 per la procedura completa.
 
 **Principio 2 — Marzio prima di tutto.** Questo non è un MMO. Non è un gioco competitivo per gamer professionisti. È un'app di paese, privata, whitelisted, dove i marziesi e i villeggianti si divertono insieme. Le scelte tecniche riflettono questa scala: tolleranza alta verso il cheating non automatizzato (se Mario gioca dal divano fingendo di essere fuori, lo si scopre alla pizzata successiva), filtri tematici inesistenti (l'admin può chiamare la caccia "Modalità Amsterdam" e popolarla di emoji 🍁 senza problemi), enfasi sull'esperienza sociale piuttosto che sulla precisione chirurgica.
 
@@ -785,6 +785,49 @@ Riassunto delle modifiche al modulo Giochi nella sessione di stabilizzazione UX 
 - **#17 Score Forger**: indurito B7.
 - **#20 Speed Demon**: nessun cambio; tollerato per design (community-trust).
 - Nuovi rischi introdotti dal round 2026-05-06: **nessuno** (le mitigazioni sono tutte difensive/UX).
+
+---
+
+## Aggiornamenti — round UX 2026-05-07 (post user-test mobile)
+
+Cinque commit di stabilizzazione UX in seguito al primo test utente in produzione su device mobile/desktop reali. Tutti retrocompatibili, niente schema/rule changes (tranne 3 nuovi rule test regression).
+
+### #1 — Organizer auto-join come participant (R1, `248b316`)
+
+**Problema diagnosticato.** L'organizer di una caccia AR che testava il proprio gioco vedeva sempre `Missing or insufficient permissions` al tap di cattura. Causa: la rule `firestore.rules` riga 342 (`items.update`) richiede `isEventParticipant(eventId)`, ma `createGameEvent` creava il `game_event` senza upsertare il doc `participants/{organizerId}`. L'organizer non era mai un participant `joined`.
+
+**Fix.** `createGameEvent(eventData, organizerIdentity?)` ora chiama `setRSVP(eventId, organizerId, 'joined', identity)` dopo il `setDoc` del game_event. Schema participant identico al ramo create di `setRSVP`, rule-conforme con `participants.create` (firestore.rules:374).
+
+### #2 — AR no-sensor fallback (R1+R5, `248b316` + `f5c1cab`)
+
+**Problema #1.** Su desktop senza giroscopio, `useDeviceOrientation` registrava il listener ma `DeviceOrientationEvent` non emetteva mai → `beta/gamma === 0` permanente → emoji incollato al centro. **R1**: nuovo flag `available: boolean` derivato (true solo dopo primo evento entro 5s); `ARCaptureLayer` salta `xOffset/yOffset` quando `!available || prefersReducedMotion`, mostra microcopy ambra "Modalità senza giroscopio".
+
+**Problema #2.** Anche su mobile con sensore, l'icona "traballava" perché `rotate: [0, 5, -5, 0]` era una keyframe **costante e indipendente dal gyro**. **R5**: rimossa la keyframe `rotate` completamente. Resta solo lo `scale: [1, 1.05/1.1, 1]` come pulse indicator. La deriva x/y dal gyro continua a funzionare per chi ha il sensore.
+
+### #3 — `PermissionsGate` non skippato per organizer treasure_hunt (R1)
+
+`GameLobby.tsx:47` aveva `!isOrganizer` come guard del gate. L'organizer non vedeva mai il prompt iOS `DeviceOrientationEvent.requestPermission()`. Cambiato a `!isQuiz`: tutti i partecipanti di una caccia (organizer incluso) devono concedere camera/GPS/orientation. Il `PermissionsGate` resta no-op per il photo_quiz (tutte le `require*` props false).
+
+### #4 — Pre-check kickoff lato client (R1)
+
+Se l'organizer faceva "Inizia Partita" prima del `scheduledKickoff`, la rule `isWithinTimeWindow` (firestore.rules:344) rejettava ogni cattura con `permission-denied` criptico. **Fix**: `captureItemTransaction` ora legge `scheduledKickoff` dentro la transazione e, se `Date.now() < scheduledKickoff`, lancia `Error("L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm.")`. La rule resta come ultimo guard server-side.
+
+### #5 — Mobile scroll/safe-area sistemico (R2+R5)
+
+Pattern ricorrente sotto la bottom-nav `h-16 + pb-safe`. Nuova utility `.pb-nav-safe` = `calc(4rem + env(safe-area-inset-bottom))` (vedi `src/index.css`). Applicata a IlBivacco, PersonalLibrary, IlBaule cropper, GameCreator step 0/1/2, AudioSessionCreate, **e in R5** a LaPiazza, ProfiloPersonale, AudioSessionsList, AudioSessionDJ, AudioSessionListener (queste ultime quattro avevano anche `pt-20/24` orfani e mancavano di `h-full overflow-y-auto`). `DialogContent` ora usa `max-h-[min(90vh,90dvh)]` per non venire troncato dalla collapse della barra Safari.
+
+### Test rule aggiunti (R1)
+
+Tre regression test in `firestore.rules.test.ts` describe `12. Game Events Security`:
+- `items.update rejected when caller is not in participants` — chiude la diagnosi #1.
+- `items.update rejected before scheduledKickoff (time window)` — chiude la diagnosi #4.
+- `items.update succeeds for joined organizer in active window` — happy-path post-fix.
+
+### Riferimento alle Sporche (post-2026-05-07)
+
+- **#14 Teleporter**: invariata, già chiusa.
+- **#17/#22**: invariate.
+- **Nuovi rischi**: **nessuno** — i fix di R1-R5 sono tutti UX/difensivi. La rule `items.update` resta come ultimo guard, ora solo accompagnata da messaggi user-friendly lato client.
 
 ---
 

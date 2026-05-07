@@ -197,3 +197,19 @@ Ogni test usa un `firestore.rules.test.ts` (giochi) e `firestore.rules.audio.tes
 - `audio_sessions/{}/queue.update` Theme Hijacker (8 casi: transition valid, shortcut blocked, metadata immutability, pointsAwarded cap, listener forbidden)
 
 Totale: ~24 nuovi test rule oltre i preesistenti.
+
+**Estensione R1 — UX round 2026-05-07:** 3 nuovi test rule regression in `firestore.rules.test.ts` describe `12. Game Events Security` documentano il comportamento atteso post-fix client (auto-join organizer come participant; pre-check tempo client):
+
+- **`items.update rejected when caller is not in participants`** — un utente approved che non ha fatto `setRSVP` non può catturare. La precondizione `isEventParticipant(eventId)` resta inviolata. Pre-fix `createGameEvent` non upsertava il participant doc per l'organizer, quindi questo caso si manifestava sempre per chi creava la propria caccia; il client R1 chiama ora `setRSVP(organizerId, 'joined')` automaticamente, ma la rule deve restare a guardia di chiunque (es. utente esterno con un eventId rubato).
+- **`items.update rejected before scheduledKickoff (time window)`** — `isWithinTimeWindow(eventId)` richiede `request.time >= scheduledKickoff`. Test conferma che anche un participant joined viene respinto se l'evento è formalmente `active` ma il kickoff schedulato è ancora nel futuro. R1 sul client surface un alert user-friendly (`"L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm."`) prima di hittare la rule.
+- **`items.update succeeds for joined organizer in active window`** — happy-path positive control. Organizer joined come participant + event active + within window + payload con immutabilità rispettata + `serverTimestamp()` su `collectedAt` → cattura accettata.
+
+**Niente nuove Sporche introdotte da R1-R5.** I fix UX sono difensivi/UX-only:
+- `useDeviceOrientation` `available` flag è puramente client-side, nessuna superficie nuova esposta lato Firestore.
+- Rimozione del `rotate` keyframed in `ARCaptureLayer` è UX-only.
+- `.pb-nav-safe` utility e `dvh` sui modali sono CSS.
+- `LaMappa` z-index del filtro è z-stack interno.
+- `QuizHostCreateRound` `posts.query` ora `limit(50)` — riduce superficie di attacco per memory exhaustion (mitigazione difensiva, non rule change).
+- `IlBaule` pre-flight + guest CTA, datetime hint, error message — UX/a11y.
+
+I 3 nuovi test sono **regression locks**: documentano che l'auto-join organizer client-side e il kickoff guard server-side devono restare entrambi. Se in futuro il client smettesse di fare l'auto-join (es. refactor di `createGameEvent`), il primo test rule fallirebbe al CI, segnalando il regression prima che l'organizer ne accusasse il sintomo in produzione.

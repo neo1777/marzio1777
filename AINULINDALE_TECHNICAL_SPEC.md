@@ -92,17 +92,20 @@ L'estetica è coerente: dark-flame (nero ardesia + ambra + crimson), vinile che 
 - **Le Sessioni del Coro** (§6) — vivono solo quando un DJ apre una sessione. Si appoggiano alla Biblioteca per scegliere cosa proporre/suonare.
 - **WebRTC P2P** (§8) — è il tessuto invisibile che fa funzionare la sessione. Senza, la sessione cade in fallback "DJ suona dalla SUA biblioteca", funzionalmente ridotto ma non rotto.
 
-### Stack tecnico (zero-dipendenze-nuove)
+### Stack tecnico (preferenza native, valutazione caso per caso)
 
-- **IndexedDB** nativo (no Dexie, no idb)
-- **Web Audio API** nativo (no Howler, no Tone.js — già presente come dipendenza ma riusiamo il minimo)
-- **WebRTC** nativo (no PeerJS, no simple-peer)
-- **Media Session API** nativo (lock screen integration)
-- **Wake Lock API** nativo (già in uso per la Caccia)
-- **Firestore + Firestore real-time listeners** (già nello stack)
-- **React 19 + Tailwind + Framer Motion + Lucide** (già nello stack)
+L'Ainulindalë è stato costruito **senza nuove dep npm** rispetto al core dell'app. Non è un vincolo religioso ma una scelta deliberata: l'app deve restare leggera anche su cellulari vecchi e ogni wrapper opaco su API native già nostre (Dexie su IndexedDB, simple-peer/PeerJS su WebRTC, Howler/Tone.js su Web Audio) sarebbe overhead senza pagare il suo costo runtime/memoria.
 
-Bundle delta stimato: **~40KB minified+gzipped**.
+- **IndexedDB** nativo — schema custom è chiaro e debuggabile; Dexie/idb sarebbero astrazione senza guadagno per il nostro caso.
+- **Web Audio API** nativo — controllo pieno del grafo (gain → eqLow → eqMid → eqHigh → analyser → destination), niente buffer interni opachi. Una libreria audio engine completa (Tone.js/Howler) costerebbe runtime/memoria fuori scala.
+- **WebRTC** nativo — il signaling Firestore-as-signaling è un asset architetturale, non overhead. PeerJS/simple-peer maschererebbero la complessità senza far guadagnare nulla.
+- **Media Session API** nativo (lock screen integration).
+- **Wake Lock API** nativo (già in uso per la Caccia).
+- **Firestore + real-time listeners**, **React 19 + Tailwind + Framer Motion + Lucide** (già nel core).
+
+Bundle delta del modulo Ainulindalë: **~40KB minified+gzipped**.
+
+**Apertura per il futuro**: una dep esterna è valutabile se passa il filtro "costo runtime su mobile entry-level" e migliora l'UX in modo chiaro. Esempio concreto: `WaveSurfer.js` per un visualizer audio rich potrebbe rientrare se il bundle resta sotto i 30KB e l'init non blocca il main-thread su un Android 8 da €100. La procedura è in `CLAUDE.md` Convenzione 1.
 
 ---
 
@@ -1176,3 +1179,32 @@ Aggiunto bottone Trash2 per cancellare audio_sessions. Visibile solo a Root. La 
 
 - `src/components/audio/AddToSessionModal.tsx` — modal per il flusso "Aggiungi a un Coro" da Library / FullScreenPlayer.
 - `src/components/ErrorBoundary.tsx` — class component globale wrappato in `App.tsx` tra `<BrowserRouter>` e `<Suspense>`. Cattura render errors di tutti i moduli incluso L'Ainulindalë.
+
+---
+
+## Aggiornamento — round UX 2026-05-07 (post user-test mobile)
+
+Quattro punti del modulo audio toccati in R1-R5 (vedi `STATO_PROGETTO.md` per il dettaglio cronologico completo).
+
+### `IlAinulindale.tsx:73` — Routes container `min-h-0` (R2)
+
+`<div className="flex-1 overflow-hidden relative">` → `<div className="flex-1 min-h-0 overflow-hidden relative">`. Senza `min-h-0`, il flex item con default `min-height: auto` saltava l'overflow del parent in casi di nested flex (regola Flexbox). Le child page (PersonalLibrary, AudioSessionsList, ecc.) hanno comunque sempre bisogno del loro `h-full overflow-y-auto` perché il container Routes resta `overflow-hidden` per design (lo scroll è di proprietà della child).
+
+### Tutte e 4 le audio page con scroll fix (R5, post-mortem)
+
+Pre-fix solo `PersonalLibrary` aveva `flex flex-col h-full ... overflow-y-auto`. Le altre quattro mancavano e su mobile non scrollavano:
+
+- **`AudioSessionsList`** — wrap esterno `<div className="h-full overflow-y-auto">` + rimosso `pt-24` orfano + inner `pb-nav-safe md:pb-8`.
+- **`AudioSessionCreate`** — wrap esterno `<div className="h-full overflow-y-auto">` (R2 aveva già rimosso `pt-24` ma non aggiunto overflow).
+- **`AudioSessionDJ`** — wrap esterno + `min-h-full` invece di `h-full` su inner (parent ora vincola altezza) + rimosso `pt-20` orfano.
+- **`AudioSessionListener`** — stesso pattern.
+
+Il `pt-20`/`pt-24` orfano nelle audio page era una compensazione doppia: il main wrapper di `Layout` ha già `pt-16 md:pt-0` per l'header mobile globale, e `IlAinulindale` ha header proprio + tabs `shrink-0` sopra il container Routes. Quindi `pt-20`/`pt-24` aggiungeva spazio inutile sopra il contenuto.
+
+### `ARCaptureLayer` — niente più `rotate` keyframed (R5)
+
+Non strettamente Ainulindalë ma sfiora i pattern audio (entrambi vivono in moduli "premium UX"). Rimossa la keyframe `rotate: [0, 5, -5, 0]` che faceva traballare l'icona AR indipendentemente dal gyro. Resta solo lo `scale: [1, 1.05/1.1, 1]` come pulse indicator. Vedi `GAMING_SYSTEM_IT.md` per la diagnosi completa.
+
+### `useAudioQueue.proposeTrackToSession` — auto-join participant (round 2026-05-06, già documentato sopra ma rilevante per R1)
+
+Stessa idea applicata in R1 a `createGameEvent` per gli organizer di game_events: il pattern "upserta il participant doc prima di scrivere su sub-collection gating" è ora un'invariante di onboarding. Replicabile per qualunque write futura su sub-collection di `audio_sessions`/`game_events` che richieda `isXxxParticipant` come precondizione rule.

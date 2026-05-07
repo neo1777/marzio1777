@@ -137,9 +137,25 @@ Puoi installarci facilmente senza intasare lo Store!
 
 ---
 
-## 📋 Aggiornamenti recenti — round UX 2026-05-06
+## 📋 Aggiornamenti recenti
 
-Sessione di stabilizzazione UX e bug-fix dopo i test utente in produzione. Cinque commit (`c98bb30 → c48ea8e`) di hardening client-side. Cose che vedi cambiate nell'app:
+### Round UX 2026-05-07 — post user-test mobile
+
+Cinque commit (R1→R5: `248b316`, `12131cf`, `b7126cd`, `f659c6b`, `f5c1cab`) dopo il primo test reale in produzione su device mobile/desktop. Cose che vedi cambiate nell'app:
+
+- **Caccia AR funzionante anche per chi crea il gioco.** Prima, l'organizzatore di una caccia che provava a giocare il proprio evento riceveva sempre `Missing or insufficient permissions` al tap di cattura. Adesso `createGameEvent` aggiunge l'organizer come partecipante "joined" automaticamente.
+- **Nessun più "icona AR che traballa".** L'icona dell'oggetto da catturare aveva una rotazione decorativa costante che faceva traballare la cattura indipendentemente dal giroscopio. Rimossa: ora l'icona si sposta solo se ruoti il device (gyro), altrimenti resta ferma con un effetto "pulsante" più sobrio.
+- **Modalità desktop/senza giroscopio chiara.** Se entri in cattura AR da un device che non ha il giroscopio (PC, tablet vecchio), l'icona resta al centro con un microcopy ambra "Modalità senza giroscopio: l'oggetto non si muove con il device" — niente più finto AR ingannevole.
+- **Permessi richiesti anche all'organizer di una caccia.** Prima, chi creava una caccia saltava la schermata di permessi (camera/GPS/giroscopio); su iOS questo significava che il prompt del giroscopio non scattava mai. Ora tutti passano dalla schermata, anche l'organizer.
+- **Messaggio chiaro se inizi prima del kickoff.** Se "Inizia Partita" parte prima dell'orario di kickoff schedulato e provi a catturare, vedi `"L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm."` invece di un errore criptico di permessi.
+- **Pagine che scorrono anche su cellulari piccoli.** Tutte le pagine creator/eventi/musica e i modali ora scrollano fino in fondo (incluso l'ultimo elemento, prima nascosto sotto la barra inferiore di iPhone) e i modali si adattano alla barra Safari che si chiude/riapre durante lo scroll.
+- **Mappa: filtro "Mappa Ricordi" sopra i pin.** Il pannello di filtro sulla pagina Mappa non finisce più dietro un pin aperto.
+- **Performance picker quiz.** Aprire il wizard "Crea round quiz" su una community con tanti post non scarica più tutti i ricordi in memoria — solo i 50 più recenti, con la ricerca testuale che filtra ulteriormente.
+- **IlBaule più gentile coi guest e con date programmate.** Se sei guest e capiti per sbaglio sul Baule, hai un bottone "Torna al Paese". Se programmi una pubblicazione ma dimentichi di mettere data/ora, l'app te lo dice prima di salvare.
+
+### Round UX 2026-05-06 — post user-test desktop
+
+Sessione precedente di stabilizzazione UX e bug-fix dopo i primi test utente. Cinque commit (`c98bb30 → c48ea8e`):
 
 - **Avatar reali nei post e nella lobby caccia.** L'avatar dell'autore (foto Google) ora appare nei post de La Piazza e nella lista partecipanti delle partite — finora era usato un fallback iniziale colorata. Per i post pubblicati prima di questa update il fallback rimane (no migration).
 - **Wizard creazione caccia più sicuro.** Il bottone "Avanti" ora è disabilitato finché non hai compilato titolo, descrizione e data; la data parte già pre-popolata a "ora + 10 minuti"; raggio e numero oggetti sono clampati a range sensati; il "Salva" sulla mappa è disabled finché non hai piazzato almeno un oggetto.
@@ -149,9 +165,9 @@ Sessione di stabilizzazione UX e bug-fix dopo i test utente in produzione. Cinqu
 - **Player audio più scopribile.** I controlli "Sfondo" (mantieni schermo attivo) e "EQ" (equalizzatore 3 bande, ±12dB) hanno ora pill chip etichettati nel FullScreenPlayer; bottone X per chiudere il player; "Aggiungi a un Coro" funziona dalla biblioteca e dal player a schermo intero (anche se non sei già listener della sessione, ti aggiunge automaticamente).
 - **Scrollbar in tema.** Le scrollbar di sistema su desktop sono ora sottili e in palette (verde scuro su dark, grigio su light); su mobile e nelle liste swipeable sono nascoste come previsto.
 
-Il dettaglio tecnico del round è in `STATO_PROGETTO.md` (visibile dalla pagina Istruzioni → tab "Stato Progetto").
+Il dettaglio tecnico di tutti i round è in `STATO_PROGETTO.md` (visibile dalla pagina Istruzioni → tab "Stato Progetto").
 
 ---
 
 *Ideato a Marzio, scritto con codice, sudore ed amato da Neo1777.*
-*Ultima riedizione del README: Maggio 2026, con l'arrivo del Campo dei Giochi e de L'Ainulindalë.*
+*Ultima riedizione del README: Maggio 2026, con l'arrivo del Campo dei Giochi, de L'Ainulindalë e le sessioni di stabilizzazione UX 2026-05-06 e 2026-05-07.*

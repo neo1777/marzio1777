@@ -1,12 +1,17 @@
 # MIGRATION — Marzio1777
 
-**Stato (Maggio 2026, post-batch B7 + Fase 2 + Fase 2.5 + UX round 2026-05-06):**
+**Stato (Maggio 2026, post-batch B7 + Fase 2 + Fase 2.5 + UX round 2026-05-06 + UX round 2026-05-07):**
 
-Aggiornamento finale Maggio 2026: TUTTI i punti della roadmap originale di
+Aggiornamento Maggio 2026: TUTTI i punti della roadmap originale di
 Fase 2 sono chiusi e deployati su `marzio1777`. Fase 2.5 chiusa al 75%
-(3 di 4 gagliardetti continuous-tracking). Sessione di stabilizzazione UX
-del 6 maggio chiusa (cinque commit `c98bb30 → c48ea8e`, vedi
-`STATO_PROGETTO.md` per il changelog completo).
+(3 di 4 gagliardetti continuous-tracking). Due sessioni di stabilizzazione UX
+post user-test:
+- **2026-05-06 (5 commit `c98bb30 → c48ea8e`)** — primo round desktop: avatar reali, wizard caccia con validazione, ricerca città Nominatim, GPS forgiving, surface error.message, player audio scopribile.
+- **2026-05-07 (5 commit R1→R5: `248b316`, `12131cf`, `b7126cd`, `f659c6b`, `f5c1cab`)** — secondo round mobile: organizer auto-join in `createGameEvent` (chiude `Missing or insufficient permissions` su cattura), `useDeviceOrientation` flag `available` + fallback statico in `ARCaptureLayer` per device senza gyro, rimosso `rotate` keyframed (chiude "icona AR che traballa"), `PermissionsGate` non skippato per organizer treasure_hunt, kickoff time pre-check, `.pb-nav-safe` utility + `dvh` modali, scroll fix sistemico su tutte le 4 audio pages (`AudioSessionsList`/`Create`/`DJ`/`Listener`), `LaPiazza`/`ProfiloPersonale` `pb-nav-safe`, z-index `LaMappa` filter `z-[400] → z-[1100]`, posts query `limit(50)` in `QuizHostCreateRound`, `IlBaule` validation pre-flight + guest CTA, datetime-local hint, error message user-friendly. 3 nuovi test rule regression in `firestore.rules.test.ts` (organizer non in participants/pre-kickoff/joined-organizer happy path).
+
+Vedi `STATO_PROGETTO.md` per il changelog completo round per round.
+
+**Riconsiderazione 2026-05-08 della filosofia "zero new dependencies"** — la regola è stata ammorbidita da "vincolo religioso" a "preferire native, valutare il costo caso per caso". L'app deve restare leggera anche su cellulari vecchi, ma una nuova dep è valutabile se passa il filtro "costo runtime su mobile entry-level" e migliora l'UX in modo chiaro. Vedi `CLAUDE.md` Convenzione 1 per la procedura completa e i candidati ragionevoli (Radix, react-hook-form+zod, date-fns, WaveSurfer.js, ecc.).
 
 Resta in Fase 3:
 - L'Ospite Perfetto (richiede CF heartbeat host)

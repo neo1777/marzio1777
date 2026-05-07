@@ -25,7 +25,7 @@ Questo documento fornisce una panoramica professionale e altamente dettagliata d
 - **P2P Transfer:** **WebRTC** nativa con signaling via Firestore (no PeerJS, no simple-peer, no signaling server dedicato).
 - **Lock Screen & Background Audio:** **Media Session API** + **Wake Lock API** native.
 
-> **Filosofia "Zero-Dipendenze-Nuove":** l'introduzione di tutti i moduli successivi al core (Campo dei Giochi, L'Ainulindalë) **non aggiunge alcuna dipendenza npm**. Il livello AR è realizzato con API native browser (`navigator.mediaDevices.getUserMedia`, `DeviceOrientationEvent`, `navigator.wakeLock`, `navigator.vibrate`). Geolocazione tramite `Geolocation.watchPosition`. Calcoli geo (Haversine, disk point picking) come utility pure interne. WebRTC P2P, IndexedDB, ID3 parsing, Web Audio Engine, Media Session — tutto su API native, zero npm. Decisioni documentate nelle sezioni §4.7-§4.14 con motivazioni tecniche complete. Bundle delta complessivo (Campo dei Giochi + L'Ainulindalë): **~70KB minified+gzipped**.
+> **Filosofia delle dipendenze npm — preferire native, valutare il costo** (rivista 2026-05-08, in precedenza "Zero-Dipendenze-Nuove" come vincolo rigido). L'app deve restare leggera, professionale, fluida anche su cellulari vecchi: ogni nuova dep costa bundle, parse-time, RAM, profondità di astrazione. Tutti i moduli post-core (Campo dei Giochi, L'Ainulindalë) sono stati costruiti senza nuove dep. Il livello AR usa API native browser (`navigator.mediaDevices.getUserMedia`, `DeviceOrientationEvent`, `navigator.wakeLock`, `navigator.vibrate`); la geolocazione `Geolocation.watchPosition`; geo-math (Haversine, disk point picking) come utility pure interne; WebRTC P2P, IndexedDB, ID3 parsing, Web Audio Engine, Media Session — tutti nativi. Bundle delta complessivo Campo dei Giochi + L'Ainulindalë: **~70KB minified+gzipped**. *Però* questo non è un vincolo religioso: una nuova dep si valuta caso per caso (es. `zod` per validation runtime, `@radix-ui/react-*` per A11y avanzata, `WaveSurfer.js` per visualizer audio rich) e si accetta se il bilancio "costo runtime su mobile entry-level" passa il filtro. Vedi `CLAUDE.md` Convenzione 1 per la procedura completa. Decisioni tecniche documentate nelle sezioni §4.7-§4.14.
 
 ---
 
@@ -805,6 +805,60 @@ Cinque commit (`c98bb30 → c48ea8e`) di stabilizzazione UX e bug-fix client-sid
 ### Build
 
 - Script build: `vite build && cp dist/index.html dist/404.html` per il SPA-on-Pages 404 trick.
+
+---
+
+## Aggiornamento — round UX 2026-05-07 (post user-test mobile)
+
+Cinque commit (R1→R5: `248b316`, `12131cf`, `b7126cd`, `f659c6b`, `f5c1cab`) di stabilizzazione UX dopo il primo test reale mobile/desktop in produzione. Tutti retrocompatibili. Niente schema/rule changes (tranne 3 nuovi rule test regression).
+
+### Gameplay AR — capture organizer + no-sensor fallback (R1+R5)
+
+- **`useGameEvents.createGameEvent(eventData, organizerIdentity?)`** — auto-upsert di `participants/{organizerId}.status='joined'` via `setRSVP`. Senza, la rule `items.update` (firestore.rules:342) rifiuta ogni cattura per il primo organizer del proprio gioco con `Missing or insufficient permissions`. Schema participant identico al ramo create di `setRSVP`, rule-conformante con `participants.create` (firestore.rules:374).
+- **`useGameEvents.captureItemTransaction`** — pre-check `Date.now() < scheduledKickoff` dentro la transazione (l'event read è già lì); throw user-friendly `"L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm."`. La rule `isWithinTimeWindow` resta come ultimo guard.
+- **`useDeviceOrientation` — flag `available: boolean`**. Default `false`; flip a `true` solo dopo aver effettivamente ricevuto un `DeviceOrientationEvent`. Timer 5s: se `permission` è `granted`/`prompt` ma nessun evento arriva, `available` resta `false`. Distingue device senza gyro fisico (desktop, VM) da permission negato.
+- **`ARCaptureLayer`** (R1+R5) — `useStaticPlacement = !sensorAvailable || prefersReducedMotion`; quando vero, `xOffset/yOffset = 0` e l'animazione non applica `rotate`. **R5** ha rimosso il `rotate: [0, 5, -5, 0]` keyframed completamente: era una keyframe decorativa indipendente dal gyro che faceva "traballare" l'icona anche su mobile con sensore. Ora l'animazione è solo `scale: [1, 1.05/1.1, 1]`.
+- **`GameLobby.tsx:47`** — guard `!isOrganizer → !isQuiz`. Anche l'organizer di un treasure_hunt deve passare dal `PermissionsGate` per concedere camera/GPS/orientation; su iOS è quello che fa scattare `DeviceOrientationEvent.requestPermission()`.
+
+### Mobile scroll/safe-area sistemico (R2+R5)
+
+- **`src/index.css` — utility `.pb-nav-safe`** = `padding-bottom: calc(4rem + env(safe-area-inset-bottom))` (`@layer utilities`). Riutilizzabile su qualsiasi pagina che scrolla sotto la bottom-nav.
+- **`DialogContent`** (`src/components/ui/index.tsx`) — `max-h-[min(90vh,90dvh)] overflow-y-auto`. `dvh` riflette il chrome corrente del browser; `min(vh,dvh)` fallback.
+- **`IlBivacco` riga 71** — `pb-8 → pb-nav-safe md:pb-8`; `CreateEventModal` `max-h-[90vh] → min(90vh,90dvh)`.
+- **`EventDetailModal`** — `max-h-[95vh] sm:max-h-[85vh]` switched to `min(...,...dvh)`; header `pt-12 → pt-8 sm:pt-12`.
+- **`PersonalLibrary`** — `pb-32 → pb-nav-safe md:pb-32`.
+- **`IlBaule`** — cropper `h-[40vh] → h-[min(40vh,40dvh)] min-h-[300px]`; preview `max-h-[60vh] → max-h-[min(60vh,60dvh)]`.
+- **`AudioSessionCreate`** — rimosso `pt-24` orfano (Layout già compensa).
+- **`IlAinulindale.tsx:73`** — Routes container `flex-1 overflow-hidden → flex-1 min-h-0 overflow-hidden`.
+- **`GameCreator` step 0/1/2** — wrapper standardizzato a `h-full min-h-0 flex flex-col overflow-y-auto pb-nav-safe md:pb-6`.
+- **R5 — pagine audio** — `AudioSessionsList`, `AudioSessionCreate`, `AudioSessionDJ`, `AudioSessionListener` mancavano tutte di `h-full overflow-y-auto`. Wrap esterno `<div className="h-full overflow-y-auto">` su ognuna; rimossi `pt-20`/`pt-24` orfani (compensavano un header che `IlAinulindale` ha già come `shrink-0`); inner wrapper standardizzato con `pb-nav-safe md:pb-8`.
+- **R5 — `LaPiazza:145` e `ProfiloPersonale:110`** — `pb-8 → pb-nav-safe md:pb-8`.
+
+### Mappe overlay & memory leak (R3)
+
+- **`LaMappa.tsx:178`** — z-index del filtro `z-[400] → z-[1100]`. Leaflet stratifica i pane (`tilePane=200`, `markerPane=600`, `popupPane=700`); il `z-[400]` lasciava il filtro dietro i popup. Aggiunto `max-w-[calc(100%-3rem)]`.
+- **`QuizHostCreateRound.tsx:55`** — `query(collection 'posts'), orderBy('timestamp','desc'), limit(50)`. Pre-fix il listener `onSnapshot` caricava tutti i posts (con cover base64) ad ogni apertura del wizard.
+
+### Polish form/error/a11y (R4)
+
+- **`IlBaule.handleUpload`** — pre-flight `if (visibilityStatus === 'scheduled' && !visibilityTime)` con alert esplicito (pre-fix il post veniva salvato senza data e non appariva mai in Piazza).
+- **`IlBaule` guest empty state** — CTA "Torna al Paese" con `navigate('/dashboard/piazza')`.
+- **`QuizHostCreateRound.handleAutoGenerate`** — error handler con linguaggio user-friendly italiano, plus `try/catch` per failure di rete/decode prima silenziati.
+- **`PhotoQuizPlay.handleSelectAnswer`** — alert con headline friendly + `console.error('[PhotoQuizPlay] ...')` per filtro DevTools.
+- **`GameCreator` kickoff input** — `htmlFor="kickoff-input"`, `id`, `aria-describedby="kickoff-hint"`, hint "Formato: AAAA-MM-GG HH:mm (ora locale). Almeno 30 secondi nel futuro." (Firefox non mostra picker datetime-local).
+
+### Test rule regression (R1)
+
+`firestore.rules.test.ts` describe `12. Game Events Security` — tre nuovi casi:
+- `items.update rejected when caller is not in participants`
+- `items.update rejected before scheduledKickoff (time window)`
+- `items.update succeeds for joined organizer in active window`
+
+Suite verde 61/63 (i 2 fail su `posts` like/unlike sono **pre-esistenti** sul commit `c9b9eab`, verificato con `git stash` + rerun; non legati a R1).
+
+### Note di processo
+
+R5 è il post-mortem di R1-R4. I sub-agent Explore avevano dato falsi positivi (Layout.tsx già conforme) e veri positivi mancati (4 pagine audio senza `overflow-y-auto`). Lezione: per pattern ricorrenti (`pb-X`, `pt-NX`, `max-h-[Nvh]`, `overflow-hidden` parent senza child scrollabile) fare `grep -rn` esaustivo e leggere ogni occorrenza prima di chiudere il round. Documentato in `CLAUDE.md` Convenzione 5.
 
 ---
 

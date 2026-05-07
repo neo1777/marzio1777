@@ -26,7 +26,7 @@ Marzio1777 was born as a digital Town Square. The Game Field is its courtyard: t
 
 The principles are three, and we religiously stick to them when choosing what to include and what to leave out:
 
-**Principle 1 — Reuse, not Reinvention.** Everything already in the app (post archive, points system, Bivouac events, map, RSVP, RBAC roles, like particles) is reused as fuel for the games module. We don't build parallel economies, we don't duplicate RSVP flows, we don't introduce new heavy libraries. The "Zero-New-Dependencies" philosophy is an explicit design constraint: the gaming module adds ~30KB to the final bundle, all React + pure TypeScript utility code. The same constraint has been rigorously maintained with the arrival of L'Ainulindalë (audio module): zero npm dependencies added, +40KB bundle. Total post-MVP: ~70KB.
+**Principle 1 — Reuse, not Reinvention.** Everything already in the app (post archive, points system, Bivouac events, map, RSVP, RBAC roles, like particles) is reused as fuel for the games module. We don't build parallel economies and we don't duplicate RSVP flows. The default stance on npm dependencies is "*prefer native, weigh the cost*": the gaming module was built with no new external deps (~30KB of bundle, all React + pure TypeScript utilities), and the same applies to L'Ainulindalë (~40KB with native Web Audio / WebRTC / IndexedDB). Total post-MVP: ~70KB. This isn't a religious constraint but the default that has paid off in lighter bundle and smooth behaviour even on older phones. New dependencies are evaluated case by case when worthwhile (e.g. crypto libraries, runtime validation, advanced A11y, richer audio visualisers) and only after their runtime cost on entry-level mobile has been verified — see `CLAUDE.md` Convention 1 for the full procedure.
 
 **Principle 2 — Marzio first.** This isn't an MMO. It's not a competitive game for professional gamers. It's a village app, private, whitelisted, where Marziesi and holiday-makers have fun together. Technical choices reflect this scale: high tolerance for non-automated cheating (if Mario plays from the couch pretending to be out, it gets discovered at the next pizza night), no thematic filters (the admin can name the hunt "Amsterdam Mode" and populate it with 🍁 emojis without issues), emphasis on social experience rather than surgical precision.
 
@@ -781,6 +781,49 @@ Summary of changes to the Game Field module in the May 6 UX stabilisation sessio
 - **#17 Score Forger**: hardened B7.
 - **#20 Speed Demon**: no change.
 - New risks introduced by the 2026-05-06 round: **none**.
+
+---
+
+## Updates — UX round 2026-05-07 (post mobile user-test)
+
+Five UX stabilisation commits following the first user-test on real mobile/desktop devices in production. All backwards-compatible, no schema/rule changes (except 3 new regression rule tests).
+
+### #1 — Organizer auto-join as participant (R1, `248b316`)
+
+**Diagnosis.** A treasure_hunt organizer testing their own game always saw `Missing or insufficient permissions` on capture tap. Root cause: rule `firestore.rules:342` (`items.update`) requires `isEventParticipant(eventId)`, but `createGameEvent` created the `game_event` without upserting `participants/{organizerId}`. The organizer was never a `joined` participant.
+
+**Fix.** `createGameEvent(eventData, organizerIdentity?)` now calls `setRSVP(eventId, organizerId, 'joined', identity)` after the `setDoc`. Participant schema mirrors the create branch of `setRSVP`, rule-conformant with `participants.create` (firestore.rules:374).
+
+### #2 — AR no-sensor fallback (R1+R5, `248b316` + `f5c1cab`)
+
+**Issue #1.** On desktop without gyroscope, `useDeviceOrientation` registered the listener but `DeviceOrientationEvent` never fired → `beta/gamma === 0` permanently → emoji glued to centre. **R1**: new derived flag `available: boolean` (true only after first event within 5s); `ARCaptureLayer` skips `xOffset/yOffset` when `!available || prefersReducedMotion` and shows an amber microcopy "Modalità senza giroscopio".
+
+**Issue #2.** Even on mobile with a working sensor, the icon "wobbled" because `rotate: [0, 5, -5, 0]` was a **constant keyframe independent of the gyro**. **R5**: removed the `rotate` keyframe entirely. Only the `scale: [1, 1.05/1.1, 1]` pulse remains. The gyro-driven x/y drift still works for users with a real sensor.
+
+### #3 — `PermissionsGate` not skipped for treasure_hunt organizer (R1)
+
+`GameLobby.tsx:47` had `!isOrganizer` as the gate guard. The organizer never saw the iOS `DeviceOrientationEvent.requestPermission()` prompt. Changed to `!isQuiz`: every hunt participant (organizer included) must grant camera/GPS/orientation. The gate stays no-op for photo_quiz (all `require*` props false).
+
+### #4 — Client-side kickoff pre-check (R1)
+
+If the organizer flipped the event to "active" before `scheduledKickoff`, the rule `isWithinTimeWindow` (firestore.rules:344) rejected every capture with cryptic `permission-denied`. **Fix**: `captureItemTransaction` now reads `scheduledKickoff` inside the transaction and, if `Date.now() < scheduledKickoff`, throws `Error("L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm.")`. The rule remains as the final server-side guard.
+
+### #5 — Systematic mobile scroll/safe-area (R2+R5)
+
+Recurring pattern under the bottom-nav `h-16 + pb-safe`. New `.pb-nav-safe` utility = `calc(4rem + env(safe-area-inset-bottom))` (see `src/index.css`). Applied in R2 to IlBivacco, PersonalLibrary, IlBaule cropper, GameCreator step 0/1/2, AudioSessionCreate, **and in R5** to LaPiazza, ProfiloPersonale, AudioSessionsList, AudioSessionDJ, AudioSessionListener (the last four also had orphan `pt-20/24` and were missing `h-full overflow-y-auto`). `DialogContent` now uses `max-h-[min(90vh,90dvh)]` so a long modal doesn't get cropped when Safari's URL bar collapses at runtime.
+
+### Rule regression tests (R1)
+
+Three new tests in `firestore.rules.test.ts` describe `12. Game Events Security`:
+- `items.update rejected when caller is not in participants` — covers diagnosis #1.
+- `items.update rejected before scheduledKickoff (time window)` — covers diagnosis #4.
+- `items.update succeeds for joined organizer in active window` — post-fix happy path.
+
+### Sporche reference (post-2026-05-07)
+
+- **#14 Teleporter**: unchanged, already closed.
+- **#17/#22**: unchanged.
+- **New risks**: **none** — R1-R5 are all UX/defensive fixes. The `items.update` rule remains the final guard, now just accompanied by user-friendly client-side messages.
 
 ---
 
