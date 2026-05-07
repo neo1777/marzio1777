@@ -96,9 +96,13 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
       const generator = questionGenerators[draft.questionType];
       const generated = await generator(selectedPost, posts);
       if (!generated) {
+        // User-facing language: avoid jargon ("generatore", "pool"). The host
+        // doesn't need to know whether the failure is missing metadata or a
+        // small candidate pool — just that this photo isn't a good source for
+        // this question type.
         alert(
-          'Generatore non disponibile per questo post (pool insufficiente o dati mancanti). ' +
-          'Prova con un altro post o compila manualmente.'
+          "Da questa foto non riesco a creare la domanda automaticamente (mancano dettagli o ci sono troppe poche foto simili). " +
+          'Puoi compilare la domanda a mano, oppure scegliere un\'altra foto come fonte.'
         );
         return;
       }
@@ -107,6 +111,12 @@ export default function QuizHostCreateRound({ eventId, hostId, roundId, roundNum
         options: generated.options,
         correctIndex: generated.correctIndex,
       });
+    } catch (e: any) {
+      // Network failure on the reverse-geocoding round, image decode error,
+      // etc. — surface the actual message so we can debug instead of leaving
+      // the user with a silent "nothing happened".
+      console.error('[QuizHostCreateRound] handleAutoGenerate failed', e);
+      alert(`Generazione automatica fallita: ${e?.message ?? 'errore sconosciuto'}. Riprova o compila a mano.`);
     } finally {
       setGenerating(false);
     }

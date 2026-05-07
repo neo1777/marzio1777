@@ -396,8 +396,9 @@ export default function GameCreator() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                  <div>
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Data/Ora Inizio</label>
-                    <input type="datetime-local" value={kickoff} onChange={(e) => setKickoff(e.target.value)} className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
+                    <label htmlFor="kickoff-input" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Data/Ora Inizio</label>
+                    <input id="kickoff-input" type="datetime-local" value={kickoff} onChange={(e) => setKickoff(e.target.value)} aria-describedby="kickoff-hint" className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none dark:text-white" />
+                    <p id="kickoff-hint" className="text-[10px] font-sans text-slate-500 dark:text-slate-400 mt-1">Formato: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">AAAA-MM-GG HH:mm</code> (ora locale). Almeno 30 secondi nel futuro.</p>
                  </div>
                  <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Moltiplicatore Punti (0.5 – 5.0)</label>

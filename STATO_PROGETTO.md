@@ -1294,6 +1294,77 @@ Leaflet e `QuizHostCreateRound` carica TUTTI i posts in memoria via
 
 ---
 
+## Sessione UX 2026-05-07 (round 4) — polish form, error messages, a11y minimo
+
+**Contesto.** Round di chiusura: piccoli polish UX scoperti durante
+l'audit ma non bloccanti. Surface error message user-friendly, validazione
+form mancante, CTA su empty state guest, hint su datetime-local.
+
+### Fix
+
+1. **`src/pages/IlBaule.tsx` — pre-flight `visibilityTime`**
+   - Pre-fix: se l'utente sceglie "Programmato" senza data, il post veniva
+     salvato come `visibilityStatus:'scheduled'` ma senza `visibilityTime`,
+     e poi non appariva nella Piazza (filtro client `visibilityTime <= now`
+     non passa con campo missing).
+   - Fix: pre-flight check in `handleUpload` con alert esplicito ("Hai
+     scelto 'Programmato' ma non hai impostato data e ora di visibilità.
+     Imposta una data o cambia il tipo di visibilità.").
+
+2. **`src/pages/IlBaule.tsx` — guest CTA**
+   - Pre-fix: empty state "Accesso in Lettura" senza link di uscita; il
+     guest che entrava per sbaglio rimaneva bloccato senza navigazione.
+   - Fix: aggiunto button "Torna al Paese" che fa `navigate('/dashboard/
+     piazza')`. `min-h-[48px]` per touch target minimo Material.
+
+3. **`src/components/QuizHostCreateRound.tsx` — error surface human**
+   - Pre-fix: `handleAutoGenerate` ritornava silenziosamente in caso di
+     `null` dal generator, con messaggio tecnico "Generatore non
+     disponibile (pool insufficiente o dati mancanti)".
+   - Fix: linguaggio user-friendly ("Da questa foto non riesco a creare
+     la domanda automaticamente — mancano dettagli o ci sono troppe poche
+     foto simili"). Aggiunto try/catch con `console.error` + alert per
+     errori di rete/decode che prima evaporavano.
+
+4. **`src/pages/PhotoQuizPlay.tsx` — error surface human**
+   - Pre-fix: `submitQuizAnswer` con catch che mostrava `Errore invio
+     risposta: ${e.message}` puro.
+   - Fix: messaggio leading user-friendly ("Non sono riuscita a inviare
+     la risposta… Aspetta il prossimo round o avvisa l'host"), preserva
+     `e.message` come dettaglio. Tag `[PhotoQuizPlay]` nel
+     `console.error` per facilitare il filtering DevTools.
+
+5. **`src/pages/GameCreator.tsx` — datetime-local a11y + hint**
+   - Aggiunto `htmlFor="kickoff-input"` sul label, `id="kickoff-input"`
+     sull'input, `aria-describedby="kickoff-hint"`. Hint testuale sotto
+     l'input: "Formato: AAAA-MM-GG HH:mm (ora locale). Almeno 30 secondi
+     nel futuro." Chiarisce il formato per Firefox (che non mostra
+     picker) e la regola di validazione client.
+
+### Note di test
+
+- `npm run lint` pulito.
+- `npm test` 63/63 unit verdi.
+- `npm run build` ~12s, bundle pulito.
+
+### File toccati
+
+`src/pages/IlBaule.tsx`, `src/components/QuizHostCreateRound.tsx`,
+`src/pages/PhotoQuizPlay.tsx`, `src/pages/GameCreator.tsx`.
+
+4 file, zero deps nuove. Niente schema/rule changes.
+
+### Cosa NON è in questo round (parking lot consapevole)
+
+- A11y profonda (focus management, screen reader full pass, contrast WCAG)
+- Toast system globale (resta `alert()` per ora)
+- Fix dei 2 rule test pre-esistenti su like/unlike (separato perché non
+  legato all'audit UX, va investigato a parte)
+- ErrorBoundary globale (parking lot finché non emerge una crash trace
+  concreta che lo giustifichi)
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

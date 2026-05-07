@@ -279,11 +279,23 @@ export default function IlBaule() {
 
   const handleUpload = async () => {
     if (!imagePreview || !user) return;
+
+    // Pre-flight: if the user picked "Programmato" but didn't set a date,
+    // the silent fall-through (riga 305-307) wrote the post as 'scheduled'
+    // without `visibilityTime`, which then never showed up because the
+    // Piazza filter requires `visibilityTime <= now`. Surface the gap up
+    // front so the user can pick a date instead of wondering where the
+    // post went.
+    if (visibilityStatus === 'scheduled' && !visibilityTime) {
+      alert('Hai scelto "Programmato" ma non hai impostato data e ora di visibilità. Imposta una data o cambia il tipo di visibilità.');
+      return;
+    }
+
     setLoading(true);
     try {
       const imageId = `${user.uid}_${Date.now()}`;
       const storageRef = ref(storage, `marzio_photos/${imageId}.jpg`);
-      
+
       await uploadString(storageRef, imagePreview, 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
@@ -338,7 +350,13 @@ export default function IlBaule() {
                  <BookOpen size={28} className="text-slate-400" />
               </div>
               <h3 className="text-xl font-serif font-bold text-slate-700 dark:text-slate-300 mb-2">Accesso in Lettura</h3>
-              <p className="text-sm font-sans text-slate-500 dark:text-slate-400 max-w-md">I visitatori non possono aggiungere foto al Baule. Contatta l'amministratore Root se desideri ottenere i permessi per contribuire ai ricordi.</p>
+              <p className="text-sm font-sans text-slate-500 dark:text-slate-400 max-w-md mb-6">I visitatori non possono aggiungere foto al Baule. Contatta l'amministratore Root se desideri ottenere i permessi per contribuire ai ricordi.</p>
+              <button
+                 onClick={() => navigate('/dashboard/piazza')}
+                 className="px-6 py-3 bg-[#2D5A27] hover:bg-[#23471f] text-white font-bold text-sm rounded-xl transition-colors min-h-[48px]"
+              >
+                 Torna al Paese
+              </button>
            </div>
         ) : step === 'upload' && (
           <div className="flex-1 flex flex-col justify-center space-y-8">

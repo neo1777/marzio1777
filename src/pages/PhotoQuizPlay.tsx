@@ -143,8 +143,13 @@ export default function PhotoQuizPlay() {
       try {
          await submitQuizAnswer(eventId, round.id, user.uid, profile.displayName || 'Anonimo', index);
       } catch (e: any) {
-         console.error(e);
-         alert(`Errore invio risposta: ${e?.message ?? e}`);
+         console.error('[PhotoQuizPlay] submit answer failed', e);
+         // Most likely failure here is the rule's `request.time < endsAt`
+         // window expiring between client-side timer reaching 0 and the
+         // tx commit, surfaced as PERMISSION_DENIED. Surface the raw
+         // message but lead with a friendly headline so the user knows
+         // it's recoverable (try again next round).
+         alert(`Non sono riuscita a inviare la risposta: ${e?.message ?? 'errore sconosciuto'}. Aspetta il prossimo round o avvisa l'host.`);
       }
    };
 
