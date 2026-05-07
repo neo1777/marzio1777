@@ -88,7 +88,7 @@ export default function PersonalLibrary({ onPlayTrack }: Props) {
             <p>La tua biblioteca è vuota o la ricerca non ha prodotto risultati.</p>
          </div>
       ) : (
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 pb-32">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 pb-nav-safe md:pb-32">
             {filteredTracks.map(track => (
                <TrackCard 
                   key={track.id} 

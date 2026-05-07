@@ -68,7 +68,7 @@ export default function IlBivacco() {
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-8 space-y-10 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto pb-nav-safe md:pb-8 space-y-10 scrollbar-hide">
         {loading ? (
            <div className="flex items-center gap-3 w-fit">
               <div className="w-2 h-2 rounded-full bg-[#f56a23] animate-pulse"></div>
@@ -237,7 +237,7 @@ function CreateEventModal({ onClose, user }: { onClose: () => void, user: any })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a2e16]/40 dark:bg-black/60 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white dark:bg-[#151e18] rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 dark:border-[#24352b] overflow-hidden flex flex-col max-h-[90vh]">
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white dark:bg-[#151e18] rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 dark:border-[#24352b] overflow-hidden flex flex-col max-h-[min(90vh,90dvh)]">
          <div className="p-4 border-b border-slate-100 dark:border-[#24352b] flex justify-between items-center bg-slate-50 dark:bg-[#1a261f]">
             <h3 className="font-serif font-bold text-lg text-[#1a2e16] dark:text-[#e2e8f0]">Organizza Appuntamento</h3>
             <button onClick={onClose} className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"><X size={20}/></button>

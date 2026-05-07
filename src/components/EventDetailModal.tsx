@@ -56,10 +56,10 @@ export default function EventDetailModal({ event, onClose, user }: { event: any,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-[#1a2e16]/60 dark:bg-black/70 backdrop-blur-md">
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white dark:bg-[#151e18] rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-100 dark:border-[#24352b] overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[85vh]">
-        
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white dark:bg-[#151e18] rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-100 dark:border-[#24352b] overflow-hidden flex flex-col max-h-[min(95vh,95dvh)] sm:max-h-[min(85vh,85dvh)]">
+
         {/* Header Immagine/Titolo */}
-        <div className="relative bg-[#2D5A27] dark:bg-[#1a261f] pt-12 pb-4 px-6 text-center text-white shrink-0">
+        <div className="relative bg-[#2D5A27] dark:bg-[#1a261f] pt-8 sm:pt-12 pb-4 px-6 text-center text-white shrink-0">
            <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"><X size={18} /></button>
            <h2 className="text-2xl font-serif font-bold text-white mb-1 shadow-sm">{event.title}</h2>
            <p className="text-sm text-green-100 font-medium flex items-center justify-center gap-2">

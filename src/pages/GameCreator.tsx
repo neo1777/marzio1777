@@ -346,9 +346,9 @@ export default function GameCreator() {
 
   if (step === 0) {
       return (
-         <div className="max-w-2xl mx-auto h-full flex flex-col py-6 px-4">
+         <div className="max-w-2xl mx-auto h-full min-h-0 flex flex-col py-6 px-4 overflow-y-auto pb-nav-safe md:pb-6">
             <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-6 flex items-center gap-2">
-               <Trophy className="text-[#2D5A27] dark:text-[#42a83a]" /> 
+               <Trophy className="text-[#2D5A27] dark:text-[#42a83a]" />
                Nuovo Evento di Gioco
             </h1>
             <p className="text-slate-500 mb-8">Scegli che tipo di esperienza vuoi organizzare per i marziesi.</p>
@@ -378,7 +378,7 @@ export default function GameCreator() {
 
   if (step === 1) {
      return (
-        <div className="max-w-2xl mx-auto h-full flex flex-col py-6 px-4 overflow-y-auto">
+        <div className="max-w-2xl mx-auto h-full min-h-0 flex flex-col py-6 px-4 overflow-y-auto pb-nav-safe md:pb-6">
            <div className="flex items-center gap-4 mb-6">
               <button onClick={() => setStep(0)} className="p-2 bg-slate-200 dark:bg-slate-800 rounded-lg"><ChevronRight size={20} className="rotate-180" /></button>
               <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
@@ -565,7 +565,7 @@ export default function GameCreator() {
   }
 
   return (
-    <div className="h-full flex flex-col pt-4">
+    <div className="h-full min-h-0 flex flex-col pt-4">
       <div className="flex items-center justify-between px-4 mb-4 gap-2">
          <h1 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-200 truncate">Posiziona gli item ({items.length})</h1>
          <div className="flex gap-2 shrink-0">

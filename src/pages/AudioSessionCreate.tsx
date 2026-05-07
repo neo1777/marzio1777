@@ -84,7 +84,7 @@ export function AudioSessionCreate() {
    };
 
    return (
-      <div className="max-w-xl mx-auto p-4 sm:p-8 pt-24 space-y-6">
+      <div className="max-w-xl mx-auto p-4 sm:p-8 pb-nav-safe md:pb-8 space-y-6">
          <h1 className="text-3xl font-bold">Nuovo Coro</h1>
          
          <Card className="bg-card/50 backdrop-blur-md shadow-lg border-primary/20">

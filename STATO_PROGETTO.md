@@ -1154,6 +1154,97 @@ già rule-conforme con la rule esistente).
 
 ---
 
+## Sessione UX 2026-05-07 (round 2) — mobile scroll/safe-area sistemico
+
+**Contesto.** L'utente segnala che "molte pagine, soprattutto giochi /
+eventi / musica, e in particolare i flussi 'crea nuovo X', non scrollano
+correttamente sul mobile e hanno parti che non si vedono". Audit a tappeto
+ha confermato un pattern ricorrente: `pb-8` sotto la bottom-nav `h-16 +
+pb-safe`, modali con `max-h-[90vh]` che esplodono sotto la barra Safari,
+wizard con `h-full flex` senza `min-h-0` (regola Flexbox: un flex item
+con `min-height:auto` rompe l'overflow del parent).
+
+### Diagnosi
+
+`src/components/Layout.tsx` è già conforme: `h-[100dvh]` al root (riga
+115), `flex-1 overflow-y-auto p-0 md:p-6 scrollbar-hide relative min-h-0`
+sul wrapper Outlet (riga 289), header mobile `absolute top-0` dentro
+`<main>` (relative implicito) → resta visivamente fisso perché lo scroll
+avviene nel div figlio. **Falso positivo dell'audit iniziale**.
+
+I veri problemi erano nei figli:
+1. Modali (`Dialog`, `CreateEventModal`, `EventDetailModal`) con
+   `max-h-[90vh]` → sulla barra-Safari-shrinks-runtime il modal si
+   posiziona quando la barra è visibile e resta lì quando collassa,
+   bottom edge cropped.
+2. Pagine con bottom-nav (IlBivacco, PersonalLibrary, AudioSessionCreate)
+   con `pb-8`/`pb-32`/`pt-24` non considerano `env(safe-area-inset-bottom)`
+   sui device con notch — ultimo item finisce sotto la nav.
+3. Wizard (`GameCreator` step 0/1, `IlAinulindale` Routes container)
+   con `h-full flex flex-col` ma senza `min-h-0` → il flex-item espande
+   oltre il parent e l'overflow salta.
+4. Cropper `IlBaule` con `h-[40vh]` fissi → su mobile con tastiera
+   visibile il cropper esce dal viewport.
+
+### Fix
+
+1. **`src/index.css`** — nuova utility `.pb-nav-safe`:
+   ```css
+   .pb-nav-safe {
+      padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+   }
+   ```
+   Riutilizzabile su qualsiasi pagina che scrolla sotto la bottom-nav.
+
+2. **`src/components/ui/index.tsx` `DialogContent`** — `max-h-[min(90vh,
+   90dvh)] overflow-y-auto`. `dvh` è il viewport "dinamico" che riflette
+   il chrome corrente del browser; `min(90vh, 90dvh)` fallback su `vh` se
+   `dvh` non è supportato (browser legacy).
+
+3. **`src/pages/IlBivacco.tsx`** — `pb-8 → pb-nav-safe md:pb-8` sulla
+   home, `max-h-[90vh] → max-h-[min(90vh,90dvh)]` sul `CreateEventModal`.
+
+4. **`src/components/EventDetailModal.tsx`** — `max-h-[95vh] sm:
+   max-h-[85vh] → max-h-[min(...,...dvh)]`; header `pt-12 → pt-8 sm:pt-12`
+   per ridurre lo spreco verticale su mobile stretto.
+
+5. **`src/pages/PersonalLibrary.tsx`** — `pb-32 → pb-nav-safe md:pb-32`.
+
+6. **`src/pages/IlBaule.tsx`** — cropper `h-[40vh] → h-[min(40vh,40dvh)]
+   min-h-[300px]`; preview `max-h-[60vh] → max-h-[min(60vh,60dvh)]`.
+
+7. **`src/pages/AudioSessionCreate.tsx`** — `pt-24 (orfano) → pb-nav-safe
+   md:pb-8`. Layout già compensa l'header mobile con `pt-16`, il `pt-24`
+   creava 32px di gap inutile.
+
+8. **`src/pages/IlAinulindale.tsx`** — Routes container `flex-1
+   overflow-hidden → flex-1 min-h-0 overflow-hidden`. Garantisce che il
+   container nested abbia altezza vincolata correttamente.
+
+9. **`src/pages/GameCreator.tsx`** — wrapper step 0/1/2 standardizzati a
+   `h-full min-h-0 flex flex-col overflow-y-auto pb-nav-safe md:pb-6`.
+
+### Note di test
+
+- `npm run lint` pulito.
+- `npm test` 63/63 unit verdi.
+- `npm run build` ~11.7s, bundle pulito.
+- Niente test rule (questo round è solo CSS / layout).
+
+### File toccati
+
+`src/index.css`, `src/components/ui/index.tsx`,
+`src/components/EventDetailModal.tsx`, `src/pages/IlBivacco.tsx`,
+`src/pages/PersonalLibrary.tsx`, `src/pages/IlBaule.tsx`,
+`src/pages/AudioSessionCreate.tsx`, `src/pages/IlAinulindale.tsx`,
+`src/pages/GameCreator.tsx`.
+
+9 file, zero deps nuove. Le modifiche sono retrocompatibili
+(`min(vh,dvh)` cade su `vh` se il browser non supporta `dvh`,
+`.pb-nav-safe` è una utility additiva).
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

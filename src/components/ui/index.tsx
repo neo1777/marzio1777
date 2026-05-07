@@ -252,8 +252,15 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
   );
 };
 
+// `dvh` is preferred over `vh` on mobile because Safari's URL bar shrinks the
+// visible viewport at runtime — a `90vh` modal that opens with the bar visible
+// stays at that size when the bar later collapses, leaving the modal floating
+// in the middle of the screen and its bottom edge cropped on small phones.
+// `min(90vh,90dvh)` falls back to vh on browsers without dvh support.
+// `overflow-y-auto` on the root means a long modal body scrolls inside the
+// modal itself, instead of sticking out of the viewport.
 export const DialogContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('relative max-w-lg w-full rounded-lg border bg-background p-6 shadow-lg', className)} {...props} />
+  <div className={cn('relative max-w-lg w-full rounded-lg border bg-background p-6 shadow-lg max-h-[min(90vh,90dvh)] overflow-y-auto', className)} {...props} />
 );
 export const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />

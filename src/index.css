@@ -55,6 +55,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Bottom-padding utility for pages that scroll under the mobile bottom-nav
+     (h-16 = 4rem) and additionally need to clear the iOS home-indicator
+     safe area. Prefer this over a bare `pb-16` for any page that lists
+     content the user is meant to scroll all the way through (IlBivacco,
+     PersonalLibrary, EventDetailModal, CreateEventModal …) — without it
+     the last item ends up under the nav on iPhone X and later. */
+  .pb-nav-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
 }
 
 /* Global slim, theme-friendly scrollbar for the few containers that DO

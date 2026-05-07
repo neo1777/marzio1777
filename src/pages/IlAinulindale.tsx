@@ -70,7 +70,7 @@ function IlAinulindaleLayout() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 min-h-0 overflow-hidden relative">
          <Routes>
             <Route index element={<PersonalLibrary onPlayTrack={handlePlayTrack} />} />
             <Route path="sessioni" element={<AudioSessionsList />} />
