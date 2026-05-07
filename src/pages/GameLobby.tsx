@@ -44,14 +44,21 @@ export default function GameLobby() {
 
   const joinedParticipants = participants.filter(p => p.status === 'joined');
 
-  if (!permissionsGranted && (event.status === 'lobby' || event.status === 'active') && !isOrganizer) {
+  // Permission gate: every treasure_hunt participant — organizer included —
+  // must concede camera + GPS + orientation before entering the play view.
+  // Pre-fix the guard skipped the gate for organizers, so on iOS the
+  // DeviceOrientationEvent.requestPermission() prompt was never shown to the
+  // organizer testing their own game and the AR overlay had no gyro data
+  // to drive — emoji glued to centre. For photo_quiz the gate is a no-op
+  // (all `require*` props false) so we don't bother rendering it.
+  if (!permissionsGranted && (event.status === 'lobby' || event.status === 'active') && !isQuiz) {
      return (
         <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-           <PermissionsGate 
-              requireLocation={!isQuiz} 
-              requireCamera={!isQuiz} 
+           <PermissionsGate
+              requireLocation={!isQuiz}
+              requireCamera={!isQuiz}
               requireOrientation={!isQuiz}
-              onPermissionsGranted={() => setPermissionsGranted(true)} 
+              onPermissionsGranted={() => setPermissionsGranted(true)}
            />
         </div>
      );

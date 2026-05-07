@@ -14,8 +14,14 @@ interface Props {
 export default function ARCaptureLayer({ item, onCatch, onCancel }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { stream, error } = useCameraStream('environment');
-  const { orientation } = useDeviceOrientation();
+  const { orientation, available: sensorAvailable } = useDeviceOrientation();
   const prefersReducedMotion = useReducedMotion();
+  // Fall back to a static, centered emoji whenever there's no working gyro
+  // (desktop, no-sensor devices) or when the user prefers reduced motion.
+  // Without this guard the AR overlay computes offsets from beta/gamma == 0
+  // (no events ever fire) and the emoji sits glued to the centre regardless
+  // of how the user moves — exactly the symptom users reported on desktop.
+  const useStaticPlacement = !sensorAvailable || prefersReducedMotion;
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -38,18 +44,18 @@ export default function ARCaptureLayer({ item, onCatch, onCancel }: Props) {
      );
   }
 
-  const xOffset = Math.max(-50, Math.min(50, orientation.gamma * 2));
-  const yOffset = Math.max(-50, Math.min(50, (orientation.beta - 45) * 2));
+  const xOffset = useStaticPlacement ? 0 : Math.max(-50, Math.min(50, orientation.gamma * 2));
+  const yOffset = useStaticPlacement ? 0 : Math.max(-50, Math.min(50, (orientation.beta - 45) * 2));
 
   return (
     <div className="fixed inset-0 z-[2000] bg-black overflow-hidden flex flex-col">
       <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
-      
+
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
          <motion.div
            className="text-8xl pointer-events-auto cursor-pointer drop-shadow-2xl select-none min-w-[80px] min-h-[80px] flex items-center justify-center"
-           style={{ x: prefersReducedMotion ? 0 : xOffset, y: prefersReducedMotion ? 0 : yOffset }}
-           animate={prefersReducedMotion ? { scale: [1, 1.05, 1] } : {
+           style={{ x: xOffset, y: yOffset }}
+           animate={useStaticPlacement ? { scale: [1, 1.05, 1] } : {
              scale: [1, 1.1, 1],
              rotate: [0, 5, -5, 0],
            }}
@@ -80,10 +86,15 @@ export default function ARCaptureLayer({ item, onCatch, onCancel }: Props) {
          </button>
       </div>
 
-      <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none drop-shadow-2xl z-10" aria-live="polite">
+      <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none drop-shadow-2xl z-10 flex flex-col items-center gap-2 px-4" aria-live="polite">
          <p className="text-white font-bold text-lg bg-black/60 inline-block px-5 py-3 rounded-full backdrop-blur-md border border-white/20" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
             Tocca l'oggetto per catturarlo!
          </p>
+         {useStaticPlacement && (
+            <p className="text-amber-200 text-xs bg-black/60 inline-block px-3 py-1.5 rounded-full backdrop-blur-md border border-amber-300/30">
+               Modalità senza giroscopio: l'oggetto non si muove con il device.
+            </p>
+         )}
       </div>
     </div>
   );

@@ -1074,6 +1074,86 @@ build` ~11s, zero deps nuove.
 
 ---
 
+## Sessione UX 2026-05-07 (round 1) — gameplay AR: cattura sempre fallita & emoji statica
+
+**Contesto.** Test in produzione su desktop dell'utente. Due bug
+concomitanti rendono inutilizzabile il gioco AR:
+1. Apri "Cattura in AR", l'oggetto rimane sempre al centro dello
+   schermo indipendentemente da come ti giri o ti muovi.
+2. Vibrazione (`navigator.vibrate(60)` su apertura, OK), poi tap
+   sull'oggetto → `Missing or insufficient permissions`.
+
+### Diagnosi
+
+**"Sempre al centro"** —
+`src/components/ARCaptureLayer.tsx` calcola gli offset `xOffset/yOffset`
+da `orientation.gamma/beta` esposti da `useDeviceOrientation`. Il listener
+si registra anche quando il device non ha gyro (desktop, alcuni VM, kiosk):
+`DeviceOrientationEvent` esiste ma nessun evento viene mai emesso →
+`beta/gamma` restano a 0 → offset 0 → emoji incollato al centro. Inoltre
+in `GameLobby.tsx:47` il `PermissionsGate` veniva saltato per
+`isOrganizer`, quindi su iOS l'organizer non vedeva mai
+`DeviceOrientationEvent.requestPermission()` partire — e il listener
+silenziosamente non riceveva nulla.
+
+**"Missing or insufficient permissions" sul tap** — la rule
+`firestore.rules:342` (`items.update`) richiede `isEventParticipant(eventId)`.
+`createGameEvent` (`src/hooks/useGameEvents.ts:174`) creava il `game_event`
+ma **non scriveva** il doc `participants/{organizerId}` — l'organizer non
+era mai un participant `joined`. Quindi qualsiasi cattura veniva respinta
+dalla rule per il primo organizer del proprio gioco. Inoltre la rule
+`isWithinTimeWindow` (`firestore.rules:344`) richiede
+`request.time >= scheduledKickoff`: se l'organizer fa "Inizia Partita"
+prima del kickoff schedulato, ogni cattura viene respinta finché il
+timer non si raggiunge — e il messaggio era "no permissions" criptico.
+
+### Fix concertati
+
+1. **Auto-join organizer come participant** (`useGameEvents.createGameEvent`)
+   - Firma estesa: `createGameEvent(eventData, organizerIdentity?)`.
+   - Dopo il `setDoc` del `game_event`, chiama `setRSVP(eventId, organizerId, 'joined', identity)` per upsertare `participants/{organizerId}`. Schema identico al ramo create di `setRSVP`. Rule-conforme: `participants.create` (`firestore.rules:374`) ammette `isApprovedUser() && userId == request.auth.uid`. L'organizer è già approved (ha passato `game_events.create.isAdminOrRoot()`).
+   - `GameCreator.handleSave` ora passa `{ displayName, photoURL }` da `useAuth().profile` con fallback su `user.displayName/photoURL`.
+
+2. **Pre-check tempo lato client** (`captureItemTransaction`)
+   - Dopo la lettura dell'`event` dentro la transazione, se `Date.now() < scheduledKickoff` → `throw new Error("L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle HH:mm.")`.
+   - Surface user-friendly invece del generico permission-denied.
+
+3. **`available` derivation in `useDeviceOrientation`**
+   - Aggiunto stato derivato `available: boolean` (default `false`, diventa `true` solo dopo aver effettivamente ricevuto un `DeviceOrientationEvent`). Timer 5s: se `permission === 'granted'/'prompt'` e nessun evento entro 5s, `available` resta `false` (sensore fisicamente assente).
+   - Distingue chiaramente "permesso negato" da "device senza sensore".
+
+4. **Fallback statico in `ARCaptureLayer`**
+   - `useStaticPlacement = !sensorAvailable || prefersReducedMotion`.
+   - Se vero, `xOffset/yOffset = 0` e l'animazione `rotate` è disabilitata (resta solo `scale` pulsante per indicare il target).
+   - Microcopy ambra in basso: "Modalità senza giroscopio: l'oggetto non si muove con il device." chiarisce all'utente cosa sta succedendo.
+
+5. **PermissionsGate non skippato per organizer treasure_hunt** (`GameLobby.tsx:47`)
+   - Guard cambiata da `!isOrganizer` a `!isQuiz`. Anche l'organizer di una caccia AR deve concedere camera/GPS/orientation. Per il quiz il PermissionsGate resta no-op (tutte le `require*` props a `false`).
+
+6. **Test rule regression** (`firestore.rules.test.ts`)
+   - 3 nuovi casi nel describe `12. Game Events Security`:
+     - `items.update rejected when caller is not in participants` — chiude la diagnosi (1).
+     - `items.update rejected before scheduledKickoff (time window)` — chiude la diagnosi (2).
+     - `items.update succeeds for joined organizer in active window` — happy-path post-fix.
+
+### Note di test
+
+- `npm run lint` pulito.
+- `npm test` 63/63 verdi.
+- `npm run build` ~11s, bundle pulito.
+- Rule test: 61/63 verdi. **I 2 fail (`rejects double-like`, `accepts a legitimate unlike`) sono pre-esistenti** sul commit `c9b9eab` (verificato con `git stash`+rerun). Riguardano la rule `posts.update` like/unlike, non sono legati al lavoro R1. Vanno trattati in un round dedicato.
+
+### File toccati
+
+`src/hooks/useGameEvents.ts`, `src/hooks/useDeviceOrientation.ts`,
+`src/components/ARCaptureLayer.tsx`, `src/pages/GameLobby.tsx`,
+`src/pages/GameCreator.tsx`, `firestore.rules.test.ts`.
+
+Zero deps nuove. Niente migration di schema (l'upsert participant è
+già rule-conforme con la rule esistente).
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

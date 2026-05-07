@@ -185,6 +185,103 @@ describe('Marzio Memories Framework Rules', () => {
       }));
     });
 
+    it('items.update rejected when caller is not in participants', async () => {
+      // Regression for "Missing or insufficient permissions" when the
+      // organizer (or any user) tries to capture without first being
+      // added to participants/{uid} with status='joined'. The rule
+      // `items.update` (firestore.rules:342) gates on isEventParticipant;
+      // pre-fix this surfaced as PERMISSION_DENIED with no useful clue.
+      await testEnv.withSecurityRulesDisabled(async (context: any) => {
+         await context.firestore().collection('users').doc('userOutsider').set({
+            uid: 'userOutsider', email: 't@test.com', role: 'Guest', accountStatus: 'approved'
+         });
+         await context.firestore().collection('game_events').doc('eventNoP').set({
+            organizerId: 'userOrg',
+            scheduledKickoff: new Date(Date.now() - 60_000),
+            endTime: new Date(Date.now() + 600_000),
+            status: 'active',
+            invitedUserIds: ['userOutsider']
+         });
+         // No participants/{userOutsider} doc on purpose.
+         await context.firestore().collection('game_events').doc('eventNoP').collection('items').doc('item1').set({
+            status: 'spawned', lat: 10, lng: 10, points: 10, templateId: 't1'
+         });
+      });
+
+      const db = testEnv.authenticatedContext('userOutsider', { email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('eventNoP').collection('items').doc('item1').update({
+         status: 'collected', collectedBy: 'userOutsider', collectedAt: serverTimestamp(),
+         lat: 10, lng: 10, points: 10, templateId: 't1',
+      }));
+    });
+
+    it('items.update rejected before scheduledKickoff (time window)', async () => {
+      // Regression for organizers who flip the event to 'active' before
+      // scheduledKickoff and then try to capture — the rule's
+      // `isWithinTimeWindow` (firestore.rules:344) requires
+      // request.time >= scheduledKickoff. Pre-fix the user saw a generic
+      // permission-denied; client now surfaces a friendlier message
+      // before even hitting the rule, but the rule itself must still
+      // hold this invariant.
+      await testEnv.withSecurityRulesDisabled(async (context: any) => {
+         await context.firestore().collection('users').doc('userEarly').set({
+            uid: 'userEarly', email: 't@test.com', role: 'Guest', accountStatus: 'approved'
+         });
+         await context.firestore().collection('game_events').doc('eventEarly').set({
+            organizerId: 'userOrg',
+            // Kickoff is in the FUTURE → rule must reject capture even
+            // though the event is technically 'active'.
+            scheduledKickoff: new Date(Date.now() + 600_000),
+            endTime: new Date(Date.now() + 1_200_000),
+            status: 'active',
+            invitedUserIds: ['userEarly']
+         });
+         await context.firestore().collection('game_events').doc('eventEarly').collection('participants').doc('userEarly').set({
+            status: 'joined'
+         });
+         await context.firestore().collection('game_events').doc('eventEarly').collection('items').doc('item1').set({
+            status: 'spawned', lat: 10, lng: 10, points: 10, templateId: 't1'
+         });
+      });
+
+      const db = testEnv.authenticatedContext('userEarly', { email_verified: true }).firestore();
+      await assertFails(db.collection('game_events').doc('eventEarly').collection('items').doc('item1').update({
+         status: 'collected', collectedBy: 'userEarly', collectedAt: serverTimestamp(),
+         lat: 10, lng: 10, points: 10, templateId: 't1',
+      }));
+    });
+
+    it('items.update succeeds for joined organizer in active window', async () => {
+      // Positive control mirroring the production happy-path post-fix:
+      // organizer is auto-joined as participant by createGameEvent, the
+      // event has flipped active inside the window, and the capture
+      // payload satisfies all immutability + identity checks.
+      await testEnv.withSecurityRulesDisabled(async (context: any) => {
+         await context.firestore().collection('users').doc('userOrg').set({
+            uid: 'userOrg', email: 't@test.com', role: 'Admin', accountStatus: 'approved'
+         });
+         await context.firestore().collection('game_events').doc('eventOK').set({
+            organizerId: 'userOrg',
+            scheduledKickoff: new Date(Date.now() - 60_000),
+            endTime: new Date(Date.now() + 600_000),
+            status: 'active',
+            invitedUserIds: []
+         });
+         await context.firestore().collection('game_events').doc('eventOK').collection('participants').doc('userOrg').set({
+            status: 'joined'
+         });
+         await context.firestore().collection('game_events').doc('eventOK').collection('items').doc('item1').set({
+            status: 'spawned', lat: 10, lng: 10, points: 10, templateId: 't1'
+         });
+      });
+
+      const db = testEnv.authenticatedContext('userOrg', { email_verified: true }).firestore();
+      await assertSucceeds(db.collection('game_events').doc('eventOK').collection('items').doc('item1').update({
+         status: 'collected', collectedBy: 'userOrg', collectedAt: serverTimestamp(),
+         lat: 10, lng: 10, points: 10, templateId: 't1',
+      }));
+    });
+
     it('invalid status transitions blocked', async () => {
       await testEnv.withSecurityRulesDisabled(async (context: any) => {
          await context.firestore().collection('users').doc('userAdmin').set({

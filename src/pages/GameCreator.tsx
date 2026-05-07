@@ -87,7 +87,7 @@ function defaultKickoffLocal(): string {
 }
 
 export default function GameCreator() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   // Coarse GPS is plenty for "centre the placement map on me". The fast
   // initial fix (one-shot getCurrentPosition + maximumAge=60s) lands in a
@@ -319,7 +319,10 @@ export default function GameCreator() {
       }
 
 // ... Removed invalid import ...
-      const eventId = await createGameEvent(eventData);
+      const eventId = await createGameEvent(eventData, {
+         displayName: profile?.displayName ?? user.displayName ?? null,
+         photoURL: profile?.photoURL ?? user.photoURL ?? null,
+      });
 
       if (type === 'treasure_hunt') {
          for (const item of items) {

@@ -171,7 +171,10 @@ export async function setRSVP(
   }
 }
 
-export async function createGameEvent(eventData: Partial<GameEvent>) {
+export async function createGameEvent(
+   eventData: Partial<GameEvent>,
+   organizerIdentity?: { displayName?: string | null; photoURL?: string | null }
+) {
    const eventRef = doc(collection(db, 'game_events'));
    const payload = {
       ...eventData,
@@ -179,6 +182,23 @@ export async function createGameEvent(eventData: Partial<GameEvent>) {
       createdAt: serverTimestamp(),
    };
    await setDoc(eventRef, payload);
+
+   // Auto-join the organizer as a 'joined' participant. The rule
+   // `game_events/{eventId}/items.update` (firestore.rules:342) requires
+   // `isEventParticipant(eventId)` for capture — without this upsert the
+   // organizer testing their own treasure_hunt would hit
+   // PERMISSION_DENIED on every tap. Schema mirrors setRSVP's create
+   // branch; rule `participants.create` (firestore.rules:374) accepts it
+   // because the caller is approved (passed `game_events.create`'s
+   // `isAdminOrRoot()` precondition above) and userId == auth.uid.
+   if (eventData.organizerId) {
+      try {
+         await setRSVP(eventRef.id, eventData.organizerId, 'joined', organizerIdentity);
+      } catch (e) {
+         console.warn('createGameEvent: organizer auto-join failed (non-fatal)', e);
+      }
+   }
+
    return eventRef.id;
 }
 
@@ -291,6 +311,22 @@ export async function captureItemTransaction(eventId: string, itemId: string, us
       const lbRef = doc(db, `game_events/${eventId}/leaderboard/${userId}`);
       const [eventSnap, lbSnap] = await Promise.all([tx.get(eventRef), tx.get(lbRef)]);
       const eventData = eventSnap.exists() ? eventSnap.data() : null;
+
+      // Surface the real reason early. The rule `items.update`
+      // (firestore.rules:344) requires `isWithinTimeWindow`, which checks
+      // `request.time >= scheduledKickoff`. If the organizer flips the
+      // game to 'active' before the kickoff timestamp, the rule rejects
+      // every capture with a generic "PERMISSION_DENIED". Catch that
+      // here so the user sees a useful message instead of "no permissions".
+      const kickoffMs = eventData?.scheduledKickoff?.toMillis?.() ?? 0;
+      if (kickoffMs > 0 && Date.now() < kickoffMs) {
+         const hhmm = new Date(kickoffMs).toLocaleTimeString('it-IT', {
+            hour: '2-digit',
+            minute: '2-digit'
+         });
+         throw new Error(`L'evento non è ancora ufficialmente iniziato. Aspetta il kickoff alle ${hhmm}.`);
+      }
+
       const isLegacyHunt = eventData?.type === 'treasure_hunt'
          && eventData?.treasureHuntConfig?.spawnMode === 'legacy_posts';
       const isFirstCapture = !lbSnap.exists() || ((lbSnap.data()?.captures ?? 0) === 0);
