@@ -1365,6 +1365,114 @@ form mancante, CTA su empty state guest, hint su datetime-local.
 
 ---
 
+## Sessione UX 2026-05-07 (round 5) — fix dei fix dei round 1-4
+
+**Contesto.** Dopo il push dei round 1-4 l'utente segnala che (a) l'icona
+AR continua a "girare e traballare" e (b) le pagine canzoni/sessioni
+ancora non scorrono. L'audit precedente aveva dato falsi positivi e io
+avevo seguito l'audit invece di leggere il codice file per file con
+cura. Round di rimedio.
+
+### Diagnosi delle mancanze
+
+**AR continua a traballare** —
+`src/components/ARCaptureLayer.tsx:60` aveva
+`animate={... { rotate: [0, 5, -5, 0] } : ...}`. Il keyframed `rotate` è
+un'animazione decorativa **indipendente dal gyro** e veniva applicata
+quando `useStaticPlacement === false` (cioè su mobile con sensore
+disponibile, che è il caso normale del gameplay). Il fix R1 nascondeva
+solo lo `xOffset/yOffset` su desktop, ma il `rotate` keyframed continuava
+su mobile a creare la sensazione di "traballamento". Era ovvio nel
+codice e mi era sfuggito.
+
+**Pagine audio non scorrono** —
+`src/pages/IlAinulindale.tsx:73` ha `<div className="flex-1 min-h-0
+overflow-hidden relative">` come container delle Routes. `overflow-hidden`
+significa che le child page **devono avere il loro `h-full
+overflow-y-auto`** per essere scrollabili. Stato pre-fix:
+- `PersonalLibrary` ✅ aveva `flex flex-col h-full ... overflow-y-auto`
+- `AudioSessionsList` ❌ `max-w-4xl mx-auto p-4 sm:p-8 pt-24 space-y-8` —
+  niente `h-full`, niente `overflow-y-auto`, e `pt-24` orfano
+- `AudioSessionCreate` ❌ `max-w-xl ... pb-nav-safe md:pb-8 space-y-6`
+  (R2 aveva tolto `pt-24` ma non aveva aggiunto overflow-y-auto)
+- `AudioSessionDJ` ❌ `h-full flex flex-col ... pt-20 max-w-7xl ...` —
+  h-full presente ma niente `overflow-y-auto`, e `pt-20` orfano
+- `AudioSessionListener` ❌ `h-full flex flex-col ... pt-20 max-w-4xl
+  ...` — stesso pattern
+
+`IlAinulindale` ha già un suo header + tabs `shrink-0`, quindi qualsiasi
+`pt-20`/`pt-24` nelle child è completamente orfano (compensava un header
+mobile globale che non esiste perché siamo già dentro un wrapper con
+header proprio).
+
+**Pagine non-audio con bottom-nav padding insufficiente** —
+`pb-8` (32px) sotto la bottom-nav `h-16 + safe-area`. Pre-fix R5:
+- LaPiazza riga 145 — `pb-8`
+- ProfiloPersonale riga 110 — `pb-8`
+- IlBivacco riga 71 — già fixato in R2
+- IlBaule cropper — già fixato in R2
+
+### Fix
+
+1. **`src/components/ARCaptureLayer.tsx:55-66`** — rimosso `rotate: [0,
+   5, -5, 0]` keyframed. Resta solo lo `scale` come pulse indicator. Lo
+   `xOffset/yOffset` derivato dal gyro continua a funzionare su device
+   con sensore (l'effetto AR rimane), ma niente più traballamento
+   decorativo.
+
+2. **`src/pages/AudioSessionsList.tsx`** — wrap interno
+   `<div className="h-full overflow-y-auto">` + `pt-24 → pb-nav-safe
+   md:pb-8`.
+
+3. **`src/pages/AudioSessionCreate.tsx`** — wrap interno
+   `<div className="h-full overflow-y-auto">` (l'inner aveva già
+   `pb-nav-safe md:pb-8` da R2).
+
+4. **`src/pages/AudioSessionDJ.tsx:202`** — wrap interno
+   `<div className="h-full overflow-y-auto"><div className="min-h-full
+   flex flex-col ... pb-nav-safe md:pb-8 ...">`. `min-h-full` invece di
+   `h-full` perché ora è il parent a vincolare l'altezza.
+
+5. **`src/pages/AudioSessionListener.tsx:66`** — stesso pattern.
+
+6. **`src/pages/LaPiazza.tsx:145`** — `pb-8 → pb-nav-safe md:pb-8`.
+
+7. **`src/pages/ProfiloPersonale.tsx:110`** — `pb-8 → pb-nav-safe
+   md:pb-8`.
+
+### Note di processo
+
+R1-R4 hanno coperto i bug più visibili ma sono partita dagli audit dei
+sub-agenti senza fare un sweep `grep` esaustivo dei pattern problematici.
+R5 è il post-mortem: ho letto tutte le pagine `pages/*.tsx` per
+overflow / pt-X / max-h-Nvh non-dvh. Pattern da ricordare per future
+sessioni:
+- Quando un parent ha `overflow-hidden`, la child PAGE deve avere
+  `h-full overflow-y-auto`. `IlAinulindale` Routes container è uno
+  di questi parent.
+- `pb-8` sotto bottom-nav `h-16 + safe-area` è insufficiente. Il nuovo
+  default è `pb-nav-safe md:pb-8`.
+- `pt-NX` orfano sospetto: il main wrapper di Layout ha già `pt-16
+  md:pt-0`, e nested layout (es. IlAinulindale) ha header proprio
+  `shrink-0`. Verificare che il `pt` non duplichi compensazione.
+
+### Note di test
+
+- `npm run lint` pulito.
+- `npm test` 63/63 unit verdi.
+- `npm run build` ~12s, bundle pulito.
+
+### File toccati
+
+`src/components/ARCaptureLayer.tsx`, `src/pages/AudioSessionsList.tsx`,
+`src/pages/AudioSessionCreate.tsx`, `src/pages/AudioSessionDJ.tsx`,
+`src/pages/AudioSessionListener.tsx`, `src/pages/LaPiazza.tsx`,
+`src/pages/ProfiloPersonale.tsx`.
+
+7 file, zero deps nuove, niente schema/rule changes.
+
+---
+
 ## Fase 3 — Da fare
 
 Stato di Maggio 2026: tutto MVP + Fase 2 + Fase 2.5 al 75% chiuso. Resta:

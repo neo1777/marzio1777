@@ -199,7 +199,7 @@ export function AudioSessionDJ() {
    };
 
    return (
-      <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8 pt-20 max-w-7xl mx-auto gap-6 bg-gradient-to-br from-background via-background to-secondary/10">
+      <div className="h-full overflow-y-auto"><div className="min-h-full flex flex-col p-4 sm:p-6 lg:p-8 pb-nav-safe md:pb-8 max-w-7xl mx-auto gap-6 bg-gradient-to-br from-background via-background to-secondary/10">
          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card/60 p-4 rounded-2xl backdrop-blur-md shadow-sm border">
             <div>
                <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">{session.title}</h1>
@@ -307,6 +307,7 @@ export function AudioSessionDJ() {
                </ScrollArea>
             </div>
          </div>
+      </div>
       </div>
    );
 }

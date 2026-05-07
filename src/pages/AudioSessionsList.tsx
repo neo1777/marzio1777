@@ -20,7 +20,7 @@ export function AudioSessionsList() {
    }
 
    return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-8 pt-24 space-y-8">
+      <div className="h-full overflow-y-auto"><div className="max-w-4xl mx-auto p-4 sm:p-8 pb-nav-safe md:pb-8 space-y-8">
          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
@@ -50,6 +50,7 @@ export function AudioSessionsList() {
                ))}
             </div>
          )}
+      </div>
       </div>
    );
 }

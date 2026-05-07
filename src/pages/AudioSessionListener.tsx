@@ -63,7 +63,7 @@ export function AudioSessionListener() {
    };
 
    return (
-      <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8 pt-20 max-w-4xl mx-auto gap-6 bg-background">
+      <div className="h-full overflow-y-auto bg-background"><div className="min-h-full flex flex-col p-4 sm:p-6 lg:p-8 pb-nav-safe md:pb-8 max-w-4xl mx-auto gap-6">
          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
             <div className="flex items-center space-x-4">
                <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/ainulindale/sessioni')} className="rounded-full hover:bg-secondary">
@@ -162,11 +162,12 @@ export function AudioSessionListener() {
             </ScrollArea>
          </div>
 
-         <ProposeTrackModal 
-            isOpen={modalOpen} 
-            onClose={() => setModalOpen(false)} 
-            onPropose={handlePropose} 
+         <ProposeTrackModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onPropose={handlePropose}
          />
+      </div>
       </div>
    );
 }

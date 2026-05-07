@@ -142,7 +142,7 @@ export default function LaPiazza() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-8">
+      <div className="flex-1 overflow-y-auto pb-nav-safe md:pb-8">
         {loading ? (
           <div className="flex items-center gap-3 p-6 bg-white dark:bg-[#151e18] border border-slate-200 dark:border-[#24352b] rounded-2xl w-fit shadow-sm transition-colors">
             <div className="w-2 h-2 rounded-full bg-[#F5A623] animate-pulse"></div>

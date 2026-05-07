@@ -107,7 +107,7 @@ export default function ProfiloPersonale() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-8 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto pb-nav-safe md:pb-8 scrollbar-hide">
          <AnimatePresence mode="wait">
             {activeTab === 'profilo' ? (
                <motion.div key="profilo" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6 pt-2">

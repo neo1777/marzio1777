@@ -54,11 +54,17 @@ export default function ARCaptureLayer({ item, onCatch, onCancel }: Props) {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
          <motion.div
            className="text-8xl pointer-events-auto cursor-pointer drop-shadow-2xl select-none min-w-[80px] min-h-[80px] flex items-center justify-center"
+           // Position drifts with the gyro when available (so rotating the
+           // device feels like the emoji exists at a fixed point in the
+           // world). On no-sensor / reduced-motion we pin it to centre.
            style={{ x: xOffset, y: yOffset }}
-           animate={useStaticPlacement ? { scale: [1, 1.05, 1] } : {
-             scale: [1, 1.1, 1],
-             rotate: [0, 5, -5, 0],
-           }}
+           // Pulse only — no `rotate` keyframes. The previous
+           // `rotate: [0,5,-5,0]` was a decorative wobble that ran
+           // continuously regardless of the gyro, making the emoji feel
+           // jittery on mobile (the user reported "trabaglia"). The
+           // breathing scale is enough to call attention to the target
+           // without overriding the AR illusion.
+           animate={{ scale: useStaticPlacement ? [1, 1.05, 1] : [1, 1.1, 1] }}
            transition={{
              duration: 4,
              repeat: Infinity,
