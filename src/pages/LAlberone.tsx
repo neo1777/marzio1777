@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { Send, TreeDeciduous, Users, Smile, Image as ImageIcon, X } from 'lucide-react';
+import { Send, TreeDeciduous, Users, Smile, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 
 const MOTION_DURATION = { instant: 0.1, short: 0.18, medium: 0.26, long: 0.36 };
 const MOTION_EASING = { out: [0.0, 0.0, 0.2, 1] as any, inOut: [0.4, 0.0, 0.2, 1] as any };
 import { it } from 'date-fns/locale';
-import EmojiPicker, { Theme } from 'emoji-picker-react';
+// Type-only import is erased at compile time, so it does not pull the library
+// into the bundle. The runtime import below is lazy and creates its own chunk.
+import type { Theme } from 'emoji-picker-react';
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
 export default function LAlberone() {
   const { user } = useAuth();
@@ -183,11 +186,18 @@ export default function LAlberone() {
                    </button>
                    {showEmojiPicker && (
                       <div className="absolute bottom-full left-0 mb-4 z-50">
-                         <EmojiPicker 
-                            onEmojiClick={onEmojiClick} 
-                            theme={document.documentElement.classList.contains('dark') ? Theme.DARK : Theme.LIGHT} 
-                            lazyLoadEmojis={true}
-                         />
+                         <Suspense fallback={
+                            <div className="w-[350px] h-[450px] rounded-lg border border-slate-200 dark:border-[#24352b] bg-slate-50 dark:bg-[#1a261f] shadow-lg flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500">
+                               <Loader2 className="animate-spin text-[#2D5A27]" size={18} />
+                               <span className="text-xs font-medium">Carico le emoji…</span>
+                            </div>
+                         }>
+                            <EmojiPicker
+                               onEmojiClick={onEmojiClick}
+                               theme={(document.documentElement.classList.contains('dark') ? 'dark' : 'light') as Theme}
+                               lazyLoadEmojis={true}
+                            />
+                         </Suspense>
                       </div>
                    )}
                 </div>

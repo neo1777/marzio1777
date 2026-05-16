@@ -99,13 +99,21 @@ export function useAudioQueue(sessionId: string) {
           functions, 'enforceQueuePerUserLimit'
        );
        await enforceLimit({ sessionId });
-    } catch (e: any) {
-       if (e?.code === 'functions/resource-exhausted') {
-          throw new Error(e?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
+    } catch (error: any) {
+       if (error?.code === 'functions/resource-exhausted') {
+          throw new Error(error?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
        }
        // CF unavailable → fall through to setDoc, the rule will still
        // validate effectiveMaxAtCreate against the formula.
-       console.warn('enforceQueuePerUserLimit unavailable, falling back to client-side check', e);
+       // TODO(release-ready): wire to telemetry system when added
+       console.warn('[marzio1777] CF fallback active', {
+          event: 'cf_fallback_active',
+          cf: 'enforceQueuePerUserLimit',
+          proposerId: user.uid,
+          sessionId,
+          reason: error?.code ?? error?.message ?? 'unknown',
+          timestamp: new Date().toISOString(),
+       });
     }
     
     const itemId = doc(collection(db, 'audio_sessions', sessionId, 'queue')).id;
@@ -203,11 +211,19 @@ export async function proposeTrackToSession(
          functions, 'enforceQueuePerUserLimit'
       );
       await enforceLimit({ sessionId });
-   } catch (e: any) {
-      if (e?.code === 'functions/resource-exhausted') {
-         throw new Error(e?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
+   } catch (error: any) {
+      if (error?.code === 'functions/resource-exhausted') {
+         throw new Error(error?.message || 'Hai raggiunto il limite di brani in coda. Attendi che ne venga suonato uno.');
       }
-      console.warn('enforceQueuePerUserLimit unavailable, falling back', e);
+      // TODO(release-ready): wire to telemetry system when added
+      console.warn('[marzio1777] CF fallback active', {
+         event: 'cf_fallback_active',
+         cf: 'enforceQueuePerUserLimit',
+         proposerId: user.uid,
+         sessionId,
+         reason: error?.code ?? error?.message ?? 'unknown',
+         timestamp: new Date().toISOString(),
+      });
    }
 
    const queueSnap = await getDocs(collection(db, 'audio_sessions', sessionId, 'queue'));

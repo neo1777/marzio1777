@@ -15,7 +15,12 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         // Bundles the icon into the precache so first-install works offline
         // (the previous DiceBear CDN reference required network on first run).
-        includeAssets: ['icon.svg'],
+        includeAssets: ['icon.svg', 'docs/*.md'],
+        workbox: {
+          // Default Workbox globPatterns excludes .md — add it so the SW
+          // precaches the Istruzioni documents for offline-first reading.
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,md}'],
+        },
         manifest: {
           name: 'marzio1777',
           short_name: 'marzio1777',
