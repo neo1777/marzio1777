@@ -9,3 +9,4 @@ coverage/
 src/firebase-applet-config.json
 CLAUDE.md
 AUDIT_REPORT.md
+graphify-out/
