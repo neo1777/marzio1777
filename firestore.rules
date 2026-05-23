@@ -46,13 +46,16 @@ service cloud.firestore {
     }
 
     // --- VALIDATORS ---
-    function isValidUser(data) {
+    function isValidUser(data, userId) {
        return data.keys().hasAll(['uid', 'email', 'role', 'accountStatus']) &&
               data.uid is string && data.uid.size() <= 128 &&
               data.email is string && data.email.size() <= 200 &&
               data.role in ['Root', 'Admin', 'Guest'] &&
               data.accountStatus in ['pending', 'approved'] &&
-              data.uid == request.auth.uid; // Identity verify
+              data.uid == userId; // uid field must equal the doc id (true for
+              // both self-writes — create gates userId == request.auth.uid —
+              // and admin/root cross-user writes, which the old `== auth.uid`
+              // check wrongly blocked, freezing every new user in `pending`).
     }
 
     function isValidUserLocation(data) {
@@ -114,8 +117,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isAdminOrRoot());
       allow list: if isSignedIn() && isAdminOrRoot();
-      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && incoming().role == (isRoot() ? 'Root' : 'Guest') && incoming().accountStatus == (isRoot() ? 'approved' : 'pending');
-      allow update: if isSignedIn() && isValidUser(incoming()) && (
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming(), userId) && incoming().role == (isRoot() ? 'Root' : 'Guest') && incoming().accountStatus == (isRoot() ? 'approved' : 'pending');
+      allow update: if isSignedIn() && isValidUser(incoming(), userId) && (
          (request.auth.uid == userId && (
             incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'apiKey', 'shareLiveLocation', 'animIcon', 'animSpeed', 'animDistance', 'animColor']) &&
             incoming().role == existing().role &&
@@ -191,18 +194,28 @@ service cloud.firestore {
          resource.data.authorId == request.auth.uid
       );
       allow create: if isSignedIn() && isAdminOrRoot() && isValidId(postId) && isValidPost(incoming()) && incoming().likesCount == 0 && incoming().commentsCount == 0 && incoming().get('likedBy', []).size() == 0;
-      allow update: if isSignedIn() && isAdminOrRoot() && isValidPost(incoming()) && (
-         isAdminOrRoot() || (
-            request.auth.uid == existing().authorId &&
-            incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'location', 'decade', 'visibilityStatus', 'visibilityTime', 'showInCinematografo'])
+      // Posts are an admin/root-only community feature (top gate). Within that:
+      //  - the author edits their own post metadata (isValidPost pins the full
+      //    doc, incl. authorId == caller);
+      //  - any admin/root can like/unlike (set diff pinned to their own uid —
+      //    Sporca #31) or bump the comment counter.
+      // isValidPost() is intentionally NOT a global AND: it enforces
+      // `authorId == request.auth.uid`, which (as a global AND) blocked every
+      // *non-author* from liking — a like is a partial update that leaves
+      // authorId untouched, so incoming().authorId stays the author's uid and
+      // the check failed for everyone but the author. It now gates only the
+      // author-edit branch. The redundant leading `isAdminOrRoot() ||` (always
+      // true under the top gate) was also dropped — it let an author bypass the
+      // like/unlike invariants entirely (e.g. forge a double-like).
+      allow update: if isSignedIn() && isAdminOrRoot() && (
+         (request.auth.uid == existing().authorId &&
+          isValidPost(incoming()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'location', 'decade', 'visibilityStatus', 'visibilityTime', 'showInCinematografo'])
          ) || (
-            // Anyone (approved) can like/unlike or bump comments — granular updates.
-            // Sporca #31 "Like Forger": before this hardening the rule only
-            // checked `likedBy.size + 1 == likesCount + 1`, which a malicious
-            // caller could satisfy by appending some-other-uid to `likedBy`.
-            // The set diff below pins the new/removed element to the caller.
-            (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'likedBy']) &&
-             (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'likedBy']) &&
+            incoming().get('likedBy', []) is list &&
+            incoming().get('likedBy', []).size() <= 5000 &&
+            (
                // Like: incoming.likedBy = existing.likedBy ∪ {auth.uid},
                //       likesCount += 1, and auth.uid wasn't in the old set.
                (incoming().likesCount == existing().likesCount + 1 &&
@@ -217,11 +230,10 @@ service cloud.firestore {
                 existing().get('likedBy', []).toSet().difference(incoming().get('likedBy', []).toSet()).hasOnly([request.auth.uid]) &&
                 request.auth.uid in existing().get('likedBy', [])
                )
-             )
-            ) ||
-            (incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount']) &&
-             (incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
             )
+         ) || (
+            incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount']) &&
+            (incoming().commentsCount == existing().commentsCount + 1 || incoming().commentsCount == existing().commentsCount - 1)
          )
       );
       allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());
@@ -237,10 +249,20 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if isSignedIn() && isAdminOrRoot();
       allow create: if isSignedIn() && isAdminOrRoot() && isValidId(eventId) && isValidEvent(incoming());
-      allow update: if isSignedIn() && isAdminOrRoot() && isValidEvent(incoming()) && (
-         isAdminOrRoot() || (
-            request.auth.uid == existing().authorId &&
-            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'date', 'location', 'description'])
+      // Same footgun as posts.update: isValidEvent() pins `authorId == caller`
+      // as a global AND, which blocked every non-author from RSVPing — the
+      // attendees map is a partial update that leaves authorId untouched, so
+      // incoming().authorId stayed the event author's uid and the check failed
+      // for everyone else. isValidEvent now gates only the author-edit branch;
+      // RSVP is its own branch, pinned to the caller's own entry in the
+      // attendees map (anti "attendee forger", same spirit as Sporca #31).
+      allow update: if isSignedIn() && isAdminOrRoot() && (
+         (request.auth.uid == existing().authorId &&
+          isValidEvent(incoming()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'date', 'location', 'description'])
+         ) || (
+          incoming().diff(existing()).affectedKeys().hasOnly(['attendees']) &&
+          incoming().get('attendees', {}).diff(existing().get('attendees', {})).affectedKeys().hasOnly([request.auth.uid])
          )
       );
       allow delete: if isSignedIn() && isAdminOrRoot() && (request.auth.uid == resource.data.authorId || isAdminOrRoot());

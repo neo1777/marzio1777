@@ -19,6 +19,16 @@
         "animSpeed": { "type": "number", "description": "Like animation duration in seconds" },
         "animDistance": { "type": "number", "description": "Vertical distance in pixels for the like particle" },
         "animColor": { "type": "string", "description": "Tint hex/rgb for the like particle" },
+        "fcmTokens": { "type": "array", "items": { "type": "string" }, "description": "FCM Web Push registration tokens (rule cap 20); arrayUnion on opt-in, arrayRemove on opt-out and on invalid-token prune by the notifyKickoff CF" },
+        "metrics": {
+          "type": "object",
+          "description": "Phase 2.5 continuous-tracking gagliardetti counters; owner-written in isolation (the users.update rule allows a metrics-only diff with no points bump)",
+          "properties": {
+            "quizStreak": { "type": "number", "description": "Consecutive correct quiz answers; reset to 0 on a wrong claim" },
+            "consecutiveSkipped": { "type": "number", "description": "Own queue items skipped without a played in between; reset on played" },
+            "huntsLegacyCompleted": { "type": "number", "description": "treasure_hunt legacy_posts events where the user collected >=1 item" }
+          }
+        },
         "createdAt": { "type": "object", "description": "Firestore Timestamp" },
         "updatedAt": { "type": "object", "description": "Firestore Timestamp" }
       },
@@ -51,6 +61,7 @@
       "properties": {
         "authorId": { "type": "string" },
         "authorName": { "type": "string" },
+        "authorPhotoURL": { "type": "string", "description": "Snapshot of the author photoURL at create time; nullable. Legacy posts omit it and the Avatar falls back to the initial-on-colored-bg (added May 2026)" },
         "imageUrl": { "type": "string" },
         "caption": { "type": "string" },
         "location": {

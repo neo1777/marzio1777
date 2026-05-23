@@ -696,5 +696,129 @@ describe('Marzio Memories Framework Rules', () => {
         .update({ finalLeaderboard: [{ userId: 'orgX', points: 999_999 }] }));
     });
   });
+
+  // Regression for the production bug: new users stuck in `pending` because
+  // isValidUser() enforced `data.uid == request.auth.uid` as a global AND over
+  // every users.update branch, so any admin/root cross-user write (approval,
+  // role change, promotion) failed before its branch was even evaluated.
+  // The fix re-bases the identity check to `data.uid == userId` (uid field must
+  // equal the doc id), which is satisfied for both self- and cross-user writes.
+  describe('Admin/Root user management (cross-user users.update)', () => {
+    async function seed(docs: Record<string, any>) {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        for (const [id, data] of Object.entries(docs)) {
+          await db.collection('users').doc(id).set(data);
+        }
+      });
+    }
+    const ROOT_EMAIL = 'nicolainformatica@gmail.com';
+
+    it('allows an Admin to approve a pending user as Guest', async () => {
+      await seed({
+        admin1: { uid: 'admin1', email: 'a@test.com', role: 'Admin', accountStatus: 'approved', points: 0 },
+        newbie: { uid: 'newbie', email: 'n@test.com', role: 'Guest', accountStatus: 'pending', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('admin1', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('newbie').update({ accountStatus: 'approved', role: 'Guest' }));
+    });
+
+    it('allows an Admin to promote an approved Guest to Admin (role-only write)', async () => {
+      await seed({
+        admin1: { uid: 'admin1', email: 'a@test.com', role: 'Admin', accountStatus: 'approved', points: 0 },
+        guest1: { uid: 'guest1', email: 'g@test.com', role: 'Guest', accountStatus: 'approved', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('admin1', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('guest1').update({ role: 'Admin' }));
+    });
+
+    it('allows Root to approve a pending user as Admin', async () => {
+      await seed({
+        pending1: { uid: 'pending1', email: 'p@test.com', role: 'Guest', accountStatus: 'pending', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('rootUid', { email: ROOT_EMAIL, email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('pending1').update({ accountStatus: 'approved', role: 'Admin' }));
+    });
+
+    it('allows Root to change a user role via dropdown (role-only write)', async () => {
+      await seed({
+        guest1: { uid: 'guest1', email: 'g@test.com', role: 'Guest', accountStatus: 'approved', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('rootUid', { email: ROOT_EMAIL, email_verified: true }).firestore();
+      await assertSucceeds(db.collection('users').doc('guest1').update({ role: 'Admin' }));
+    });
+
+    it('denies a non-admin approved Guest from approving another user', async () => {
+      await seed({
+        guestA: { uid: 'guestA', email: 'ga@test.com', role: 'Guest', accountStatus: 'approved', points: 0 },
+        pendingB: { uid: 'pendingB', email: 'pb@test.com', role: 'Guest', accountStatus: 'pending', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('guestA', { email: 'ga@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('pendingB').update({ accountStatus: 'approved', role: 'Guest' }));
+    });
+
+    it('denies an Admin from modifying a Root user', async () => {
+      await seed({
+        admin1: { uid: 'admin1', email: 'a@test.com', role: 'Admin', accountStatus: 'approved', points: 0 },
+        theRoot: { uid: 'theRoot', email: ROOT_EMAIL, role: 'Root', accountStatus: 'approved', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('admin1', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('theRoot').update({ role: 'Guest', accountStatus: 'approved' }));
+    });
+
+    it('denies an Admin from repointing the uid field while approving', async () => {
+      await seed({
+        admin1: { uid: 'admin1', email: 'a@test.com', role: 'Admin', accountStatus: 'approved', points: 0 },
+        newbie: { uid: 'newbie', email: 'n@test.com', role: 'Guest', accountStatus: 'pending', points: 0 },
+      });
+      const db = testEnv.authenticatedContext('admin1', { email: 'a@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('users').doc('newbie').update({ accountStatus: 'approved', role: 'Guest', uid: 'someoneElse' }));
+    });
+  });
+
+  // Third instance of the same footgun: events.update gated isValidEvent()
+  // (authorId == request.auth.uid) as a global AND, so a non-author could not
+  // RSVP (the attendees map is a partial update leaving authorId untouched).
+  describe('Events update (RSVP cross-user + author edit)', () => {
+    async function seedEvent(extra: Record<string, any> = {}) {
+      await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
+        const db = ctx.firestore();
+        await db.collection('users').doc('author1').set({ uid: 'author1', email: 'au@test.com', role: 'Admin', accountStatus: 'approved', points: 0 });
+        await db.collection('users').doc('admin2').set({ uid: 'admin2', email: 'a2@test.com', role: 'Admin', accountStatus: 'approved', points: 0 });
+        await db.collection('events').doc('ev1').set({
+          authorId: 'author1', authorName: 'Author', name: 'Festa', date: '2026-08-01', timestamp: 1234,
+          attendees: {}, ...extra,
+        });
+      });
+    }
+
+    it('allows a non-author to RSVP (writes only their own attendees entry)', async () => {
+      await seedEvent();
+      const db = testEnv.authenticatedContext('admin2', { email: 'a2@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('events').doc('ev1').update({
+        attendees: { admin2: { status: 'yes', name: 'A2', photoURL: null, guestCount: 0 } },
+      }));
+    });
+
+    it('allows the author to edit their own event metadata', async () => {
+      await seedEvent();
+      const db = testEnv.authenticatedContext('author1', { email: 'au@test.com', email_verified: true }).firestore();
+      await assertSucceeds(db.collection('events').doc('ev1').update({ name: 'Festa Grande' }));
+    });
+
+    it('denies a non-author from editing event metadata', async () => {
+      await seedEvent();
+      const db = testEnv.authenticatedContext('admin2', { email: 'a2@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('events').doc('ev1').update({ name: 'Hijacked' }));
+    });
+
+    it('denies forging another user attendees entry (attendee forger)', async () => {
+      await seedEvent();
+      const db = testEnv.authenticatedContext('admin2', { email: 'a2@test.com', email_verified: true }).firestore();
+      await assertFails(db.collection('events').doc('ev1').update({
+        attendees: { author1: { status: 'no' } },
+      }));
+    });
+  });
 });
 
