@@ -6,6 +6,7 @@ import { Shield, Users, Activity, AlertTriangle, Key, UserCheck, Clock } from 'l
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar } from '../components/ui';
+import { TENANT } from '../config/tenant';
 
 interface UserData {
   uid: string;
@@ -213,7 +214,7 @@ export default function AdminPanel() {
                     <div className="flex items-center gap-3 sm:w-auto w-full">
                       <div className="flex flex-col text-right hidden sm:flex">
                         <span className="text-xs text-slate-400 dark:text-slate-500 font-sans uppercase font-bold">Altitudine</span>
-                        <span className="text-sm font-bold font-serif text-[#2D5A27] dark:text-[#42a83a]">{728 + user.points}m</span>
+                        <span className="text-sm font-bold font-serif text-[#2D5A27] dark:text-[#42a83a]">{TENANT.map.baseAltitude + user.points}m</span>
                       </div>
   
                       <select 

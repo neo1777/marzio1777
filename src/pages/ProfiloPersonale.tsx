@@ -9,6 +9,7 @@ import { Avatar } from '../components/ui';
 import { useUserGagliardetti } from '../hooks/useUserGagliardetti';
 import type { GagliardettoState } from '../lib/gagliardetti';
 import { useFCM } from '../hooks/useFCM';
+import { TENANT } from '../config/tenant';
 
 export default function ProfiloPersonale() {
   const { user, profile, isAdminOrRoot } = useRBAC();
@@ -67,7 +68,7 @@ export default function ProfiloPersonale() {
   if (!profile) return null;
 
   const points = profile.points || 0;
-  const baseAltitude = 728;
+  const baseAltitude = TENANT.map.baseAltitude;
   const currentAltitude = baseAltitude + points;
 
   // Phase 2 §15.C: full Gagliardetti catalog computed from snapshot metrics

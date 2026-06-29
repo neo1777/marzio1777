@@ -12,6 +12,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, LayersControl } from 're
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TENANT } from '../config/tenant';
 
 const customMarkerHtml = `<div style="background-color: #2D5A27; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;"><div style="background-color: white; width: 0.5rem; height: 0.5rem; border-radius: 50%;"></div></div>`;
 const pinIcon = L.divIcon({ html: customMarkerHtml, className: 'custom-bento-marker', iconSize: [24, 24], iconAnchor: [12, 24] });
@@ -294,7 +295,7 @@ export default function IlBaule() {
     setLoading(true);
     try {
       const imageId = `${user.uid}_${Date.now()}`;
-      const storageRef = ref(storage, `marzio_photos/${imageId}.jpg`);
+      const storageRef = ref(storage, `${TENANT.storage.photosPrefix}/${imageId}.jpg`);
 
       await uploadString(storageRef, imagePreview, 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
@@ -635,7 +636,7 @@ export default function IlBaule() {
                         </div>
                       </button>
 
-                      <button onClick={() => { setTempLocation(location || {lat: 45.9238, lng: 8.8655}); setLocationMode('manual') }} className="flex items-center gap-4 w-full p-4 text-left border border-slate-200 dark:border-[#24352b] rounded-xl hover:border-[#2D5A27] dark:hover:border-[#42a83a] hover:bg-slate-50 dark:hover:bg-[#1a261f] transition-all group">
+                      <button onClick={() => { setTempLocation(location || {lat: TENANT.map.center[0], lng: TENANT.map.center[1]}); setLocationMode('manual') }} className="flex items-center gap-4 w-full p-4 text-left border border-slate-200 dark:border-[#24352b] rounded-xl hover:border-[#2D5A27] dark:hover:border-[#42a83a] hover:bg-slate-50 dark:hover:bg-[#1a261f] transition-all group">
                         <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-[#2D5A27] dark:text-[#42a83a] flex items-center justify-center shrink-0"><MapIcon size={18} /></div>
                         <div>
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-[#2D5A27] dark:group-hover:text-[#42a83a]">Visualizza e piazza su Mappa</p>
@@ -663,7 +664,7 @@ export default function IlBaule() {
                  {locationMode === 'manual' && (
                     <div className="flex flex-col gap-4">
                       <div className="w-full h-64 bg-slate-100 dark:bg-[#111814] rounded-lg overflow-hidden border border-slate-200 dark:border-[#24352b] relative z-0">
-                         <MapContainer center={tempLocation || [45.9238, 8.8655]} zoom={16} scrollWheelZoom={true} className="w-full h-full z-0 font-sans" zoomControl={true} key={isDark ? 'dark' : 'light'}>
+                         <MapContainer center={tempLocation || TENANT.map.center} zoom={16} scrollWheelZoom={true} className="w-full h-full z-0 font-sans" zoomControl={true} key={isDark ? 'dark' : 'light'}>
                            <LayersControl position="topright">
                              <LayersControl.BaseLayer name="Esploratore (Satellitare)">
                                <TileLayer

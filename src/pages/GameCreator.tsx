@@ -10,6 +10,7 @@ import { serverTimestamp, collection, getDocs, doc, setDoc } from 'firebase/fire
 import { db } from '../lib/firebase';
 import { generateUniformPointsInRadius } from '../lib/geoUtils';
 import { useHighAccuracyPosition } from '../hooks/useHighAccuracyPosition';
+import { TENANT } from '../config/tenant';
 
 interface ItemDraft {
   lat: number;
@@ -74,7 +75,7 @@ const customIcon = createMarkerIcon('gold');
 // produced a GPS fix. Avoids the visible "Roma → Marzio" jump that happened
 // when the wizard mounted with a 41.9°N centre and then re-centred once GPS
 // arrived.
-const MARZIO_FALLBACK: [number, number] = [45.9238, 8.8655];
+const MARZIO_FALLBACK: [number, number] = TENANT.map.center;
 
 // `<input type="datetime-local">` wants `YYYY-MM-DDTHH:mm` in local time, and
 // `Date.toISOString()` returns UTC, so format manually. +10 min from now is

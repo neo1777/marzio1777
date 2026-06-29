@@ -12,6 +12,7 @@ import { Trophy, Compass, Crosshair, Radar } from 'lucide-react';
 import ARCaptureLayer from '../components/ARCaptureLayer';
 import CompassArrow from '../components/CompassArrow';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { TENANT } from '../config/tenant';
 import { createMarkerIcon } from '../lib/leafletIcons';
 
 const userIcon = createMarkerIcon('blue');
@@ -250,7 +251,7 @@ export default function TreasureHuntPlay() {
                  const cfg = (event as any)?.treasureHuntConfig;
                  const fallbackCenter: [number, number] = cfg?.centerLat && cfg?.centerLng
                     ? [cfg.centerLat, cfg.centerLng]
-                    : [45.9238, 8.8655];
+                    : TENANT.map.center;
                  return (
                     <div className="flex-1 relative w-full h-full">
                        <div className="absolute top-2 left-2 right-2 z-[500] bg-amber-100/95 dark:bg-amber-900/40 backdrop-blur border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-lg px-3 py-2 text-xs font-medium pointer-events-none">

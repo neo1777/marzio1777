@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { TENANT } from '../config/tenant';
 import { useAuth } from '../contexts/AuthContext';
 import { Send, TreeDeciduous, Users, Smile, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,7 +41,7 @@ export default function LAlberone() {
   }, []);
 
   useEffect(() => {
-    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", createdBy: "System", communityId: 'marzio', createdAt: serverTimestamp() }, { merge: true });
+    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", createdBy: "System", communityId: TENANT.id, createdAt: serverTimestamp() }, { merge: true });
 
     const q = query(
       collection(db, `chats/${channelId}/messages`), 
@@ -98,7 +99,7 @@ export default function LAlberone() {
         authorName: user.displayName,
         text: newMessage.trim(),
         imageUrl: selectedImage,
-        communityId: 'marzio',
+        communityId: TENANT.id,
         timestamp: serverTimestamp()
       });
       setNewMessage('');

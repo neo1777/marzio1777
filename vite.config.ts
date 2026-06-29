@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/marzio1777/', // IMPORTANT: Rimuovi il commento se ospiti il sito su https://tuonome.github.io/marzio1777/
+    base: env.VITE_BASE_PATH || '/marzio1777/', // base path per-istanza: override via VITE_BASE_PATH; default = istanza Marzio
     plugins: [
       react(), 
       tailwindcss(),

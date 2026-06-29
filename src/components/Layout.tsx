@@ -7,6 +7,7 @@ import { Avatar } from './ui';
 import { logout, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { SW_UPDATE_EVENT, JUST_UPDATED_KEY, triggerUpdateReload } from '../main';
+import { TENANT } from '../config/tenant';
 
 export default function Layout() {
   const { user, profile, isRoot, isAdminOrRoot, isPending, isGuest } = useRBAC();
@@ -103,7 +104,7 @@ export default function Layout() {
   }, [user, profile, isAdminOrRoot]);
 
   const points = profile?.points || 0;
-  const baseAltitude = 728; // Marzio altitude
+  const baseAltitude = TENANT.map.baseAltitude;
   const currentAltitude = baseAltitude + points;
 
   // Simple badges derivation based on points/metrics

@@ -10,6 +10,7 @@ import { Map, MapPin } from 'lucide-react';
 import { useRBAC } from '../hooks/useRBAC';
 import { Avatar } from '../components/ui';
 import { liveUserAvatarHtml } from '../lib/leafletIcons';
+import { TENANT } from '../config/tenant';
 
 const customMarkerHtmlLight = `
   <div style="background-color: #2D5A27; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;">
@@ -67,7 +68,7 @@ const createLiveUserIcon = (user: any) => {
 export default function LaMappa() {
   const { user, profile, isGuest, isPending } = useRBAC();
   const [posts, setPosts] = useState<any[]>([]);
-  const marzioCenter: [number, number] = [45.9238, 8.8655];
+  const marzioCenter: [number, number] = TENANT.map.center;
   const [isDark, setIsDark] = useState(false);
   const [liveUsers, setLiveUsers] = useState<any[]>([]);
   
