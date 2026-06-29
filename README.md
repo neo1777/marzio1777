@@ -1,20 +1,56 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# marzio1777
 
-# Run and deploy your AI Studio app
+PWA social "di paese" per la comunità di **Marzio**: una piazza digitale dove
+conservare i ricordi del paese, organizzare eventi, giocare a cacce al tesoro
+geolocalizzate e condividere musica. SPA **React 19 + Vite + TypeScript +
+Tailwind v4 + Firebase**, distribuita come Progressive Web App.
 
-This contains everything you need to run your app locally.
+🔗 **Live:** https://neo1777.github.io/marzio1777/
 
-View your app in AI Studio: https://ai.studio/apps/e52702df-ebb2-4364-800f-42c32d7574c2
+> Nata come app per una singola comunità (Marzio = istanza zero, in produzione).
+> I valori di dominio sono centralizzati in [`src/config/tenant.ts`](src/config/tenant.ts):
+> è il primo passo verso una piattaforma istanziabile per altre comunità.
 
-## Run Locally
+## Funzionalità
 
-**Prerequisites:**  Node.js
+- **La Piazza** — bacheca social con post, like e commenti.
+- **Il Bivacco** — eventi con RSVP e spese condivise.
+- **Il Baule** — caricamento foto con cropper.
+- **La Mappa** — Leaflet con posizione live.
+- **Il Cinematografo / L'Alberone / Profilo / Admin / Istruzioni**.
+- **Il Campo dei Giochi** — caccia al tesoro AR geolocalizzata + quiz a host rotativo.
+- **L'Ainulindalë** — modulo audio: biblioteca locale (IndexedDB), sessioni DJ e
+  trasferimento P2P via WebRTC (Firestore solo come signaling).
 
+Sicurezza zero-trust con ruoli `Root | Admin | Guest` e stati `pending | approved`,
+applicati lato `firestore.rules` (con suite di test dedicata).
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Stack
+
+React 19 · Vite · TypeScript · Tailwind v4 · Firebase (Firestore + Auth +
+Cloud Functions + FCM) · react-leaflet · Framer Motion · Web Audio API · WebRTC.
+
+## Avvio locale
+
+**Prerequisiti:** Node.js.
+
+1. Installa le dipendenze: `npm install`
+2. Copia `.env.example` in `.env.local` e imposta le variabili `VITE_FIREBASE_*`
+   (e, opzionale, `GEMINI_API_KEY`).
+3. Avvia: `npm run dev` (Vite su `:3000`).
+
+Altri comandi: `npm run build` (produzione), `npm run preview`, `npm run lint`
+(typecheck), `npm test` (unit, Vitest). I test delle regole Firestore girano
+sull'emulatore (richiedono JDK 21+) — vedi `CLAUDE.md`.
+
+> Il base path è `/marzio1777/` (GitHub Pages); per ospitarlo altrove imposta
+> `VITE_BASE_PATH` (es. `VITE_BASE_PATH=/ npm run build`).
+
+## Documentazione
+
+Specifiche estese in [`public/docs/`](public/docs/) (TECHNICAL_DOCS, GAMING_SYSTEM,
+security_spec, in IT/EN) e `AINULINDALE_TECHNICAL_SPEC.md`, `MIGRATION.md`.
+
+## Licenza
+
+[MIT](LICENSE) © 2026 neo1777
