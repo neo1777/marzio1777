@@ -173,6 +173,8 @@ Il backend non è qui (deciso: resta FlutterFire, §0.1). Queste cinque decision
 
 ### 2.4 Theming (Tailwind v4 inline → ThemeData / design tokens)
 
+> **🎨 Aggiornato 2026-06-30 — design integrato:** il design system è ora il **N1777 Design System** di Neo (brass su ink; token/tipografia/componenti in [`design-system-N1777/00-INTEGRAZIONE.md`](design-system-N1777/00-INTEGRAZIONE.md)). La raccomandazione qui sotto — `ThemeData` + `ThemeExtension` derivata da `TenantConfig` — **regge e si concretizza** su quei token: la `ThemeExtension` porta i token N1777 di base, `TenantConfig` l'override per-istanza. L'analisi seppia / verde-notte / dark-flame qui sotto descrive lo stato **React da cui si migra**, non il target.
+
 **Perché.** `src/index.css` definisce in `@theme` la palette di brand `--color-marzio-{seppia,verde,oro,azzurro,grigio}` **più** un set di token semantici (`--color-background`, `--color-primary`, `--color-card`…) mappati sul tema *dark-flame* dell'Ainulindalë — con un commento che avverte: senza questi, Tailwind v4 droppa silenziosamente `.bg-primary` ("bug pagina nera"). Convivono **due superfici**: *seppia/giorno* (Comunità) e *notte/dark-flame* (Ainulindalë, forzata dal parent `bg-[#0A0A0F]`). Il dark mode è una classe `.dark` su `documentElement`, scritta da `Layout.tsx` e **osservata via `MutationObserver`** da `LaMappa`/`IlBaule`/`LAlberone`. Problema reale e load-bearing: **fortissima deriva di palette** — 72 occorrenze di `bg-[#2D5A27]`, 62 di `bg-[#111814]`, 51 di `bg-[#1a261f]`… contro appena ~9 usi dei token `marzio-*`. I colori sono per lo più hardcoded inline, non tokenizzati.
 
 | Alternativa | Pro | Contro |

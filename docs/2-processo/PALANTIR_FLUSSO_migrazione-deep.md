@@ -26,7 +26,7 @@
 ## Stato corrente
 - Fase: **FLUSSO COMPLETO** (A→E). Piano verificato e approfondito; archiviato su NB.
 - ⚠️ Branch `autoplan/flutter-migration`: 5 commit; gli ultimi 2 (`56758c2` piano Parte I, `daf732d` Parte II+annessi) **non pushati** → `git push` quando Neo vuole.
-- ⏳ Atteso: **cartella design** di Neo → innesto in `PLAN_ANNEX_frontend-design.md`.
+- ✅ **Cartella design integrata** (2026-06-30): è il **N1777 Design System** → `docs/1-piano-flutter-ATTUALE/design-system-N1777/00-INTEGRAZIONE.md` (+ token CSS + flutter-ref + previews copiati nel repo). Resta da confermare identità Marzio (opzione A "N1777 base + Marzio tenant caldo", raccomandata, vs B "adozione integrale").
 - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter-migration`.
 - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`56758c2`) — da arricchire.
 

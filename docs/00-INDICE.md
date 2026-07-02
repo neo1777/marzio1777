@@ -29,6 +29,8 @@
 > Nota: i file di questa cartella si citano a vicenda per nome semplice → i link fra loro
 > restano validi perché sono nella stessa cartella.
 
+🎨 **`design-system-N1777/`** — il **design di Neo** (N1777 Design System) integrato nel piano (30 giu): `00-INTEGRAZIONE.md` (autoritativo: token→Flutter, tipografia Fraunces/Archivo/JetBrains, componenti, decisione identità Marzio) + `tokens/colors_and_type.css` (fonte di verità) + `flutter-ref/` (Dart di riferimento da allineare) + `previews/` (PNG). 🟢 attuale.
+
 ## 2-processo/
 - `PALANTIR_FLUSSO_migrazione-deep.md` — stato del flusso di verifica (a che punto è, cosa è fatto). Utile per riprendere il lavoro.
 

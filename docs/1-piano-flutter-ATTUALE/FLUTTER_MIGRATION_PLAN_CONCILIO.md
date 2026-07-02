@@ -82,7 +82,8 @@ Il dettaglio production-ready di ogni dimensione vive negli annessi (fondati su 
 
 - `PLAN_ANNEX_sicurezza.md` — **Matrice delle 30 Sporche (+#31) per la migrazione**: per ogni vettore, la shape Dart load-bearing perché la mitigazione regga (forme [VALID]/[DIFF]/[PIN]/[INT]/[NEST]/[TS]/[CAP]/[ONEWAY]/[CF]).
 - `PLAN_ANNEX_audio-coda-p2p.md` — preservazione elegante di coda dinamica ("patto a 3" → 4° sito Dart), P2P WebRTC, IndexedDB, AudioEngine.
-- `PLAN_ANNEX_architettura.md` · `PLAN_ANNEX_performance.md` · `PLAN_ANNEX_frontend-design.md` (incl. base-default neutro pronto per la cartella design) · `PLAN_ANNEX_test-antiregressione.md` · `PLAN_ANNEX_pulizia-refactoring.md`.
+- `PLAN_ANNEX_architettura.md` · `PLAN_ANNEX_performance.md` · `PLAN_ANNEX_frontend-design.md` · `PLAN_ANNEX_test-antiregressione.md` · `PLAN_ANNEX_pulizia-refactoring.md`.
+- **`design-system-N1777/00-INTEGRAZIONE.md`** — 🎨 il design di Neo (N1777 Design System) **integrato**: token, tipografia (Fraunces/Archivo/JetBrains), componenti, e l'implementazione Flutter di riferimento da allineare.
 - Dossier sorgentato completo: `PLAN_DOSSIER_corpus.md`.
 
-> **Cartella design**: ancora attesa da Neo → si innesta in `PLAN_ANNEX_frontend-design.md` (predisposto come base-default parametrizzabile su `TenantConfig`).
+> **Cartella design: RICEVUTA e INTEGRATA** (2026-06-30) — è il **N1777 Design System** di Neo (brass su ink, Fraunces/Archivo/JetBrains). Vedi `design-system-N1777/00-INTEGRAZIONE.md`. Sostituisce il "base-default neutro": il design system di marzio-Flutter È N1777. Resta da confermare l'identità di Marzio (opzione A "N1777 base + Marzio tenant caldo", raccomandata, vs B "adozione integrale").

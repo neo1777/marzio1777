@@ -1,0 +1,262 @@
+/* ============================================================================
+   N1777 — Design System di Neo (team1777)
+   colors_and_type.css — foundational tokens
+   "ottone su inchiostro" — brass on ink. Caldo-su-freddo (warm on cold).
+   ----------------------------------------------------------------------------
+   Fonts are loaded from Google Fonts (all OFL / libero):
+     Fraunces      — display / editorial
+     Archivo       — UI / corpo (body)
+     JetBrains Mono — dati / mono (data)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------------------------------------------------------------------- */
+  /* PRIMITIVE — COLORE                                                      */
+  /* L'inchiostro è FREDDO. Il testo è CALDO. L'accento è UNICO.            */
+  /* ---------------------------------------------------------------------- */
+
+  /* Inchiostro (cold ink) — backgrounds, ascending elevation */
+  --ink-000: #0E1116;   /* base — la pagina */
+  --ink-100: #141821;   /* superficie sollevata / card */
+  --ink-200: #1B212C;   /* popover / menu / input */
+  --ink-300: #232B38;   /* hover su superficie */
+  --ink-400: #2D3645;   /* hover forte / selezione */
+
+  /* Off-white caldo — MAI bianco puro */
+  --paper-100: #EAE7DF;  /* testo primario */
+  --paper-200: #C9C6BD;  /* testo su accento / enfasi calda */
+
+  /* Grigi freddi — testo secondario e linee */
+  --slate-300: #98A1AE;  /* testo secondario */
+  --slate-400: #6B7480;  /* testo terziario / placeholder */
+  --slate-500: #4A515D;  /* disabilitato */
+
+  /* Ottone / ambra — ACCENTO UNICO. Caldo ma NON terracotta. */
+  --brass-400: #E6B96A;  /* hover / highlight */
+  --brass-500: #D6A24C;  /* accento base */
+  --brass-600: #B98837;  /* pressed */
+  --brass-tint: rgba(214, 162, 76, 0.12);   /* fondo tenue accento */
+  --brass-line: rgba(214, 162, 76, 0.32);   /* bordo accento */
+
+  /* Bordi — luce calda a bassissima opacità sopra il freddo */
+  --line-100: rgba(234, 231, 223, 0.07);  /* divisori tenui */
+  --line-200: rgba(234, 231, 223, 0.12);  /* bordo default */
+  --line-300: rgba(234, 231, 223, 0.20);  /* bordo forte / focus neutro */
+
+  /* Semantici — sobri, fuori dal testo (icone, stati, bordi) */
+  --ok-500:    #6FA878;  /* positivo — salvia */
+  --ok-tint:   rgba(111, 168, 120, 0.14);
+  --warn-500:  #D8B860;  /* attenzione — oro, più giallo dell'accento */
+  --warn-tint: rgba(216, 184, 96, 0.14);
+  --danger-500:#C75D67;  /* errore — rosa-rosso, freddo */
+  --danger-tint:rgba(199, 93, 103, 0.14);
+  --info-500:  #6E8CA8;  /* informativo — ardesia */
+  --info-tint: rgba(110, 140, 168, 0.14);
+
+  /* ---------------------------------------------------------------------- */
+  /* SEMANTIC — superfici e testo                                           */
+  /* ---------------------------------------------------------------------- */
+  --bg:            var(--ink-000);
+  --bg-raised:     var(--ink-100);
+  --bg-overlay:    var(--ink-200);
+  --bg-hover:      var(--ink-300);
+  --bg-active:     var(--ink-400);
+
+  --fg:            var(--paper-100);   /* testo primario */
+  --fg-muted:      var(--slate-300);   /* testo secondario */
+  --fg-subtle:     var(--slate-400);   /* terziario / placeholder */
+  --fg-disabled:   var(--slate-500);
+  --fg-on-accent:  #1A130A;            /* testo su ottone — inchiostro caldo scuro */
+
+  --accent:        var(--brass-500);
+  --accent-hover:  var(--brass-400);
+  --accent-press:  var(--brass-600);
+
+  --border:        var(--line-200);
+  --border-subtle: var(--line-100);
+  --border-strong: var(--line-300);
+  --border-accent: var(--brass-line);
+
+  /* ---------------------------------------------------------------------- */
+  /* TIPOGRAFIA                                                              */
+  /* ---------------------------------------------------------------------- */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui:      'Archivo', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* Fraunces — assi ottici: morbido e leggermente "wonky" per editoriale */
+  --fraunces-soft: 'SOFT' 0, 'WONK' 0;
+
+  /* Scala tipografica (riposo editoriale — molta aria) */
+  --text-display: 4rem;      /* 64 — eroe, numeri grandi */
+  --text-h1:      2.5rem;    /* 40 */
+  --text-h2:      1.875rem;  /* 30 */
+  --text-h3:      1.375rem;  /* 22 */
+  --text-title:   1.0625rem; /* 17 — titoli UI */
+  --text-body:    0.9375rem; /* 15 — corpo */
+  --text-sm:      0.8125rem; /* 13 — secondario */
+  --text-label:   0.6875rem; /* 11 — etichette maiuscole tracciate */
+  --text-mono:    0.8125rem; /* 13 — dati */
+
+  --leading-tight:  1.1;
+  --leading-snug:   1.28;
+  --leading-normal: 1.55;
+  --leading-relax:  1.7;
+
+  --tracking-label: 0.14em;  /* etichette maiuscole */
+  --tracking-tight: -0.01em;
+  --tracking-display: -0.02em;
+
+  /* ---------------------------------------------------------------------- */
+  /* SPAZIO — base 4px                                                       */
+  /* ---------------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---------------------------------------------------------------------- */
+  /* RAGGI — disciplinati, mai morbidi                                       */
+  /* ---------------------------------------------------------------------- */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------------- */
+  /* OMBRE — sottili sul buio. Elevazione = luce + bordo + ombra morbida.    */
+  /* ---------------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.55);
+  /* Riflesso superiore interno — dà spessore alle superfici sollevate */
+  --sheen: inset 0 1px 0 rgba(234, 231, 223, 0.045);
+  /* Anello focus accento */
+  --ring: 0 0 0 3px rgba(214, 162, 76, 0.30);
+
+  /* ---------------------------------------------------------------------- */
+  /* MOVIMENTO — breve e funzionale. "Il giusto e quando serve."             */
+  /* ---------------------------------------------------------------------- */
+  --ease-out:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast:   120ms;
+  --dur-base:   180ms;
+  --dur-slow:   260ms;
+}
+
+/* ============================================================================
+   ELEMENTI SEMANTICI — applica i token sopra
+   Include o estendi questo blocco per ottenere h1/h2/p/code coerenti.
+   ========================================================================== */
+
+.n1-display,
+.n1-h1, .n1-h2, .n1-h3 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  color: var(--fg);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.n1-display {
+  font-size: var(--text-display);
+  line-height: var(--leading-tight);
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+  font-variation-settings: var(--fraunces-soft);
+}
+.n1-h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-tight);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+.n1-h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-snug);
+  font-weight: 500;
+  letter-spacing: var(--tracking-tight);
+}
+.n1-h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-snug);
+  font-weight: 500;
+}
+
+/* Titoli e corpo UI — Archivo */
+.n1-title {
+  font-family: var(--font-ui);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+.n1-body {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  margin: 0;
+}
+.n1-body-muted {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+  margin: 0;
+}
+.n1-sm {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+/* Etichetta — maiuscolo, tracciato. Il marcatore editoriale del sistema. */
+.n1-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+/* Dati e codice — JetBrains Mono */
+.n1-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: 500;
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  font-feature-settings: 'zero' 1, 'ss01' 1;
+}
+.n1-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: 400;
+  color: var(--fg);
+  background: var(--ink-200);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 0.1em 0.4em;
+}

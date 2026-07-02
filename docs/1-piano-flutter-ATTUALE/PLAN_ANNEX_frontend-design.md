@@ -1,5 +1,7 @@
 > Annesso al piano di migrazione marzio1777→Flutter (Fase B, 2026-06-30). Fondato su codice/doc reali; disciplina spiegazione-tecnica (verifica alla fonte, perché prima del come). Apre con i gap trovati nella Parte I, poi la sezione production-ready.
 
+> **🎨 AGGIORNAMENTO 2026-06-30 — design integrato.** La "base-default neutra" che questo annesso proponeva (gap #5) è **superata**: la cartella design di Neo è arrivata ed è il **N1777 Design System** (brass su ink; Fraunces/Archivo/JetBrains). La fonte autoritativa (token, tipografia, componenti, implementazione Flutter di riferimento + le decisioni) è ora **[`design-system-N1777/00-INTEGRAZIONE.md`](design-system-N1777/00-INTEGRAZIONE.md)**. Il resto di questo annesso — adaptive/responsive, safe-area, stati vuoto/errore/caricamento, a11y `Semantics`, i 42 `alert()`→`SnackBar`, la cura per pagina — **resta valido, applicato ai token N1777**.
+
 ### Verifica del piano attuale (gap trovati)
 
 Ho verificato §2.4 (Theming), §3.1 (Shell/tema/primitive), §3.2 (pagine), §7 (trade-off CanvasKit) contro `src/index.css`, `src/components/ui/index.tsx`, `src/config/tenant.ts`, `src/components/Layout.tsx` e grep sul codice reale. Il piano è solido sull'impianto (ThemeData + ThemeExtension, go_router shell, ThemeMode al posto del `MutationObserver`), ma ha cinque imprecisioni load-bearing sulla dimensione frontend-design e tre omissioni.
