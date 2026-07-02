@@ -19,12 +19,14 @@
 ## Il flusso (skill in ordine)
 - [x] **A — setaccio** ✓ (2026-06-30): dossier 156KB, 7 temi sorgentati → `scratchpad/SETACCIO_DOSSIER.md`.
 - [x] **B — spiegazione-tecnica + verifica multi-agente** ✓ (2026-06-30): 7 dimensioni, 164KB di gap+sezioni → `scratchpad/FASE_B_ARRICCHIMENTI.md`. Sicurezza ha trovato 8 gap reali (int/double, FieldPath vs 'a.b', fallback CF block-vs-fallback, serverTimestamp, drift deploy).
-- [ ] **C — agora1777**: concilio di completezza.
-- [ ] **D — integrazione** nel piano.
-- [ ] **E — sync NotebookLM** (notebook dedicato).
+- [x] **C — agora1777** ✓ (2026-06-30): 5 voci, concilio → `scratchpad/FASE_C_CONCILIO.md`; trovati 4 precondizioni bloccanti + trasversali + tensioni.
+- [x] **D — integrazione** ✓ (2026-06-30): `FLUTTER_MIGRATION_PLAN_CONCILIO.md` (Parte II) + 7 annessi `PLAN_ANNEX_*.md` + `PLAN_DOSSIER_corpus.md`. Commit `daf732d`.
+- [x] **E — sync NotebookLM** ✓ (2026-06-30): notebook `af7ca152-c7a2-4117-82f9-6ad73160cbae` "marzio1777 — migrazione Flutter (piano + verifica profonda)" con **14 fonti** (13 file; dossier in 2 parti). Confermato da source_list.
 
 ## Stato corrente
-- Fase: **C (concilio di completezza)** in avvio.
+- Fase: **FLUSSO COMPLETO** (A→E). Piano verificato e approfondito; archiviato su NB.
+- ⚠️ Branch `autoplan/flutter-migration`: 5 commit; gli ultimi 2 (`56758c2` piano Parte I, `daf732d` Parte II+annessi) **non pushati** → `git push` quando Neo vuole.
+- ⏳ Atteso: **cartella design** di Neo → innesto in `PLAN_ANNEX_frontend-design.md`.
 - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter-migration`.
 - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`56758c2`) — da arricchire.
 

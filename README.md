@@ -49,7 +49,7 @@ sull'emulatore (richiedono JDK 21+) — vedi `CLAUDE.md`.
 ## Documentazione
 
 Specifiche estese in [`public/docs/`](public/docs/) (TECHNICAL_DOCS, GAMING_SYSTEM,
-security_spec, in IT/EN) e `AINULINDALE_TECHNICAL_SPEC.md`, `MIGRATION.md`.
+security_spec, in IT/EN) e `docs/3-spec-originali/AINULINDALE_TECHNICAL_SPEC.md`, `docs/3-spec-originali/MIGRATION.md`.
 
 ## Licenza
 

@@ -1,0 +1,3329 @@
+ ▐▛███▜▌   Claude Code v2.1.195
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/Scrivania/marzio1777-main
+
+
+❯ /model                                                                        
+  ⎿  Set model to Opus 4.8 (1M context) and saved as your default for new
+     sessions
+
+❯ /effort                                                                       
+  ⎿  Set effort level to ultracode (this session only): xhigh + dynamic workflow
+     orchestration
+
+❯ su questo computer abbiamo realizzato marzio1777 funzionante e su repo, poi l 
+  abbiamo riscritta in modo che sia piu generale, la prima versione era         
+  specifica per i miei amici, ne abbiamo fatto la versione per il pubblico, ma  
+  è passato tempo ed ho pasticciato, ci sono cartelle sparse di queste 2        
+  versioni, ci sono sessioni claude cli ci sono testi doc cartelle file, ci     
+  sono trascrizioni, devo riordinare tutto e capire quali sono i file piu       
+  aggiornati, come codice non solo come data, riusciamo a riordinare tutto?     
+  riesci a trovare su pc tutti i file correlati a marzio1777 old e new? riesci  
+  a capire dalle varie trascrizioni lo storico e lo stato attuale? raccogli     
+  tutti i file ma non eliminare nulla, puoi però spostare i file se necessario  
+
+● Ottimo, mettiamo ordine in questo caos. Prima di proporti qualsiasi
+  spostamento devo vedere cosa c'è davvero sul disco. Parto con una fase di
+  ricognizione: trovo tutti i file e cartelle legati a marzio1777 (vecchia e
+  nuova versione), le sessioni Claude CLI e le trascrizioni. Non tocco nulla in
+  questa fase — solo lettura.
+
+  Comincio dalla scansione del disco.
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Quadro già molto chiaro. Ci sono più copie sparse di marzio1777-main
+  (Scrivania, raccolta-bot-vps-1777, Scaricati come zip e cartella) più una
+  cartella "ONLYDOC" di soli documenti, una in archivio _elimina, e —
+  preziosissimo — un file di memoria project_marzio1777_status.md e una
+  trascrizione. Vado in profondità: leggo lo stato salvato e raccolgo metadati
+  (date, dimensioni, struttura) di ogni copia.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Importante: il file di memoria descrive la versione privata "di paese" (la
+  vecchia, per gli amici di Marzio). La versione pubblica/generalizzata potrebbe
+  essere stata rinominata senza "marzio" nel nome — quindi la mia ricerca per
+  nome la mancherebbe. Devo cercarla per lignaggio del codice (stesso stack
+  React 19 + Vite + Firebase, ma generalizzato). Allargo la vista alla Scrivania
+  e raccolgo git/package.json di ogni copia.
+
+  Listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+● Scoperta chiave: la cartella Scrivania/marzio1777-main è l'unico repo git ed è
+  sul branch autoplan/generalization, ultimo commit "docs: add 
+  GENERALIZATION_BRIEF for the multi-community plan". Quindi la "versione
+  pubblica/generale" non è una cartella separata: è un branch dello stesso repo
+  (impostato col tuo metodo autoplan1777). Le altre due copie non sono repo git
+  (snapshot/zip più vecchi). Indago il repo a fondo e cerco se esista anche un
+  fork generalizzato sotto altro nome.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Ora ho la spina dorsale della storia. Riassumo il lignaggio git prima di
+  scendere nelle trascrizioni:
+
+  - origin/main (GitHub pubblico) → main locale ahead di 2 commit →
+  autoplan/generalization = main + 1 commit (il GENERALIZATION_BRIEF).
+  - La "versione generale/pubblica" risulta a livello di BRIEF/piano sul branch
+  autoplan/generalization, non come codebase separata completata. Ci sono due 
+  piani grandi: FLUTTER_MIGRATION_BRIEF.md (migrazione a Flutter) e
+  GENERALIZATION_BRIEF.md (multi-comunità).
+
+  Adesso inventario tutte le trascrizioni/sessioni e leggo i due brief centrali
+  + confronto il codice delle 3 copie per stabilire quale è davvero la più
+  aggiornata.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+  ⎿  Loaded CLAUDE.md
+
+● Il CLAUDE.md del repo (caricato in automatico) mi ha dato la storia tecnica
+  completa. Ora ho il quadro quasi intero. Faccio gli ultimi accertamenti inline
+  prima di sintetizzare: verifico le sessioni .jsonl, deduplico le copie del
+  transcript grande, confronto il codice tra le copie e ispeziono la cartella
+  ONLYDOC e gli zip.
+
+  Listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+● Inventario completo. Tre fatti chiave emersi:
+
+  1. Non esistono sessioni .jsonl nelle dir Claude CLI (solo memory/): le
+  "trascrizioni" sono i .txt copia-incolla dentro le cartelle. Il transcript
+  grande (145KB, 30/05) è identico (stesso md5) nelle 3 copie → una sola
+  sessione, triplicata.
+  2. ONLYDOC non è codice: è un export di soli documenti (03–08/05) + il suo
+  CLAUDE.md + cronache-di-marzio.html (narrazione 80KB) + un transcript. Serviva
+  probabilmente a generare le "cronache"/NotebookLM.
+  3. Zip in Scaricati (tutti del 03/05) = download vecchi da inizio maggio; la
+  cartella marzio1777(1) (102 file) ne è lo scompattato.
+
+  Confermo col diff del codice che il repo git è davvero il superset più
+  aggiornato, poi lancio l'analisi profonda delle trascrizioni.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Risposta diretta alla tua domanda sul codice più aggiornato (la più
+  importante):
+
+  - Scrivania/marzio1777-main (repo git) e la copia in
+  raccolta-bot-vps-1777/D-cli/ sono identiche nel codice (87 file src/ uguali,
+  unica differenza un log di debug). La copia nella raccolta-bot è uno specchio 
+  senza .git del repo.
+  - La cartella Scaricati/.../marzio1777(1) e i 3 zip (tutti del 3 maggio) sono
+  codice vecchio: 76 file src/, mancano useRBAC, useWakeLock, le Cloud
+  Functions, i due brief — cioè è la versione prima dell'hardening di maggio
+  (B4/B6/B7). È vicina alla "versione per gli amici" originale.
+
+  Quindi: fonte di verità = il repo git. Ora ricostruisco lo storico dalle
+  trascrizioni con un'analisi in parallelo.
+
+● Workflow(Ricostruisce storico e stato attuale di marzio1777 da trascrizioni,
+          cronache e brief sparsi)
+  ⎿  /workflows to view dynamic workflow runs
+
+● Mentre l'analisi delle trascrizioni gira in background, faccio un paio di
+  accertamenti rapidi a supporto del piano di riordino: cosa contengono gli zip
+  e perché c'è una copia dentro raccolta-bot-vps-1777.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Ho il quadro completo della topologia su disco, anche prima che finisca
+  l'analisi delle trascrizioni (che gira ora in background). Ti do subito la
+  mappa e il verdetto sul codice; il racconto storico arriva appena i reader
+  finiscono.
+
+  🗺️ Mappa di tutto ciò che è "marzio1777" sul PC
+
+  #: 1
+  Percorso: Scrivania/marzio1777-main
+  Cos'è: Repo git (89 commit, branch autoplan/generalization)
+  Versione: NEW — fonte di verità
+  Stato: Codice più aggiornato; ahead 2 su origin/main + 1 commit del brief
+  ────────────────────────────────────────
+  #: 2
+  Percorso: raccolta-bot-vps-1777/D-cli/marzio1777-main
+  Cos'è: Copia senza .git
+  Versione: = identica a #1
+  Stato: Specchio del repo (87/87 file src/ uguali), messo nella raccolta-bot il
+
+    30/05
+  ────────────────────────────────────────
+  #: 3
+  Percorso: Scaricati/1777DIR/230526/marzio1777(1)
+  Cos'è: Cartella scompattata
+  Versione: OLD (3 mag)
+  Stato: 76 file src/, manca tutto l'hardening B4–B7 + i brief
+  ────────────────────────────────────────
+  #: 4
+  Percorso: Scaricati/1777FILE/230526/marzio1777.zip
+  Cos'è: Zip download
+  Versione: OLD-1 (più vecchio)
+  Stato: 113 file, ha GAME_DESIGN.md, no spec audio
+  ────────────────────────────────────────
+  #: 5
+  Percorso: Scaricati/1777FILE/230526/marzio1777(1).zip
+  Cos'è: Zip download
+  Versione: OLD-2
+  Stato: 116 file (= scompattato in #3)
+  ────────────────────────────────────────
+  #: 6
+  Percorso: Scaricati/1777FILE/230526/marzio1777-main.zip
+  Cos'è: Zip da GitHub
+  Versione: OLD
+  Stato: wrapper marzio1777-main/
+  ────────────────────────────────────────
+  #: 7
+  Percorso: Scrivania/MARZIO1777ONLYDOC-2305260615
+  Cos'è: Export solo documenti + CLAUDE.md + cronache-di-marzio.html
+  Versione: doc 03–24 mag
+  Stato: Niente codice; serviva a generare cronache/NotebookLM
+  ────────────────────────────────────────
+  #: 8
+  Percorso: .claude/projects/…marzio1777-main/memory/
+  Cos'è: Memoria di sessione (project_marzio1777_status.md)
+  Versione: —
+  Stato: Conserva i gap spec↔codice
+  ────────────────────────────────────────
+  #: 9
+  Percorso:
+  mcp_dash/_elimina/_archivio-pulizia-2026-06-05/marzio1777-altro-progetto
+  Cos'è: Log/screenshot di test (mix con dashboard.py)
+  Versione: —
+  Stato: Già in archivio "_elimina"
+  ────────────────────────────────────────
+  #: 10
+  Percorso: 3× transcript .txt (30/05)
+  Cos'è: identici (stesso md5)
+  Versione: —
+  Stato: Una sola sessione, triplicata in #1, #2 e in
+  E-idee-bot/trascrizioni-txt
+
+  ✅ Verdetto "qual è il più aggiornato come codice"
+
+  Il repo git (#1), e la sua copia identica (#2). Tutto ciò che sta in Scaricati
+  (#3–#6) è la versione di inizio maggio, vicina alla "prima versione per gli
+  amici" — da trattare come archivio storico, non da confondere col corrente.
+
+  ⏳ In corso
+
+  4 reader in parallelo stanno leggendo: il transcript grande del 30/05, la
+  trascrizione + cronache di ONLYDOC, i brief di roadmap (Flutter +
+  generalizzazione), e la bash_history (per ricostruire come i file si sono
+  sparsi). Appena tornano, ti consegno lo storico old→new, lo stato attuale e il
+  piano di riordino (che ti farò confermare prima di spostare qualunque cosa).
+
+✻ Cogitated for 7m 8s
+
+● Dynamic workflow "Ricostruisce storico e stato attuale di marzio1777 da
+trascrizioni, cronache e brief sparsi" completed · 3m 52s
+● L'analisi è completa. Leggo il risultato integrale per ricostruire lo storico
+  con precisione.
+
+  Read 1 file (ctrl+o to expand)
+
+● Il reader della bash_history ha trovato un filo che mi mancava: tracce di cd 
+  app-project/, tree -T marzio1777migration, python3 rename_project.py, git push
+  — cioè una migrazione/rinomina del progetto dentro ~/app-project/. La mia
+  ricerca per nome "marzio" l'aveva mancata proprio perché il rename_project.py
+  serve a togliere "marzio" dal nome. Questa potrebbe essere davvero la versione
+  pubblica/generalizzata rinominata. Investigo subito.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● ~/app-project/ è un progetto diverso (piattaforma di peer-review per articoli
+  tecnici AI, in Flutter) — non una versione rinominata di marzio. Ma il
+  riferimento marzio1777migration nella bash history resta da chiarire: verifico
+  il contesto esatto e cerco un'eventuale cartella di migrazione marzio
+  altrove.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Risolto anche l'ultimo dubbio: ~/app-project/ è peerlayer1777, un progetto
+  Flutter completamente diverso (piattaforma di peer-review per articoli AI) —
+  non cita mai "marzio". Il marzio1777migration nella bash history era solo una
+  stringa-titolo che stavi provando col comando tree (stavi sperimentando le
+  opzioni per generare treeT_m1777.txt), non una cartella. Non esiste nessun
+  codebase marzio rinominato/generalizzato su disco.
+
+  Ora ho il quadro completo e verificato. Ti consegno storico, stato reale e
+  piano di riordino.
+
+  ---
+  📜 Lo storico ricostruito (old → new)
+
+  - Aprile 2026 — Genesi. Nasce marzio1777: PWA React 19 + Vite + Firebase per
+  la comunità privata del paese di Marzio (~10 persone di fiducia, un solo Root:
+  nicolainformatica@gmail.com). Shell con 11 "stanze", auth Google, ruoli
+  zero-trust. Questa è "la versione per gli amici".
+  - Inizio maggio 2026 — i due moduli grossi + i primi download. Campo dei
+  Giochi (caccia AR + quiz) e L'Ainulindalë (audio P2P WebRTC). È di questo 
+  periodo il codice congelato negli zip e nella cartella in Scaricati (3
+  maggio): la fotografia più vicina alla "prima versione".
+  - Maggio 2026 — l'assedio degli audit. Batch B1→B8 chiudono 24+ gap; deploy di
+  7 Cloud Functions su Firebase Blaze; FCM; round UX post user-test reale
+  (R1–R5).
+  - 23–24 maggio — l'export documentale. Crei MARZIO1777ONLYDOC (solo doc,
+  niente codice) e da lì, con /htmldoc1777, generi cronache-di-marzio.html: la
+  storia narrativa bilingue del progetto.
+  - 30 maggio — la "generalizzazione". In una lunga sessione (per lo più su
+  infrastruttura mcp1777/Telegram/NotebookLM), arriva la richiesta marzio: con
+  /ultraplan impostare un piano per renderla multi-comunità/white-label. Claude
+  (come agora1777) crea la skill autoplan1777 e committa GENERALIZATION_BRIEF.md
+  sul branch autoplan/generalization. La copia-specchio finisce in
+  raccolta-bot-vps-1777/D-cli/.
+  - Giugno — assestamento. Nel repo solo lavoro di analisi (graphify), poi
+  attività su altri progetti (peerlayer1777, VPS, graphify PR #934).
+
+  🎯 Lo stato attuale reale (un punto importante da confermare)
+
+  C'è uno scarto tra il ricordo e il disco, e voglio essere onesta su questo:
+
+  ▎ Tu dici "ne abbiamo fatto la versione per il pubblico". Sul disco e nel git,
+  ▎ la versione generale/multi-comunità non è stata scritta: esiste solo come 
+  ▎ piano (GENERALIZATION_BRIEF.md, committato ma mai pushato). Non è mai stata 
+  ▎ neanche prodotta la pianificazione vera (l'/ultraplan remoto fallì perché 
+  ▎ lanciato dalla cartella sbagliata). Quindi: "la versione per il pubblico" 
+  ▎ oggi = un brief di 164 righe, non codice.
+
+  Inoltre, due cose critiche rimaste in sospeso dal 23–30 maggio:
+  1. 🔴 Fix di sicurezza non deployato. Il commit 96353ca (23 mag) ripara un bug
+  per cui l'approvazione dei nuovi iscritti, i like dei non-autori e gli RSVP
+  sono rotti in produzione. È committato in locale ma non pushato né deployato
+  (firebase deploy --only firestore:rules). Finché non lo fai, il sito live ha
+  quei bug.
+  2. 🟡 Il branch autoplan/generalization ha 3 commit locali mai pushati (i due
+  brief + ricerca).
+
+  E c'è anche un secondo piano distinto da non confondere con la
+  generalizzazione: FLUTTER_MIGRATION_BRIEF.md (riscrivere l'app in
+  Flutter/Flame) — anch'esso solo pianificato.
+
+  ---
+  🧹 Piano di riordino proposto
+
+  Idea guida: il repo git resta dov'è (è la fonte di verità e spostarlo
+  romperebbe riferimenti); tutto il resto — vecchie copie, zip, export doc,
+  trascrizioni — lo raccolgo in un unico hub d'archivio, senza eliminare niente.
+  Userei la tua convenzione esistente (ARCHIVE_PROJECT_BOOK_CLAUDE,
+  ARCHIVE_PROJECT_BOT1777 → ARCHIVE_PROJECT_MARZIO1777):
+
+  Scrivania/marzio1777-main/              ← REPO CANONICO (non si tocca, fonte
+  di verità)
+  Scrivania/ARCHIVE_PROJECT_MARZIO1777/   ← nuovo hub, ci raccolgo tutto il
+  resto
+  ├── INDICE-E-STORICO.md                  ← dossier completo (questa analisi,
+  scritta su file)
+  ├── 01-codice-storico-maggio/            ← la "versione vecchia" (3 mag):
+  marzio1777(1)/ + i 3 zip
+  ├── 02-export-documentazione/            ← MARZIO1777ONLYDOC +
+  cronache-di-marzio.html
+  ├── 03-trascrizioni/                     ← le sessioni .txt (deduplicate)
+  └── 04-artefatti-non-codice/            ← (opz.) scarti del working tree
+  segnati "da pulire"
+
+  Prima di spostare qualcosa, ho bisogno che tu decida 3 cose:
+
+● User answered Claude's questions:
+  ⎿  · Dove raccolgo le copie sparse, gli zip, l'export-doc e le trascrizioni? 
+     (Il repo git resta comunque dov'è.) → ARCHIVE_PROJECT_MARZIO1777 sulla 
+     Scrivania
+     · Dentro 'raccolta-bot-vps-1777/D-cli/' c'è una copia IDENTICA al repo 
+     (11MB, senza .git), ma è parte di un'altra collezione con un suo MANIFEST. 
+     Che ne faccio? → Lasciala intatta dov'è
+     · Nel working tree del repo ci sono file non-codice che la sessione del 
+     30/05 aveva segnato 'da pulire' (artefatti graphify, log emulatore, 
+     firebase.json.marzio-emu.bak, vitest.rules.config.ts, 2 transcript). Li 
+     riordino? → Spostali nell'archivio (non elimino)
+
+● Perfetto, procedo con il riordino secondo le tue scelte: hub 
+  ARCHIVE_PROJECT_MARZIO1777, copia-specchio della raccolta-bot intatta, scarti
+  del repo spostati (non eliminati). Faccio tutto con mv (nessuna
+  cancellazione), in tappe verificate.
+
+  Prima creo la struttura e controllo lo stato esatto dei file da spostare
+  (incluso se esiste un graphify-out/ rigenerato e quali file del repo sono
+  untracked).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tutto confermato. graphify-out/ rigenerato non esiste (solo l'archive),
+  .env.local lo tengo. Eseguo gli spostamenti.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Spostamenti fatti. Verifico lo stato finale: contenuto dell'hub, pulizia del
+  repo e integrità della copia-specchio (che dovevo lasciare intatta).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Riordino eseguito e verificato. Ora scrivo il dossier-indice nell'hub:
+  contiene tutto lo storico, la mappa aggiornata, il verdetto sul codice e il
+  registro esatto degli spostamenti (così è reversibile).
+
+● Write(~/Scrivania/ARCHIVE_PROJECT_MARZIO1777/INDICE-E-STORICO.md)
+  ⎿  Wrote 115 lines to ../ARCHIVE_PROJECT_MARZIO1777/INDICE-E-STORICO.md
+      1 # marzio1777 — Indice, Storico e Stato (riordino del 2026-06-29)
+      2 
+      3 > Documento prodotto durante il riordino del materiale sparso di 
+      4 > Scopo: dire **dov'è ogni cosa**, **qual è il codice più aggiorn
+        ato**, **cosa è stato fatto e cosa resta aperto**.
+      5 > Principio del riordino: **niente è stato eliminato**, solo spos
+        tato. Il repo git non è stato toccato (resta la fonte di verità).
+      6 
+      8 
+      9 ## 0. In una riga
+     … +189 lines (ctrl+o to expand)
+
+● Dossier scritto. Salvo un appunto di memoria con i fatti durevoli (posizione
+  canonica, hub d'archivio, generalizzazione solo a brief, fix di sicurezza non
+  deployato), utile alle sessioni future.
+
+  Ran 1 shell command, wrote 2 memories (ctrl+o to expand)
+
+● Fatto. Riordino completato, verificato e documentato. Niente è stato
+  eliminato.
+
+  ✅ Cosa ho fatto
+
+  Trovato tutto il materiale marzio1777 sul PC e raccolto in un unico hub,
+  lasciando il repo git e la copia-specchio intatti:
+
+  ~/Scrivania/
+  ├── marzio1777-main/                       ← REPO CANONICO (codice più
+  aggiornato, intatto)
+  ├── raccolta-bot-vps-1777/D-cli/marzio1777-main/   ← copia-specchio (intatta,
+  come da tua scelta)
+  └── ARCHIVE_PROJECT_MARZIO1777/            ← NUOVO hub, tutto il resto
+  ordinato
+      ├── INDICE-E-STORICO.md                 ← il dossier con storico, mappa,
+  verdetto, registro mosse
+      ├── 01-codice-storico-maggio/           ← la "versione vecchia" (3 mag):
+  cartella + 3 zip
+      ├── 02-export-documentazione/           ← ONLYDOC +
+  cronache-di-marzio.html
+      ├── 03-trascrizioni/                     ← le sessioni .txt
+      └── 04-artefatti-non-codice/            ← scarti rigenerabili tolti dal
+  repo
+
+  Il working tree del repo è ora pulito (resta solo la modifica tracciata a
+  firebase.json e .env.local, che serve a far girare l'app). La copia-specchio è
+  intatta (459 file, 11 MB). In Scaricati non resta nessun residuo marzio.
+
+  🎯 Le risposte alle tue domande
+
+  1. Codice più aggiornato (non per data, per codice): il repo git
+  ~/Scrivania/marzio1777-main. La copia in raccolta-bot-vps-1777 ne è uno
+  specchio identico; tutto ciò che era in Scaricati (zip + cartella del 3
+  maggio) è la versione vecchia, pre-hardening — l'ho marcata come "storico".
+  2. Tutti i file correlati: trovati e mappati (vedi tabella nel dossier).
+  Chiarito che ~/app-project (peerlayer1777) e il marzio1777migration nella bash
+  history non sono marzio (era solo una stringa-titolo del comando tree).
+  3. Storico e stato attuale dalle trascrizioni: ricostruiti (4 reader in
+  parallelo su transcript, cronache, brief e bash history).
+
+  ⚠️ Due cose che devi sapere (emerse dall'analisi)
+
+  - La "versione per il pubblico" non è stata scritta: esiste solo come piano
+  (GENERALIZATION_BRIEF.md, mai pushato). Confermami se per "pubblico" intendevi
+  la generalizzazione multi-comunità (al brief) o l'apertura open-source
+  dell'app esistente (il repo è già pubblico/live).
+  - 🔴 Fix di sicurezza non deployato: un commit del 23 maggio ripara bug in
+  produzione (approvazione nuovi iscritti, like, RSVP) ma è solo locale. Per
+  chiuderlo: push + firebase deploy --only firestore:rules.
+
+● Il dossier completo: storico, mappa aggiornata, verdetto sul codice e registro
+  esatto degli spostamenti (per reversibilità). È anche salvato nell'hub sulla
+  Scrivania.
+
+  › [file] ~/Scrivania/ARCHIVE_PROJECT_MARZIO1777/INDICE-E-STORICO.md (8.2KB)
+
+● Possibili prossimi passi (a tua scelta)
+
+  - Chiudere il fix di sicurezza in produzione (push del branch main + deploy
+  delle rules) — è la cosa più urgente, perché tocca utenti reali.
+  - Far partire davvero la generalizzazione: hai già la skill autoplan1777 e il
+  GENERALIZATION_BRIEF.md; basta lanciare /ultraplan dal repo per produrre il
+  piano vero (questa volta dalla cartella git giusta).
+  - Decidere l'ordine tra generalizzazione e migrazione Flutter (i due brief si
+  influenzano).
+
+  Dimmi quale vuoi affrontare e procedo. Per ora il riordino è chiuso: tutto
+  raccolto, niente perso, e c'è il dossier che fa da mappa.
+
+✻ Cooked for 33m 20s
+
+❯ Procedi con i fix poi vediamo se migrare prima o generalizzare                
+
+● Bene. "I fix" = chiudere ciò che è rimasto in sospeso, prima fra tutti il
+  deploy delle firestore.rules (il bug di sicurezza in produzione) e la
+  sincronizzazione del repo. Prima di toccare la produzione devo accertare lo
+  stato live esatto (le note nel CLAUDE.md potrebbero essere vecchie) e
+  verificare che i test siano verdi. Niente push/deploy alla cieca.
+
+  Parto con una ricognizione read-only: stato git reale, presenza del fix nel
+  codice, e strumenti disponibili (JDK/firebase/node).
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Lo stato live è diverso (e migliore) di quanto diceva il CLAUDE.md:
+
+  - Il git fetch ha aggiornato origin/main: il fix di sicurezza 96353ca è già 
+  pushato (insieme ai due brief). main è perfettamente sincronizzato (0 ahead /
+  0 behind). L'unico commit non pushato è 4ad7501 (il GENERALIZATION_BRIEF, docs
+  su branch feature — non è un "fix").
+  - Quindi la nota "NON pushato" era vecchia. Resta da fare la cosa che il 
+  commit da solo non fa: il firebase deploy delle rules (il bug è lato
+  Firestore). E ho tutto il necessario: firebase CLI 15.16, loggato come 
+  nicolainformatica@gmail.com (l'owner), JDK 21, node_modules presenti.
+
+  Prima di toccare la produzione, eseguo i test per confermare che le rules
+  siano corrette e verdi. Parto dagli unit test.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Unit test 66/66 verdi. Ora i rule test (i più importanti per questo fix), che
+  girano sull'emulatore Firestore.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Test tutti verdi: unit 66/66, rules 74/74, 0 fail. (I PERMISSION_DENIED nel
+  log sono i casi negativi attesi — provano che le rules rifiutano correttamente
+  le scritture non autorizzate.) Il fix è confermato corretto nel codice.
+
+  Ora chiudo davvero il fix: deploy delle rules in produzione. È l'azione che il
+  commit da solo non fa. Firebase è loggato come l'owner; deploy mirato alle
+  sole rules (blast radius minimo).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● ✅ Deploy completato — released rules firestore.rules to cloud.firestore. Il
+  fix di sicurezza è ora live in produzione: approvazione nuovi iscritti, like
+  dei non-autori e RSVP cross-user funzionano di nuovo.
+
+  Aggiorno memoria e dossier perché non risultino più "in sospeso", e verifico
+  se restano altri fix reali.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Update(~/Scrivania/ARCHIVE_PROJECT_MARZIO1777/INDICE-E-STORICO.md)
+  ⎿  Added 4 lines, removed 3 lines
+      75  - (a) **generalizzazione multi-tenant** → è al brief (questo do
+          c §5), oppure
+      76  - (b) **apertura open-source** dell'app esistente → il repo è g
+          ià pubblico/live, l'OSS-readiness è una traccia citata nei brie
+          f ma non completata.
+      77  
+      78 -### 🔴 Critico — fix di sicurezza non deployato                
+      79 -Commit `96353ca` (23 mag): ripara un footgun per cui in **produ
+         -zione** sono rotti *l'approvazione dei nuovi iscritti, i like d
+         -ei non-autori e gli RSVP*. **Committato in locale ma NON pushat
+         -o né deployato.** Per chiuderlo serve push + `firebase deploy -
+         --only firestore:rules`.                                        
+      78 +### ✅ Risolto il 2026-06-29 — fix di sicurezza deployato      
+      79 +Commit `96353ca` (23 mag): riparava un footgun per cui in **pro
+         +duzione** erano rotti *l'approvazione dei nuovi iscritti, i lik
+         +e dei non-autori e gli RSVP*. **Stato al 2026-06-29:** il commi
+         +t risultava già pushato su `origin/main` (la nota "non pushato"
+         + del CLAUDE.md era vecchia); mancava il `firebase deploy`. Eseg
+         +uito: test verdi (unit 66/66, rule 74/74) → `firebase deploy --
+         +only firestore:rules` su `marzio1777` (loggato come nicolainfor
+         +matica@gmail.com), `released rules ... to cloud.firestore`. **F
+         +ix ora live.**                                                 
+      80  
+      81  ### 🟡 Aperti minori
+      82 -- 3 commit locali su `autoplan/generalization` mai pushati (i 2
+         - brief + ricerca).                                             
+      82 +- 1 commit locale su `autoplan/generalization` non pushato: `4a
+         +d7501` (GENERALIZATION_BRIEF), docs su branch feature. `main` è
+         + invece sincronizzato (0 ahead/0 behind origin).               
+      83 +- Nota: il file di memoria di sessione `project_marzio1777_stat
+         +us.md` elenca 11 "gap spec↔codice" ma è **obsoleto** — quei pun
+         +ti risultano già chiusi nei batch B1–B7 (vedi `CLAUDE.md` del r
+         +epo).                                                          
+      84  - Prova visiva login Root mai confermata (problema headless sul
+          la macchina).
+      85  - Fase 3 app: "L'Ospite Perfetto" (CF heartbeat host), skeleton
+           `auditMassSkip` / `validateP2PTransferIntegrity`, estensioni a
+          udio.
+      86  
+
+● Fatto. Memoria e dossier aggiornati. I fix sono chiusi.
+
+  ✅ Riepilogo "fix"
+
+  ┌────────────────────────────────┬────────────────────────────────────────┐
+  │              Item              │                 Stato                  │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ 🔐 Fix sicurezza rules         │ Deployato in produzione oggi — test    │
+  │ (approvazione/like/RSVP)       │ verdi (unit 66/66, rule 74/74),        │
+  │                                │ released rules to cloud.firestore      │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ 🔄 Sync repo main ↔            │ Già allineato (0/0); il fix risultava  │
+  │ origin/main                    │ già pushato — la nota "non pushato"    │
+  │                                │ del CLAUDE.md era vecchia              │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ 📋 11 "gap spec↔codice" del    │ Già chiusi nei batch B1–B7: il memo    │
+  │ vecchio memo                   │ era obsoleto (annotato)                │
+  └────────────────────────────────┴────────────────────────────────────────┘
+
+  Resta fuori solo 4ad7501 (il GENERALIZATION_BRIEF, docs su branch feature, non
+  pushato) — ma è materiale del generalizzare, non un fix, e per tua
+  convenzione il push lo fai tu.
+
+  ---
+  🧭 Ora: migrare o generalizzare prima?
+
+  Avendo letto entrambi i brief, la mia raccomandazione è generalizzare prima, 
+  sullo stack attuale — e ti spiego il perché in due righe:
+
+  - Rischio. Generalizzare = estendere un'app viva, testata e in produzione.
+  Migrare a Flutter = riscriverla tutta (React→Flutter, forse
+  Firestore→Supabase). Fare la riscrittura per prima, su un'app monocomunità,
+  significa rischiare regressioni sull'istanza Marzio live prima di aver portato
+  a casa valore.
+  - Dove sei forte. Il pezzo davvero difficile della generalizzazione è
+  l'isolamento per-tenant nelle firestore.rules — esattamente la superficie che
+  ti ha morso 3 volte col footgun e su cui hai 74 rule-test e l'hai appena
+  ri-deployata. È il posto migliore per costruire il modello tenant.
+  - Il lavoro non si butta. Il design multi-tenant (membership = (uid, tenantId,
+  role, status), config per-tenant) si trasferisce a Flutter/Supabase dopo
+  (regole → RLS Postgres). Lo stesso GENERALIZATION_BRIEF §7.4 dice di decidere
+  l'ordine proprio perché si influenzano.
+  - Valore subito. Una seconda comunità può nascere senza rewrite.
+
+  L'unico caso in cui migrare prima ha senso è se l'obiettivo vero è
+  mobile-nativo (GPS/fotocamera/AR che richiedono davvero il native) più che il
+  multi-comunità.
+
+  Come vuoi procedere?
+
+● User answered Claude's questions:
+  ⎿  · Chiusi i fix, da dove partiamo per la direzione grande? → Approfondisci 
+     prima di decidere
+
+● Ottimo, faccio l'analisi comparata profonda. Prima localizzo i documenti di
+  ricerca migrazione citati nel brief, poi lancio l'approfondimento in parallelo
+  (effort di generalizzazione misurato sul codice reale, scala della
+  riscrittura Flutter, accoppiamento tra i due cantieri).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Dati concreti raccolti: ~15.400 LOC in src/ (23 pagine), 26 file con hardcode
+  "marzio", rules 616 LOC, e ci sono i due doc di ricerca migrazione. Lancio
+  l'approfondimento: 4 analisi in parallelo, poi sintetizzo io il dossier
+  decisionale.
+
+● Workflow(Analisi comparata profonda: generalizzare vs migrare a Flutter,
+          ordine consigliato)
+  ⎿  /workflows to view dynamic workflow runs
+
+● Analisi in corso (4 agenti in parallelo). Appena tornano, ti consegno un
+  dossier decisionale con: fasi/effort/rischi di ciascun cantiere, dove i due si
+  sovrappongono ("rules per-tenant ≈ RLS Postgres") e il costo del "fare due
+  volte", più la raccomandazione motivata sull'ordine. Ti avviso a risultato
+  pronto.
+
+✻ Brewed for 6m 31s
+
+● Dynamic workflow "Analisi comparata profonda: generalizzare vs migrare a
+Flutter, ordine consigliato" completed · 4m 9s
+
+● L'analisi è completa. Leggo il risultato integrale per sintetizzare il dossier
+  decisionale.
+
+  Read 1 file (ctrl+o to expand)
+
+● Analisi completa e convergente. C'è un risultato netto che raffina (e in parte
+  corregge) la mia prima impressione. Scrivo il dossier decisionale, poi te lo
+  sintetizzo.
+
+● Write(DECISIONE_ordine_generalizzare_vs_migrare.md)
+  ⎿  Wrote 73 lines to DECISIONE_ordine_generalizzare_vs_migrare.md
+      1 # marzio1777 — Generalizzare o migrare prima? (memo decisionale, 
+      2 
+        nità su React+Firebase **vs** migrazione a Flutter), basata sul c
+        odice reale del repo e sui due brief. Scopo: decidere **l'ordine*
+         lo produce `/ultraplan`).
+      5 ## Il fatto centrale: un solo artefatto condiviso, ed è il più pe
+      6 
+      7 Entrambi i cantieri ruotano attorno **allo stesso oggetto load-be
+      8 - `firestore.rules` = **616 righe**, 24 match block, 80 `allow`, 
+        .rules:15` e `AuthCo
+     … +133 lines (ctrl+o to expand)
+
+● Update(DECISIONE_ordine_generalizzare_vs_migrare.md)  ⎿  Added 1 line, removed 1 line
+      69  1. **Quanto presto serve una seconda comunità live?** (urgente 
+          / mesi / nessun piano concreto)
+      70  2. **Flutter + mobile è un obiettivo vero e committato, o un "s
+          omeday/maybe"?**
+      71  
+      72 -> Default in assenza di urcenza sulla 2ª comunità e dato che Fl
+         -utter+Supabase è la direzione dichiarata: **config/OSS ora → de
+         -sign del modello tenant una volta → generalizzare sul target di
+         - migrazione** invece di costruire il multi-tenant due volte.   
+      72 +> Default in assenza di urgenza sulla 2ª comunità e dato che Fl
+         +utter+Supabase è la direzione dichiarata: **config/OSS ora → de
+         +sign del modello tenant una volta → generalizzare sul target di
+         + migrazione** invece di costruire il multi-tenant due volte.   
+      73  </content>
+
+● Dossier scritto (DECISIONE_ordine_generalizzare_vs_migrare.md, nel repo
+  accanto ai due brief). Ecco la sintesi — e una nota di onestà: la mia prima
+  impressione ("generalizza prima") era troppo semplice. L'analisi profonda la
+  corregge.
+
+  Il nocciolo
+
+  I due cantieri condividono un solo oggetto davvero pesante: il modello dei 
+  permessi (firestore.rules, 616 righe, root inchiodato a un'email, zero
+  tenantId, e già fragile per il footgun che ha rotto 3 volte gli update). Il
+  FLUTTER_MIGRATION_BRIEF stesso dice rules → RLS Postgres. Quindi la logica di 
+  isolamento per-tenant, se fatta male, la scrivi due volte. È il lavoro più
+  caro e più rischioso, su un'app in produzione.
+
+  E un secondo fatto dal codice: migrare a Flutter butterebbe ~30-40% di una 
+  generalizzazione fatta prima (AudioEngine Web Audio, IndexedDB, Leaflet, PWA,
+  sensori AR — pezzi browser-native senza equivalente Flutter 1:1).
+
+  La raccomandazione (a stadi)
+
+  1. Subito, sempre: apertura OSS + estrazione hardcode in config (base path,
+  centro mappa, branding). Costo-doppio zero, rischio zero, e abilita "una 2ª
+  comunità da configurazione". Prerequisito di ogni strada.
+  2. Una volta sola: progettare il modello tenant in forma RLS-friendly
+  (membership per-tenant, tenantId di prima classe, isolamento come test),
+  evitando il footgun. Poco costo, leva enorme.
+  3. Poi si biforca — e qui decidi tu, perché la variabile è di business, non di
+  codice.
+
+  ❌ Da evitare assolutamente: multi-tenant completo su Firestore e poi
+  migrazione a Flutter+Supabase → è il peggior doppio-lavoro.
+
+  Per scegliere il ramo dello stadio 3 mi servono due risposte:
+
+● User answered Claude's questions:
+  ⎿  · Quanto presto ti serve una SECONDA comunità live (oltre Marzio)? → Tra 
+     diversi mesi
+     · Flutter + mobile nativo: obiettivo vero e committato, o 'someday/maybe'? 
+     → flutter lo voglio, è il mio linguaggio dart ma vedo diversi problemi, mi 
+     interessa soprattutto perche multi os, quindi web, mobile e desktop, non 
+     voglio rinunciare a funzionalita però, non possiamo fare una app completa 
+     in flutter e dart, ed altro dove serve?
+
+● Risposta secca alla tua domanda: sì, si può — ed è esattamente così che si 
+  fanno le app Flutter serie. "Tutto in Flutter/Dart, e qualcos'altro dove
+  serve" non è un compromesso: è il pattern professionale. Flutter è progettato
+  con delle vie di fuga apposta per i punti dove non arriva.
+
+  Le vie di fuga (come fai "altro dove serve")
+
+  Meccanismo: JS interop (dart:js_interop + package:web) sul web
+  A cosa serve: Chiamare le API del browser così come sono
+  Per marzio: L'AudioEngine: sul web tieni il vero Web Audio (BiquadFilter EQ +
+    AnalyserNode) → comportamento identico a oggi
+  ────────────────────────────────────────
+  Meccanismo: dart:ffi (+ flutter_rust_bridge)
+  A cosa serve: Chiamare C/C++/Rust nativo
+  Per marzio: DSP audio / cripto / logica pesante scritta una volta in Rust,
+    usata su mobile+desktop
+  ────────────────────────────────────────
+  Meccanismo: Platform Channels / Pigeon
+  A cosa serve: Ponte verso Kotlin/Swift/native
+  Per marzio: Capacità native che nessun package wrappa
+  ────────────────────────────────────────
+  Meccanismo: Platform Views (HtmlElementView, AndroidView…)
+  A cosa serve: Incastonare una view nativa nel widget tree
+  Per marzio: Camera/AR, una mappa nativa, una WebView
+  ────────────────────────────────────────
+  Meccanismo: Conditional imports
+  A cosa serve: Una sola interfaccia Dart, implementazioni diverse per
+    piattaforma
+  Per marzio: audio_engine_web.dart (JS) vs audio_engine_native.dart
+  (FFI/soloud)
+    dietro lo stesso AudioEngine
+
+  La forma giusta è: ~90% in Flutter/Dart (le 23 pagine, routing, stato,
+  business-logic, i giochi su Flame) + vie di fuga mirate sul ~10% duro (audio
+  DSP, forse i sensori AR), nascoste dietro un'interfaccia Dart. In superficie
+  resta "un'app completa in Flutter".
+
+  Il caso più elegante per te: la logica pesante davvero cross-platform (il
+  motore audio) scritta in Rust e chiamata via FFI sul nativo e via WASM sul web
+  → una implementazione, tutte le piattaforme. Il FLUTTER_MIGRATION_BRIEF lo
+  cita già (Rust Shared Core + dart2wasm).
+
+  I "diversi problemi" che intuisci — sono reali, eccoli
+
+  - Il desktop costa. web+mobile+desktop = matrice di test 5-6 target. Ogni
+  modulo "via di fuga" può servire 2 implementazioni (web via JS, nativo via
+  FFI/Rust). Non 6 se sei furbo, ma è lavoro vero.
+  - Alcune feature sono per natura legate alla piattaforma. AR con
+  camera+sensori è roba mobile; su desktop/web degrada al fallback (che l'app
+  già ha — vedi il "Continua senza GPS"). FCM e P2P cambiano per target. Quindi
+  "non rinunciare a funzionalità" va letto come piena funzionalità dove la 
+  piattaforma la supporta, degradazione elegante altrove.
+  - Superficie di manutenzione più ampia di una singola PWA.
+
+  La svolta strategica (date le tue 2 risposte)
+
+  Tu hai detto: 2ª comunità tra mesi (nessuna fretta) + Flutter committed (è il
+  tuo Dart, ti serve il multi-OS). Questo, combinato con un fatto dell'analisi,
+  semplifica tutto:
+
+  ▎ Se nella migrazione resti su Firestore (FlutterFire) invece di andare su 
+  ▎ Supabase, il problema del "rules scritte due volte" sparisce. Le 616 righe 
+  ▎ di rules + le 7 Cloud Functions + i 74 rule-test restano intatti (porting 
+  ▎ ~zero: cambi solo le chiamate SDK al pacchetto Dart). E quando, tra mesi, 
+  ▎ generalizzerai, aggiungi tenantId a quelle stesse rules una volta sola. 
+  ▎ Niente doppio rewrite, perché non c'è nessuna traduzione verso RLS.
+
+  Questo trasforma "migrare prima" da scelta rischiosa a scelta de-rischiata. La
+  regola: una migrazione grande alla volta — cambi il front (React→Flutter)
+  tenendo fermo il back (Firestore). Supabase resta una decisione separata,
+  futura, opzionale.
+
+  Cosa farei, concretamente, in quest'ordine
+
+  1. OSS + estrazione hardcode in config (centro mappa, base path, branding →
+  TenantConfig). Costo basso, rischio zero, utile qualunque cosa succeda dopo. È
+  anche il primo passo della generalizzazione futura.
+  2. Uno spike Flutter sui 3 moduli duri (AudioEngine, WebRTC P2P, AR/sensori)
+  per validare le vie di fuga e far emergere i "diversi problemi" concretamente,
+  prima di impegnarti nel rewrite completo. Backend dello spike =
+  Firestore/FlutterFire.
+  3. Se lo spike convince → migrazione piena Flutter (web+mobile+desktop) su
+  Firestore.
+  4. Più avanti (quando la 2ª comunità diventa reale) → generalizzazione =
+  tenantId sulle rules Firestore, una volta.
+
+  Vuoi che parta dal punto 1 (estrazione config/OSS, lavoro concreto sul repo) o
+  che prepari lo spike del punto 2 (imposto il brief/ultraplan per il
+  proof-of-concept Flutter sui moduli critici)? Posso anche solo dettagliare
+  l'architettura ibrida di uno dei tre moduli, se preferisci vederla a fondo
+  prima di muovere codice.
+
+✻ Sautéed for 1h 39m 6s
+
+❯ procedi con punto 1 e 2                                                       
+
+● Procedo con entrambi. Sono indipendenti, quindi li lancio in parallelo: il
+  punto 2 (spike Flutter) è un progetto nuovo separato a rischio zero per la
+  produzione → lo affido a un agente in background; il punto 1 (estrazione 
+  config) tocca il repo in produzione → lo faccio io con cura, con la suite di
+  test come cancello.
+
+  Prima due accertamenti: che Flutter sia installato e la mappa esatta degli
+  hardcode "sicuri" da estrarre (lezione "sweep esaustivo" del vostro
+  CLAUDE.md).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Flutter c'è (development/flutter, web+linux+android abilitabili) e ho la mappa
+  esatta degli hardcode.
+
+  Lancio il punto 2 in background (spike Flutter, progetto separato a rischio
+  zero) e in parallelo leggo le convenzioni di import + vite.config.ts che mi
+  servono per il punto 1.
+
+● Agent(Spike Flutter 3 moduli duri)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+● Import in stile relativo (../lib/..., ../hooks/...), niente estensione → il
+  config andrà in src/config/tenant.ts e lo importerò come ../config/tenant.
+  Leggo vite.config.ts per il base path e controllo che non esista già una dir
+  config.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● vite.config usa già loadEnv → posso fare base: env.VITE_BASE_PATH || 
+  '/marzio1777/' (default Marzio invariato). Creo un branch dedicato
+  feat/tenant-config partendo da main (slice indipendente e revisionabile) e
+  leggo gli header dei file da editare.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Branch feat/tenant-config pronto. Leggo gli header degli altri file da
+  editare.
+
+  Read 6 files (ctrl+o to expand)
+
+● Ho tutti gli anchor. Creo il config e applico le modifiche.
+
+● Write(src/config/tenant.ts)
+  ⎿  Wrote 47 lines to src/config/tenant.ts
+       1 /**
+       3  *
+       4  * Centralizza i valori specifici della comunità (oggi: Marzio).
+       5  * futura piattaforma multi-comunità: per generare l'app di un'a
+       6  * basterà fornire un altro `TenantConfig`, senza fork del codic
+         e. Finché Marzio
+         iati alla leggera.
+       8  *
+         olo i valori di
+         ne, identità,
+     … +48 lines (ctrl+o to expand)
+
+● Ora le modifiche ai file. Comincio dalle mappe (centro/coordinate):
+
+● Update(src/pages/LaMappa.tsx)
+  ⎿  Added 1 line
+      10  import { useRBAC } from '../hooks/useRBAC';
+      11  import { Avatar } from '../components/ui';
+      12  import { liveUserAvatarHtml } from '../lib/leafletIcons';
+      13 +import { TENANT } from '../config/tenant';                     
+      14  
+      15  const customMarkerHtmlLight = `
+      16    <div style="background-color: #2D5A27; width: 1.5rem; height:
+           1.5rem; border-radius: 50% 50% 50% 0; border: 2px solid #fff; 
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transform: rotate(-45
+          deg); display: flex; align-items: center; justify-content: cent
+          er;">
+
+● Update(src/pages/LaMappa.tsx)
+  ⎿  Added 1 line, removed 1 line
+      68  export default function LaMappa() {
+      69    const { user, profile, isGuest, isPending } = useRBAC();
+      70    const [posts, setPosts] = useState<any[]>([]);
+      71 -  const marzioCenter: [number, number] = [45.9238, 8.8655];    
+      71 +  const marzioCenter: [number, number] = TENANT.map.center;    
+      72    const [isDark, setIsDark] = useState(false);
+      73    const [liveUsers, setLiveUsers] = useState<any[]>([]);
+      74    
+
+● Update(src/pages/GameCreator.tsx)
+  ⎿  Added 1 line
+      10  import { db } from '../lib/firebase';
+      11  import { generateUniformPointsInRadius } from '../lib/geoUtils'
+          ;
+      12  import { useHighAccuracyPosition } from '../hooks/useHighAccura
+          cyPosition';
+      13 +import { TENANT } from '../config/tenant';                     
+      14  
+      15  interface ItemDraft {
+      16    lat: number;
+
+● Update(src/pages/GameCreator.tsx)
+  ⎿  Added 1 line, removed 1 line
+      75  // produced a GPS fix. Avoids the visible "Roma → Marzio" jump 
+          that happened
+      76  // when the wizard mounted with a 41.9°N centre and then re-cen
+          tred once GPS
+      77  // arrived.
+      78 -const MARZIO_FALLBACK: [number, number] = [45.9238, 8.8655];   
+      78 +const MARZIO_FALLBACK: [number, number] = TENANT.map.center;   
+      79  
+      80  // `<input type="datetime-local">` wants `YYYY-MM-DDTHH:mm` in 
+          local time, and
+      81  // `Date.toISOString()` returns UTC, so format manually. +10 mi
+          n from now is
+● Update(src/pages/TreasureHuntPlay.tsx)
+  ⎿  Added 1 line
+      12  import ARCaptureLayer from '../components/ARCaptureLayer';
+      13  import CompassArrow from '../components/CompassArrow';
+      14  import { useWakeLock } from '../hooks/useWakeLock';
+      15 +import { TENANT } from '../config/tenant';                     
+      16  import { createMarkerIcon } from '../lib/leafletIcons';
+      17  
+      18  const userIcon = createMarkerIcon('blue');
+
+● Update(src/pages/TreasureHuntPlay.tsx)
+  ⎿  Added 1 line, removed 1 line
+      251                   const cfg = (event as any)?.treasureHuntConfi
+           g;
+      252                   const fallbackCenter: [number, number] = cfg?
+           .centerLat && cfg?.centerLng
+      253                      ? [cfg.centerLat, cfg.centerLng]
+      254 -                    : [45.9238, 8.8655];                      
+      254 +                    : TENANT.map.center;                      
+      255                   return (
+      256                      <div className="flex-1 relative w-full h-f
+           ull">
+      257                         <div className="absolute top-2 left-2 r
+           ight-2 z-[500] bg-amber-100/95 dark:bg-amber-900/40 backdrop-b
+           lur border border-amber-300 dark:border-amber-700 text-amber-8
+           00 dark:text-amber-200 rounded-lg px-3 py-2 text-xs font-mediu
+           m pointer-events-none">
+
+● Update(src/pages/IlBaule.tsx)
+  ⎿  Added 1 line
+      12  import L from 'leaflet';
+      13  import 'leaflet/dist/leaflet.css';
+      14  import { motion, AnimatePresence } from 'framer-motion';
+      15 +import { TENANT } from '../config/tenant';                     
+      16  
+      17  const customMarkerHtml = `<div style="background-color: #2D5A27
+          ; width: 1.5rem; height: 1.5rem; border-radius: 50% 50% 50% 0; 
+          border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3
+          ); transform: rotate(-45deg); display: flex; align-items: cente
+          r; justify-content: center;"><div style="background-color: whit
+          e; width: 0.5rem; height: 0.5rem; border-radius: 50%;"></div></
+          div>`;
+      18  const pinIcon = L.divIcon({ html: customMarkerHtml, className: 
+          'custom-bento-marker', iconSize: [24, 24], iconAnchor: [12, 24]
+           });
+
+● Update(src/pages/IlBaule.tsx)
+  ⎿  Added 1 line, removed 1 line
+      295      setLoading(true);
+      296      try {
+      297        const imageId = `${user.uid}_${Date.now()}`;
+      298 -      const storageRef = ref(storage, `marzio_photos/${imageId
+          -}.jpg`);                                                      
+      298 +      const storageRef = ref(storage, `${TENANT.storage.photos
+          +Prefix}/${imageId}.jpg`);                                     
+      299  
+      300        await uploadString(storageRef, imagePreview, 'data_url')
+           ;
+      301        const downloadUrl = await getDownloadURL(storageRef);
+
+● Update(src/pages/IlBaule.tsx)
+  ⎿  Added 1 line, removed 1 line
+      636                          </div>
+      637                        </button>
+      638  
+      639 -                      <button onClick={() => { setTempLocation
+          -(location || {lat: 45.9238, lng: 8.8655}); setLocationMode('ma
+          -nual') }} className="flex items-center gap-4 w-full p-4 text-l
+          -eft border border-slate-200 dark:border-[#24352b] rounded-xl h
+          -over:border-[#2D5A27] dark:hover:border-[#42a83a] hover:bg-sla
+          -te-50 dark:hover:bg-[#1a261f] transition-all group">          
+      639 +                      <button onClick={() => { setTempLocation
+          +(location || {lat: TENANT.map.center[0], lng: TENANT.map.cente
+          +r[1]}); setLocationMode('manual') }} className="flex items-cen
+          +ter gap-4 w-full p-4 text-left border border-slate-200 dark:bo
+          +rder-[#24352b] rounded-xl hover:border-[#2D5A27] dark:hover:bo
+          +rder-[#42a83a] hover:bg-slate-50 dark:hover:bg-[#1a261f] trans
+          +ition-all group">                                             
+      640                          <div className="w-10 h-10 rounded-full
+            bg-emerald-50 dark:bg-emerald-900/20 text-[#2D5A27] dark:text
+           -[#42a83a] flex items-center justify-center shrink-0"><MapIcon
+            size={18} /></div>
+      641                          <div>
+      642                            <p className="font-bold text-sm text
+           -slate-800 dark:text-slate-200 group-hover:text-[#2D5A27] dark
+           :group-hover:text-[#42a83a]">Visualizza e piazza su Mappa</p>
+
+● Update(src/pages/IlBaule.tsx)
+  ⎿  Added 1 line, removed 1 line
+      664                   {locationMode === 'manual' && (
+      665                      <div className="flex flex-col gap-4">
+      666                        <div className="w-full h-64 bg-slate-100
+            dark:bg-[#111814] rounded-lg overflow-hidden border border-sl
+           ate-200 dark:border-[#24352b] relative z-0">
+      667 -                         <MapContainer center={tempLocation ||
+          - [45.9238, 8.8655]} zoom={16} scrollWheelZoom={true} className
+          -="w-full h-full z-0 font-sans" zoomControl={true} key={isDark 
+          -? 'dark' : 'light'}>                                          
+      667 +                         <MapContainer center={tempLocation ||
+          + TENANT.map.center} zoom={16} scrollWheelZoom={true} className
+          +="w-full h-full z-0 font-sans" zoomControl={true} key={isDark 
+          +? 'dark' : 'light'}>                                          
+      668                             <LayersControl position="topright">
+      669                               <LayersControl.BaseLayer name="Es
+           ploratore (Satellitare)">
+      670                                 <TileLayer
+
+● Ora altitudine, communityId e base path:
+
+● Update(src/pages/AdminPanel.tsx)
+  ⎿  Added 1 line
+       6  import { Navigate } from 'react-router-dom';
+       7  import { motion, AnimatePresence } from 'framer-motion';
+       8  import { Avatar } from '../components/ui';
+       9 +import { TENANT } from '../config/tenant';                     
+      10  
+      11  interface UserData {
+      12    uid: string;
+
+● Update(src/pages/AdminPanel.tsx)
+  ⎿  Added 1 line, removed 1 line
+      214                      <div className="flex items-center gap-3 sm
+           :w-auto w-full">
+      215                        <div className="flex flex-col text-right
+            hidden sm:flex">
+      216                          <span className="text-xs text-slate-40
+           0 dark:text-slate-500 font-sans uppercase font-bold">Altitudin
+           e</span>
+      217 -                        <span className="text-sm font-bold fon
+          -t-serif text-[#2D5A27] dark:text-[#42a83a]">{728 + user.points
+          -}m</span>                                                     
+      217 +                        <span className="text-sm font-bold fon
+          +t-serif text-[#2D5A27] dark:text-[#42a83a]">{TENANT.map.baseAl
+          +titude + user.points}m</span>                                 
+      218                        </div>
+      219    
+      220                        <select 
+
+● Update(src/pages/ProfiloPersonale.tsx)
+  ⎿  Added 1 line
+       9  import { useUserGagliardetti } from '../hooks/useUserGagliardet
+          ti';
+      10  import type { GagliardettoState } from '../lib/gagliardetti';
+      11  import { useFCM } from '../hooks/useFCM';
+      12 +import { TENANT } from '../config/tenant';                     
+      13  
+      14  export default function ProfiloPersonale() {
+      15    const { user, profile, isAdminOrRoot } = useRBAC();
+
+● Update(src/pages/ProfiloPersonale.tsx)
+  ⎿  Added 1 line, removed 1 line
+      68    if (!profile) return null;
+      69  
+      70    const points = profile.points || 0;
+      71 -  const baseAltitude = 728;                                    
+      71 +  const baseAltitude = TENANT.map.baseAltitude;                
+      72    const currentAltitude = baseAltitude + points;
+      73  
+      74    // Phase 2 §15.C: full Gagliardetti catalog computed from sna
+          pshot metrics
+
+● Update(src/components/Layout.tsx)
+  ⎿  Added 1 line
+       7  import { logout, db } from '../lib/firebase';
+       8  import { collection, query, where, orderBy, onSnapshot } from '
+          firebase/firestore';
+       9  import { SW_UPDATE_EVENT, JUST_UPDATED_KEY, triggerUpdateReload
+           } from '../main';
+      10 +import { TENANT } from '../config/tenant';                     
+      11  
+      12  export default function Layout() {
+      13    const { user, profile, isRoot, isAdminOrRoot, isPending, isGu
+          est } = useRBAC();
+
+● Update(src/components/Layout.tsx)
+  ⎿  Added 1 line, removed 1 line
+      104    }, [user, profile, isAdminOrRoot]);
+      105  
+      106    const points = profile?.points || 0;
+      107 -  const baseAltitude = 728; // Marzio altitude                
+      107 +  const baseAltitude = TENANT.map.baseAltitude;               
+      108    const currentAltitude = baseAltitude + points;
+      109  
+      110    // Simple badges derivation based on points/metrics
+
+● Update(src/pages/LAlberone.tsx)
+  ⎿  Added 1 line
+      1  import React, { useState, useEffect, useRef, lazy, Suspense } fr
+         om 'react';
+      2  import { collection, query, orderBy, onSnapshot, addDoc, serverT
+         imestamp, setDoc, doc, limit } from 'firebase/firestore';
+      3  import { db } from '../lib/firebase';
+      4 +import { TENANT } from '../config/tenant';                      
+      5  import { useAuth } from '../contexts/AuthContext';
+      6  import { Send, TreeDeciduous, Users, Smile, Image as ImageIcon, 
+         X, Loader2 } from 'lucide-react';
+      7  import { motion, AnimatePresence } from 'framer-motion';
+
+● Update(src/pages/LAlberone.tsx)
+  ⎿  Added 2 lines, removed 2 lines
+      41    }, []);
+      42  
+      43    useEffect(() => {
+      44 -    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", c
+         -reatedBy: "System", communityId: 'marzio', createdAt: serverTim
+         -estamp() }, { merge: true });                                  
+      44 +    setDoc(doc(db, 'chats', channelId), { name: "L'Alberone", c
+         +reatedBy: "System", communityId: TENANT.id, createdAt: serverTi
+         +mestamp() }, { merge: true });                                 
+      45  
+      46      const q = query(
+      47        collection(db, `chats/${channelId}/messages`), 
+     ...
+       99          authorName: user.displayName,
+      100          text: newMessage.trim(),
+      101          imageUrl: selectedImage,
+      102 -        communityId: 'marzio',                                
+      102 +        communityId: TENANT.id,                               
+      103          timestamp: serverTimestamp()
+      104        });
+      105        setNewMessage('');
+
+● Update(vite.config.ts)
+  ⎿  File must be read first
+
+● Tutto applicato tranne vite.config.ts (l'avevo letto via shell, non col tool
+  Read). Lo leggo e correggo.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(vite.config.ts)
+  ⎿  Added 1 line, removed 1 line
+       7  export default defineConfig(({mode}) => {
+       8    const env = loadEnv(mode, '.', '');
+       9    return {
+      10 -    base: '/marzio1777/', // IMPORTANT: Rimuovi il commento se 
+         -ospiti il sito su https://tuonome.github.io/marzio1777/        
+      10 +    base: env.VITE_BASE_PATH || '/marzio1777/', // base path pe
+         +r-istanza: override via VITE_BASE_PATH; default = istanza Marzi
+         +o                                                              
+      11      plugins: [
+      12        react(), 
+      13        tailwindcss(),
+
+● Tutte le modifiche applicate. Verifico: typecheck + sweep di controllo che non
+  siano rimasti hardcode del subset, poi i test.
+
+  Ran 1 shell command (ctrl+o to expand)
+● Typecheck verde (exit 0) e sweep pulito: i valori estratti restano solo in
+  src/config/tenant.ts (singola fonte), 8 file importano TENANT. Le
+  coordinate/altitudine sono identiche → comportamento invariato per Marzio.
+  Eseguo gli unit test per confermare zero regressioni.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tutto verde: typecheck 0, unit 66/66, build ✓. Verifico che il base path di
+  default sia rimasto /marzio1777/ nel build (la parte critica per la
+  produzione), poi committo solo i miei file.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Base path preservato (/marzio1777/assets/...), diff minimo e pulito. Committo
+  solo i miei file (niente firebase.json, niente push — come da vostra
+  convenzione).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● ✅ Punto 1 — Estrazione config: fatto e committato
+
+  Ho introdotto src/config/tenant.ts (TenantConfig + istanza TENANT con i valori
+  di Marzio) e ci ho ricondotto gli hardcode di dominio "sicuri", senza 
+  cambiare il comportamento per Marzio (gli stessi valori, ora come default):
+
+  ┌───────────────────────┬─────────────┬──────────────────────────────────┐
+  │       Costante        │   Prima     │               Ora                │
+  │                       │  (sparsa)   │                                  │
+  ├───────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Centro mappa          │ 4 file      │ TENANT.map.center                │
+  │ [45.9238, 8.8655]     │             │                                  │
+  ├───────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Altitudine base 728m  │ 3 file      │ TENANT.map.baseAltitude          │
+  ├───────────────────────┼─────────────┼──────────────────────────────────┤
+  │ communityId: 'marzio' │ LAlberone   │ TENANT.id                        │
+  ├───────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Storage               │ IlBaule     │ TENANT.storage.photosPrefix      │
+  │ marzio_photos/        │             │                                  │
+  ├───────────────────────┼─────────────┼──────────────────────────────────┤
+  │ Base path build       │ hardcoded   │ VITE_BASE_PATH con default       │
+  │                       │             │ /marzio1777/                     │
+  └───────────────────────┴─────────────┴──────────────────────────────────┘
+
+  Verifiche: typecheck 0 errori, unit 66/66, build ✓ con base path /marzio1777/
+  preservato, sweep pulito (i valori restano solo nel config). Commit 909437a
+  sul branch feat/tenant-config (1 commit avanti su main, non pushato — il push
+  lo fai tu).
+
+  Volutamente fuori scope (fasi separate, più pesanti/rischiose): i18n, modello
+  dati tenantId, rules tenant-aware. Non fatto perché è una tua scelta: il file
+  LICENSE per l'apertura OSS — dimmi quale preferisci (MIT permissiva /
+  Apache-2.0 permissiva con clausola brevetti / AGPL copyleft) e lo aggiungo.
+  Branding di metadata.json/manifest PWA: micro-follow-up se vuoi.
+
+  ⏳ Punto 2 — Spike Flutter: in corso
+
+  L'agente sta lavorando in background: crea
+  ~/Scrivania/marzio1777-flutter-spike/, prototipa i 3 moduli duri (AudioEngine,
+  WebRTC P2P, AR/sensori) con il pattern "via di fuga" (interfaccia Dart +
+  conditional import web/native), backend fisso su Firestore, e produrrà un
+  FINDINGS.md brutalmente onesto su cosa compila, cosa è stub e i "diversi
+  problemi" reali. Ti avviso appena finisce con la sintesi di fattibilità.
+
+✻ Brewed for 7m 46s
+
+● Agent "Spike Flutter 3 moduli duri" finished · 22m 15s
+
+● Spike completato, e con un esito onesto e concreto — esattamente quello che
+  cercavi sui "diversi problemi". Verifico al volo il progetto, aggiorno il memo
+  decisionale con gli esiti, poi ti sintetizzo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Spike reale e ben strutturato (architettura a vie di fuga completa,
+  FINDINGS.md 232 righe). Aggiorno il memo decisionale con gli esiti e la
+  decisione raffinata.
+
+● Update(DECISIONE_ordine_generalizzare_vs_migrare.md)
+  ⎿  Added 24 lines
+      70  2. **Flutter + mobile è un obiettivo vero e committato, o un "s
+          omeday/maybe"?**
+      71  
+      72  > Default in assenza di urgenza sulla 2ª comunità e dato che Fl
+          utter+Supabase è la direzione dichiarata: **config/OSS ora → de
+          sign del modello tenant una volta → generalizzare sul target di
+           migrazione** invece di costruire il multi-tenant due volte.
+      73 +                                                               
+      74 +---                                                            
+      75 +                                                               
+      76 +## Aggiornamento 2026-06-29 — risposte di Neo, decisione e spik
+         +e                                                              
+      77 +                                                               
+      78 +**Risposte alle 2 domande:** (1) seconda comunità **tra diversi
+         + mesi** (nessuna urgenza); (2) Flutter **committed** — è il lin
+         +guaggio di Neo (Dart) e l'attrattiva è il **multi-OS (web + mob
+         +ile + desktop)**, senza rinunciare a funzionalità; domanda chia
+         +ve posta: *"un'app completa in Flutter, e altro dove serve?"*. 
+      79 +                                                               
+      80 +**Decisione che ne deriva → ramo (b): migrare prima, con una sv
+         +olta de-rischiante.**                                          
+      81 +- **Si RESTA su Firestore (FlutterFire)** per la migrazione, NO
+         +N Supabase. Questo **annulla il problema del "rules scritte due
+         + volte"**: le 616 righe di rules + 7 CF + 74 rule-test restano 
+         +intatti; la generalizzazione futura aggiungerà `tenantId` a *qu
+         +elle stesse* rules **una volta sola**. Supabase resta decisione
+         + separata, futura, opzionale.                                  
+      82 +- **Architettura "Flutter core + vie di fuga"** (interfaccia Da
+         +rt unica + conditional import web/native) per i moduli browser-
+         +native; logica pesante cross-platform candidabile a Rust+FFI/WA
+         +SM.                                                            
+      83 +                                                               
+      84 +**Punto 1 (config extraction) FATTO:** `src/config/tenant.ts` +
+         + 8 file ricondotti a `TENANT`, base path env-overridable. Commi
+         +t `909437a` su branch `feat/tenant-config` (non pushato). Compo
+         +rtamento Marzio invariato.                                     
+      85 +                                                               
+      86 +**Punto 2 (spike Flutter) FATTO** — `~/Scrivania/marzio1777-flu
+         +tter-spike/` (vedi `FINDINGS.md`). Esiti verificati: `flutter a
+         +nalyze` pulito, `flutter test` verde, **`build web` verde**, **
+         +`build linux` fallito** su una dep di sistema (`libasound2-dev`
+         + per flutter_soloud). Per modulo:                              
+      87 +| Modulo | Web | Mobile | Desktop |                            
+      88 +|---|---|---|---|                                              
+      89 +| Audio (EQ 3 bande + analyser) | ✅ reale (JS interop su Web A
+         +udio) | 🟡 FFT reale, EQ/controlli stub | 🟡 idem + blocco ALSA
+         + |                                                             
+      90 +| WebRTC P2P | ✅ compila, porting fedele | ✅/🟡 | 🟡 link nat
+         +ivo da confermare |                                            
+      91 +| AR/orientamento | 🟡 fusion manuale | 🟡 fusion manuale (no c
+         +alibrazione OS) | 🔴 `camera` assente su Linux |               
+      92 +| Firestore (FlutterFire) | ✅ risolve e compila | ✅ | ✅ |   
+      93 +                                                               
+      94 +**Verdetto spike:** l'architettura ibrida **regge per web+mobil
+         +e**; **il desktop è la gamba debole** (dep native dei plugin: A
+         +LSA per soloud, `camera` assente su Linux, webrtc nativo da con
+         +fermare) — non per Flutter in sé. **L'audio è il modulo più dur
+         +o** (web perfetto, nativo da completare: soloud ha EQ grafico 8
+         +-bande, non le 3 biquad shelf/peaking → niente mapping 1:1). **
+         +Restare su Firestore non dà alcun attrito.**                   
+      95 +                                                               
+      96 +**Ordine operativo aggiornato:** config/OSS (in corso) → **migr
+         +azione Flutter su Firestore, web+mobile per primi, desktop come
+         + stretch** → generalizzazione dopo (`tenantId` sulle rules Fire
+         +store, una volta).                                             
+      97  </content>
+
+● Memo aggiornato. Aggiorno anche la memoria di progetto con la direzione
+  decisa, poi ti sintetizzo lo spike.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● Entrambi i punti chiusi. Ecco la sintesi dello spike — che risponde
+  concretamente al tuo "un'app completa in Flutter e altro dove serve?".
+
+  🧪 Punto 2 — Spike Flutter: l'architettura ibrida regge (per web+mobile)
+
+  Progetto in ~/Scrivania/marzio1777-flutter-spike/ con il pattern "via di fuga"
+  reale: una sola interfaccia Dart + conditional import audio_engine.dart →
+  _web.dart / _native.dart. Verifiche verificate, non inferite: flutter analyze
+  pulito, flutter test verde, build web verde; build linux fallito su una dep di
+  sistema.
+
+  ┌─────────────────┬─────────────────────┬──────────────────┬──────────────┐
+  │     Modulo      │         Web         │      Mobile      │   Desktop    │
+  ├─────────────────┼─────────────────────┼──────────────────┼──────────────┤
+  │ Audio (EQ 3     │ ✅ reale — Web      │ 🟡 FFT reale     │              │
+  │ bande +         │ Audio vero via JS   │ (soloud),        │ 🟡 + blocco  │
+  │ analyser)       │ interop, EQ + FFT   │ EQ/controlli da  │ ALSA         │
+  │                 │ funzionanti         │ finire           │              │
+  ├─────────────────┼─────────────────────┼──────────────────┼──────────────┤
+  │                 │ ✅ porting fedele   │                  │ 🟡 link      │
+  │ WebRTC P2P      │ (chunk 16KB,        │ ✅/🟡            │ nativo da    │
+  │                 │ header,             │                  │ confermare   │
+  │                 │ backpressure)       │                  │              │
+  ├─────────────────┼─────────────────────┼──────────────────┼──────────────┤
+  │ AR /            │ 🟡 sensor-fusion a  │ 🟡 fusion a mano │ 🔴 camera    │
+  │ orientamento    │ mano                │  (no             │ assente su   │
+  │                 │                     │ calibrazione OS) │ Linux        │
+  ├─────────────────┼─────────────────────┼──────────────────┼──────────────┤
+  │ Firestore       │ ✅ risolve e        │ ✅               │ ✅           │
+  │ (FlutterFire)   │ compila             │                  │              │
+  └─────────────────┴─────────────────────┴──────────────────┴──────────────┘
+
+  I 3 problemi reali (i tuoi "diversi problemi", confermati)
+
+  1. Il desktop è la gamba debole — non per Flutter, ma per le dipendenze native
+  dei plugin: flutter_soloud vuole libasound2-dev (ALSA), camera non supporta
+  Linux desktop, il link nativo di flutter_webrtc su Linux è da confermare. Per
+  sbloccare il build Linux: ! sudo apt install libasound2-dev.
+  2. L'audio è il modulo più duro. Sul web è perfetto (riusi il vero Web Audio).
+  Sul nativo non c'è un equivalente 1:1: flutter_soloud ha un EQ grafico a 8
+  bande, non le 3 biquad shelf/peaking dell'originale → l'EQ nativo è da
+  scrivere (qui entrerebbe l'eventuale Rust+FFI per averlo identico ovunque).
+  3. AR/heading: il browser ti dà alpha/beta/gamma già fusi e calibrati dall'OS;
+  sensors_plus dà solo flussi grezzi → serve sensor-fusion a mano (drift,
+  niente calibrazione) o flutter_compass.
+
+  Cosa significa per la decisione
+
+  - ✅ L'architettura "Flutter core + vie di fuga" è validata per web + mobile:
+  un solo lib/ compila e testa pulito con audio/webrtc/sensori/camera/firestore
+  nello stesso bundle.
+  - ✅ Restare su Firestore non dà alcun attrito → conferma la scelta che
+  annulla il doppio rewrite delle rules.
+  - ⚠️ Il desktop è il punto aperto. Onestamente: per un'app social "di paese"
+  il desktop conta meno del mobile; lo terrei come stretch goal, non requisito
+  di fase 1.
+
+  Memo DECISIONE_...md e memoria aggiornati con questi esiti e l'ordine
+  operativo: config/OSS → migrazione Flutter su Firestore (web+mobile prima, 
+  desktop stretch) → generalizzazione dopo (tenantId una volta).
+
+● Il report completo dello spike (per-modulo: cosa compila, cosa è stub, il
+  problema, il pacchetto consigliato, verdetto effort/rischio).
+
+  › [file] ~/Scrivania/marzio1777-flutter-spike/FINDINGS.md (11.9KB)
+
+● Entrambi i punti chiusi. Stato attuale:
+
+  - Punto 1 — config extraction committato su feat/tenant-config (909437a),
+  test/build verdi, non pushato.
+  - Punto 2 — spike Flutter completo, architettura ibrida validata per
+  web+mobile, Firestore confermato senza attriti, desktop e audio-nativo come
+  punti aperti noti.
+  - Tracce — DECISIONE_...md (nel repo) e memoria aggiornati; lo spike vive in
+  ~/Scrivania/marzio1777-flutter-spike/.
+
+  Da qui, quando vuoi, le strade naturali sono:
+
+  1. Validare lo spike a runtime — far girare davvero l'echo WebRTC e l'audio
+  web nel browser (finora compila e analizza, ma l'esecuzione non è stata
+  fatta), e sbloccare il build Linux con ! sudo apt install libasound2-dev.
+  2. Chiudere lo slice OSS — scegli la licenza (MIT / Apache-2.0 / AGPL) e
+  completo branding di manifest/metadata.json.
+  3. Produrre il piano di migrazione vero — lanciare /ultraplan dal repo col
+  FLUTTER_MIGRATION_BRIEF, ora informato dalle decisioni prese (resta-Firestore,
+  architettura a vie di fuga, esiti spike): il prossimo passo logico verso la
+  migrazione vera.
+
+  Dimmi tu quale, oppure ci fermiamo qui per oggi — il grosso (riordino, fix in
+  produzione, decisione di rotta con prove alla mano) è fatto.
+
+✻ Cogitated for 27m 43s
+
+!  sudo apt install libasound2-dev                                              
+  ⎿  WARNING: apt does not have a stable CLI interface. Use with caution in
+     scripts.
+
+     Lettura elenco dei pacchetti...
+     Generazione albero delle dipendenze...
+     Lettura informazioni sullo stato...
+     Pacchetti suggeriti:
+       libasound2-doc
+     I seguenti pacchetti NUOVI saranno installati:
+       libasound2-dev
+     0 aggiornati, 1 installati, 0 da rimuovere e 250 non aggiornati.
+     È necessario scaricare 115 kB di archivi.
+     Dopo quest'operazione, verranno occupati 715 kB di spazio su disco.
+     Scaricamento di:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64
+     libasound2-dev amd64 1.2.11-1ubuntu0.2 [115 kB]
+     dpkg-preconfigure: impossibile riaprire stdin: No such file or directory
+     Recuperati 115 kB in 0s (1.438 kB/s)
+     Selezionato il pacchetto libasound2-dev:amd64 non precedentemente
+     selezionato.
+     (Lettura del database...
+     (Lettura del database... 5%
+     (Lettura del database... 10%
+     (Lettura del database... 15%
+     (Lettura del database... 20%
+     (Lettura del database... 25%
+     (Lettura del database... 30%
+     (Lettura del database... 35%
+     (Lettura del database... 40%
+     (Lettura del database... 45%
+     (Lettura del database... 50%
+     (Lettura del database... 55%
+     (Lettura del database... 60%
+     (Lettura del database... 65%
+     (Lettura del database... 70%
+     (Lettura del database... 75%
+     (Lettura del database... 80%
+     (Lettura del database... 85%
+     (Lettura del database... 90%
+     (Lettura del database... 95%
+     (Lettura del database... 100%
+     (Lettura del database... 593250 file e directory attualmente installati.)
+     Preparativi per estrarre .../libasound2-dev_1.2.11-1ubuntu0.2_amd64.deb...
+     Estrazione di libasound2-dev:amd64 (1.2.11-1ubuntu0.2)...
+     Configurazione di libasound2-dev:amd64 (1.2.11-1ubuntu0.2)...
+
+● Hai installato libasound2-dev — questo sblocca la dipendenza ALSA di
+  flutter_soloud. Riprovo il build Linux per vedere se ora passa (o se emerge il
+  punto ancora aperto: il link nativo di flutter_webrtc).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Build Linux riuscito ✓ — Built build/linux/x64/release/bundle/. Due cose
+  importanti emergono: l'ALSA per soloud ora c'è, e soprattutto flutter_webrtc 
+  linka senza errori su Linux (era il punto "da confermare"). Restano solo
+  warning innocui. Verifico il bundle e aggiorno i documenti.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bundle desktop prodotto (67M, eseguibile presente). Aggiorno il memo
+  decisionale con il desktop ora sbloccato.
+● Update(DECISIONE_ordine_generalizzare_vs_migrare.md)
+  ⎿  Added 2 lines, removed 2 lines
+      86  **Punto 2 (spike Flutter) FATTO** — `~/Scrivania/marzio1777-flu
+          tter-spike/` (vedi `FINDINGS.md`). Esiti verificati: `flutter a
+          nalyze` pulito, `flutter test` verde, **`build web` verde**, **
+          `build linux` fallito** su una dep di sistema (`libasound2-dev`
+           per flutter_soloud). Per modulo:
+      87  | Modulo | Web | Mobile | Desktop |
+      88  |---|---|---|---|
+      89 -| Audio (EQ 3 bande + analyser) | ✅ reale (JS interop su Web A
+         -udio) | 🟡 FFT reale, EQ/controlli stub | 🟡 idem + blocco ALSA
+         - |                                                             
+      90 -| WebRTC P2P | ✅ compila, porting fedele | ✅/🟡 | 🟡 link nat
+         -ivo da confermare |                                            
+      89 +| Audio (EQ 3 bande + analyser) | ✅ reale (JS interop su Web A
+         +udio) | 🟡 FFT reale, EQ/controlli stub | 🟡 builda (ALSA ok), 
+         +EQ nativo da finire |                                          
+      90 +| WebRTC P2P | ✅ compila, porting fedele | ✅/🟡 | ✅ linka su
+         + Linux (confermato) |                                          
+      91  | AR/orientamento | 🟡 fusion manuale | 🟡 fusion manuale (no c
+          alibrazione OS) | 🔴 `camera` assente su Linux |
+      92  | Firestore (FlutterFire) | ✅ risolve e compila | ✅ | ✅ |
+      93  
+
+● Update(DECISIONE_ordine_generalizzare_vs_migrare.md)
+  ⎿  Added 2 lines
+      94  **Verdetto spike:** l'architettura ibrida **regge per web+mobil
+          e**; **il desktop è la gamba debole** (dep native dei plugin: A
+          LSA per soloud, `camera` assente su Linux, webrtc nativo da con
+          fermare) — non per Flutter in sé. **L'audio è il modulo più dur
+          o** (web perfetto, nativo da completare: soloud ha EQ grafico 8
+          -bande, non le 3 biquad shelf/peaking → niente mapping 1:1). **
+          Restare su Firestore non dà alcun attrito.**
+      95  
+      96  **Ordine operativo aggiornato:** config/OSS (in corso) → **migr
+          azione Flutter su Firestore, web+mobile per primi, desktop come
+           stretch** → generalizzazione dopo (`tenantId` sulle rules Fire
+          store, una volta).
+      97 +                                                               
+      98 +**Update post-install (2026-06-29):** dopo `apt install libasou
+         +nd2-dev`, **`flutter build linux --release` passa** (bundle pro
+         +dotto). `flutter_webrtc` **linka su Linux** (rischio risolto). 
+         +Il desktop NON è più un blocco di build: resta solo `camera` as
+         +sente su Linux (AR, già con fallback) + il completamento dell'E
+         +Q audio nativo. Validazione runtime (echo WebRTC, audio nel bro
+         +wser) ancora da fare.                                          
+      99  </content>
+
+● Fatto. Il quadro desktop migliora parecchio rispetto al primo passaggio dello
+  spike:
+
+  Desktop Linux: da "gamba debole" a "regge" ✅
+
+  - flutter build linux --release ora passa → bundle eseguibile da 67M prodotto
+  (solo warning innocui in soloud).
+  - flutter_webrtc linka su Linux senza errori → il rischio "link nativo da
+  confermare" è risolto. Significa che il P2P è disponibile su web + mobile +
+  desktop.
+  - flutter_soloud compila con backend ALSA abilitato.
+
+  Cosa resta aperto sul desktop (ridotto a poco): solo camera assente su Linux
+  per l'AR-passthrough (ma c'è già il fallback no-sensor) e il completamento
+  dell'EQ audio nativo (qui entrerebbe l'eventuale Rust+FFI per averlo identico
+  ovunque).
+
+  Dove siamo
+
+  Il tuo obiettivo — un'app sola in Flutter su web + mobile + desktop, "altro 
+  dove serve" — risulta fattibile su tutti e tre i target, restando su
+  Firestore. Il "qualcos'altro dove serve" si concentra in un solo punto vero:
+  il motore audio nativo. Tutto il resto compila e si tiene con il pattern a vie
+  di fuga.
+
+  Ho aggiornato FINDINGS.md e il memo DECISIONE_...md con questi esiti.
+
+  Resta da fare, se vuoi, la validazione a runtime (non più solo compile): far
+  girare l'echo WebRTC e l'audio web nel browser, e lanciare il bundle desktop
+  per vederlo vivo. Posso procedere — tieni presente che avviare l'app desktop
+  aprirebbe una finestra sulla tua sessione. Procedo con la validazione runtime,
+  o ci fermiamo qui?
+
+✻ Churned for 1m 58s
+
+❯ 1. valida. 2. non saprei, mettiamo mit per ora, o guarda le altre licenze che 
+  ho nei miei repo 3.completa poi lanciamo la 3                                 
+
+● Ricevuto: 1) valido a runtime, 2) licenza MIT salvo che i tuoi altri repo
+  usino altro (guardo), 3) completo lo slice OSS e poi prepariamo/lanciamo il
+  piano.
+
+  Parto in parallelo: guardo che licenze usi negli altri repo e leggo la UI
+  dello spike per capire come validarlo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I tuoi repo usano MIT quasi ovunque → MIT è la scelta coerente. Lo spike ha 3
+  demo page (Audio/WebRTC/AR) → posso validarlo davvero nel browser. Leggo il
+  formato esatto della tua MIT, il README del repo e la UI dello spike.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● UI dello spike chiara (Audio: "Play test tone" + visualizer + EQ; WebRTC:
+  "Esegui echo demo" con round-trip; AR: orientamento+camera). Licenza → MIT con
+  Copyright (c) 2026 neo1777 (coerente coi tuoi repo).
+
+  Faccio prima lo slice OSS deterministico (LICENSE + README), poi la
+  validazione runtime. Scrivo i file:
+
+● Write(LICENSE)
+  ⎿  Wrote 21 lines to LICENSE
+       1 MIT License
+       3 Copyright (c) 2026 neo1777
+       4 
+         ining a copy
+       6 of this software and associated documentation files (the "Softwa
+       7 in the Software without restriction, including without limitatio
+         n the rights
+         d/or sell
+       9 copies of the Software, and to permit persons to whom the Softwa
+      10 furnished to do so, subject to the following conditions:
+     … +23 lines (ctrl+o to expand)
+
+● Write(README.md)
+  ⎿  Error writing file
+
+● Devo leggere il README col tool Read prima di sovrascriverlo.
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(README.md)
+  ⎿  Added 49 lines, removed 13 lines
+       1 -<div align="center">                                           
+       2 -<img width="1200" height="475" alt="GHBanner" src="https://gith
+         -ub.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a076
+         -3ed6" />                                                       
+       3 -</div>                                                         
+       1 +# marzio1777                                                   
+       2  
+       5 -# Run and deploy your AI Studio app                            
+       3 +PWA social "di paese" per la comunità di **Marzio**: una piazza
+         + digitale dove                                                 
+       4 +conservare i ricordi del paese, organizzare eventi, giocare a c
+         +acce al tesoro                                                 
+       5 +geolocalizzate e condividere musica. SPA **React 19 + Vite + Ty
+         +peScript +                                                     
+       6 +Tailwind v4 + Firebase**, distribuita come Progressive Web App.
+       7  
+       7 -This contains everything you need to run your app locally.     
+       8 +🔗 **Live:** https://neo1777.github.io/marzio1777/             
+       9  
+       9 -View your app in AI Studio: https://ai.studio/apps/e52702df-ebb
+         -2-4364-800f-42c32d7574c2                                       
+      10 +> Nata come app per una singola comunità (Marzio = istanza zero
+         +, in produzione).                                              
+      11 +> I valori di dominio sono centralizzati in [`src/config/tenant
+         +.ts`](src/config/tenant.ts):                                   
+      12 +> è il primo passo verso una piattaforma istanziabile per altre
+         + comunità.                                                     
+      13  
+      11 -## Run Locally                                                 
+      14 +## Funzionalità                                                
+      15  
+      13 -**Prerequisites:**  Node.js                                    
+      16 +- **La Piazza** — bacheca social con post, like e commenti.    
+      17 +- **Il Bivacco** — eventi con RSVP e spese condivise.          
+      18 +- **Il Baule** — caricamento foto con cropper.                 
+      19 +- **La Mappa** — Leaflet con posizione live.                   
+      20 +- **Il Cinematografo / L'Alberone / Profilo / Admin / Istruzion
+         +i**.                                                           
+      21 +- **Il Campo dei Giochi** — caccia al tesoro AR geolocalizzata 
+         ++ quiz a host rotativo.                                        
+      22 +- **L'Ainulindalë** — modulo audio: biblioteca locale (IndexedD
+         +B), sessioni DJ e                                              
+      23 +  trasferimento P2P via WebRTC (Firestore solo come signaling).
+      24  
+      25 +Sicurezza zero-trust con ruoli `Root | Admin | Guest` e stati `
+         +pending | approved`,                                           
+      26 +applicati lato `firestore.rules` (con suite di test dedicata). 
+      27  
+      16 -1. Install dependencies:                                       
+      17 -   `npm install`                                               
+      18 -2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your
+         - Gemini API key                                                
+      19 -3. Run the app:                                                
+      20 -   `npm run dev`                                               
+      28 +## Stack                                                       
+      29 +                                                               
+      30 +React 19 · Vite · TypeScript · Tailwind v4 · Firebase (Firestor
+         +e + Auth +                                                     
+      31 +Cloud Functions + FCM) · react-leaflet · Framer Motion · Web Au
+         +dio API · WebRTC.                                              
+      32 +                                                               
+      33 +## Avvio locale                                                
+      34 +                                                               
+      35 +**Prerequisiti:** Node.js.                                     
+      36 +                                                               
+      37 +1. Installa le dipendenze: `npm install`                       
+      38 +2. Copia `.env.example` in `.env.local` e imposta le variabili 
+         +`VITE_FIREBASE_*`                                              
+      39 +   (e, opzionale, `GEMINI_API_KEY`).                           
+      40 +3. Avvia: `npm run dev` (Vite su `:3000`).                     
+      41 +                                                               
+      42 +Altri comandi: `npm run build` (produzione), `npm run preview`,
+         + `npm run lint`                                                
+      43 +(typecheck), `npm test` (unit, Vitest). I test delle regole Fir
+         +estore girano                                                  
+      44 +sull'emulatore (richiedono JDK 21+) — vedi `CLAUDE.md`.        
+      45 +                                                               
+      46 +> Il base path è `/marzio1777/` (GitHub Pages); per ospitarlo a
+         +ltrove imposta                                                 
+      47 +> `VITE_BASE_PATH` (es. `VITE_BASE_PATH=/ npm run build`).     
+      48 +                                                               
+      49 +## Documentazione                                              
+      50 +                                                               
+      51 +Specifiche estese in [`public/docs/`](public/docs/) (TECHNICAL_
+         +DOCS, GAMING_SYSTEM,                                           
+      52 +security_spec, in IT/EN) e `AINULINDALE_TECHNICAL_SPEC.md`, `MI
+         +GRATION.md`.                                                   
+      53 +                                                               
+      54 +## Licenza                                                     
+      55 +                                                               
+      56 +[MIT](LICENSE) © 2026 neo1777                                  
+
+● Slice OSS pronto. Committo LICENSE + README e avvio il server del build web in
+  background per la validazione.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Commit fatto (4c0713d, branch a 2 commit da main). Verifico il server e carico
+  gli strumenti Chrome per la validazione visiva (Flutter web rende su canvas,
+  quindi serve screenshot + click).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Background command "Avvia server web dello spike" completed (exit code 0)
+
+● Server attivo (HTTP 200). Apro lo spike nel browser. Prima il contesto tab
+  (obbligatorio), poi creo una tab nuova.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Uso la tab esistente. Navigo allo spike e aspetto il caricamento di CanvasKit.
+
+  Called claude-in-chrome 2 times (ctrl+o to expand)
+● Il titolo è "marzio1777 Flutter Spike" → l'app è caricata. Screenshot per
+  vedere la pagina Audio.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● App renderizzata. Conferma già visibile: "Backend: Web Audio API 
+  (dart:js_interop + package:web)" = la via di fuga web è il vero Web Audio.
+  Clicco "Play test tone" per vedere l'analyser animarsi.
+
+  Called claude-in-chrome 2 times (ctrl+o to expand)
+
+● Modulo Audio validato a runtime ✅: stato "In riproduzione (test tone)",
+  backend Web Audio API via dart:js_interop, e l'analyser mostra lo spettro 
+  reale (energia concentrata sui bin bassi del tono a 180 Hz). La via di fuga
+  web è il vero Web Audio. Ora il WebRTC: vado sul tab WebRTC.
+
+  Called claude-in-chrome 2 times (ctrl+o to expand)
+
+● WebRTC page pronta. Clicco "Esegui echo demo" (apre 2 peer + DataChannel,
+  round-trip di 40KB in chunk da 16KB).
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● Modulo WebRTC validato a runtime ✅: "OK echo round-trip — inviati 40000 byte,
+  ricevuti 40000 byte, identici: true, chunk: 3 da 16KB + header meta JSON". Il
+  trasferimento P2P su DataChannel funziona end-to-end. Vedo il terzo modulo
+  (AR, su desktop browser mostrerà il fallback no-sensori) e controllo la
+  console per errori.
+
+  Called claude-in-chrome 2 times (ctrl+o to expand)
+
+● AR su desktop browser: badge "Sensori: rilevamento..." e area camera nera
+  (camera/sensori assenti su desktop = comportamento degradato atteso, con
+  fallback). Tutti e tre i moduli rendono. Controllo la console per errori, poi
+  chiudo il server.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Nessun errore in console. Validazione web completa. Faccio un'ultima prova:
+  lancio il bundle desktop nativo qualche secondo (verifica che le librerie
+  native — soloud/webrtc — si carichino a runtime, non solo in compile), poi
+  chiudo il server.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● App desktop nativa rimasta viva 7s senza crash → le librerie native
+  (soloud/ALSA, webrtc) si caricano a runtime. Confermo la chiusura del server e
+  riepilogo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Codice d'uscita anomalo, riprovo con un comando più semplice (senza pkill, che
+  forse causava il segnale).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Validazione completa. Riepilogo di questo giro.
+
+  ✅ 1) Validazione runtime (nel tuo Chrome + nativo) — superata
+
+  Ho guidato lo spike dal vivo nel browser (hai visto la finestra aprirsi):
+
+  - Audio — stato "In riproduzione (test tone). Backend: Web Audio API 
+  (dart:js_interop + package:web)" e l'analyser mostra lo spettro reale del tono
+  a 180 Hz. → il vero Web Audio via via-di-fuga web funziona a runtime, non
+  solo in compile.
+  - WebRTC — echo demo: "inviati 40000 byte · ricevuti 40000 byte · identici: 
+  true · 3 chunk da 16KB + header meta JSON". → trasferimento P2P su DataChannel
+  end-to-end verificato.
+  - AR — la pagina rende col fallback desktop atteso (sensori/camera assenti su
+  desktop browser).
+  - Console: 0 errori.
+  - Bundle desktop nativo — lanciato, vivo 7s senza crash → le .so native
+  (soloud/ALSA, webrtc) si caricano a runtime.
+
+  Tutti i moduli "duri" sono ora validati a runtime su web; il nativo builda e
+  si avvia. L'unico vero "altro dove serve" resta l'EQ audio nativo (web
+  perfetto).
+
+  ✅ 2) Slice OSS — completato
+
+  - LICENSE MIT (Copyright (c) 2026 neo1777, coerente coi tuoi repo).
+  - README.md riscritto (era lo scaffold AI Studio): descrive app, stack, avvio,
+  override base path, doc, licenza.
+  - Commit 4c0713d. Il branch feat/tenant-config ha ora 2 commit su main (config
+  909437a + OSS 4c0713d), non pushati.
+
+  ▶️ 3) Pronti a lanciare il piano di migrazione
+
+  Ultima cosa prima di lanciare /ultraplan: il FLUTTER_MIGRATION_BRIEF è 
+  anteriore alle decisioni prese e lì dentro "privilegia Supabase". Per far
+  produrre al planner cloud il piano giusto, il brief va aggiornato con:
+  resta-su-Firestore, architettura a vie di fuga (validata dallo spike), scope 
+  piattaforme web+mobile prima / desktop stretch, e i riferimenti agli esiti
+  dello spike.
+
+  Questo è esattamente il lavoro della tua skill autoplan1777 ("scrive un BRIEF
+  a regola d'arte, committato"). Poi /ultraplan (cloud) lo esegui tu, perché
+  clona lo stato pushato → servirà anche il push.
+
+  Procedo a preparare il brief aggiornato (con autoplan1777), così resta solo
+  che tu faccia push + /ultraplan? O preferisci aggiornarlo tu?
+
+✻ Sautéed for 9m 3s
+
+❯ ok, procedi con /autoplan1777                                                 
+
+● Skill(autoplan1777)
+  ⎿  Successfully loaded skill
+
+● Skill caricata — seguo il metodo. Il FLUTTER_MIGRATION_BRIEF.md esistente è il
+  gold standard di questa skill, quindi faccio una revisione mirata che
+  recepisce le decisioni. Leggo il brief attuale per intero (per revisionarlo
+  con precisione) e il template di riferimento.
+
+  Read 1 file (ctrl+o to expand)
+● Letto. Ora revisiono il brief al livello del gold standard, ribaltando le
+  parti superate (Supabase→resta-Firestore) e incorporando architettura a vie di
+  fuga, esiti spike, scope piattaforme e rinvio della generalizzazione. Prima
+  creo il branch dedicato (sopra feat/tenant-config, così il push porta tutto il
+  pacchetto "pronto per la pianificazione"), poi porto gli esiti spike nel
+  repo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Branch pronto. Ora scrivo il brief revisionato (§1-§9 a regola d'arte, con le
+  decisioni incorporate).
+
+● Write(FLUTTER_MIGRATION_BRIEF.md)
+  ⎿  Added 147 lines, removed 64 lines
+       7  >
+       8  > **Come lanciarlo:** dalla CLI esegui `/ultraplan` e incolla l
+          a sezione **§1–§9** (o digita:
+       9  > *"Leggi e segui FLUTTER_MIGRATION_BRIEF.md e tutta la documen
+          tazione del repo; produci il
+      10 -> piano richiesto in §9"*). La sessione cloud clona lo stato pu
+         -shato del repo, quindi questo                                  
+      11 -> file e i due doc di ricerca devono essere committati (lo sono
+         -).                                                             
+      10 +> piano richiesto in §9"*). La sessione cloud clona lo **stato 
+         +pushato** del repo, quindi questo                              
+      11 +> file e i doc citati in §3 devono essere committati **e pushat
+         +i**.                                                           
+      12 +>                                                              
+      13 +> **Revisione 2026-06-29.** Questo brief è stato aggiornato dop
+         +o una sessione di analisi e uno                                
+      14 +> **spike di fattibilità** (vedi §0 e §3). Rispetto alla v1, du
+         +e cose sono cambiate da                                        
+      15 +> "candidato da valutare" a **scelta presa**: (a) il backend **
+         +resta Firestore/FlutterFire**                                  
+      16 +> (non Supabase); (b) l'architettura è **"Flutter core + vie di
+         + fuga"**, validata da spike. Le                                
+      17 +> ragioni sono in §0 e in `DECISIONE_ordine_generalizzare_vs_mi
+         +grare.md`.                                                     
+      18  
+      19  ---
+      20  
+      21 +## 0. Decisioni di questa sessione (2026-06-29) — vincolanti pe
+         +r il piano                                                     
+      22 +                                                               
+      23 +Prese con Neo dopo l'analisi comparata e lo spike. Sono **palet
+         +ti**, non aperture:                                            
+      24 +                                                               
+      25 +1. **Backend: si RESTA su Firestore via FlutterFire. NIENTE Sup
+         +abase (per ora).**                                             
+      26 +   Motivo: la migrazione di stack (React→Flutter) e la futura g
+         +eneralizzazione multi-comunità                                 
+      27 +   condividono **un solo artefatto caro e pericoloso, il modell
+         +o di permessi**                                                
+      28 +   (`firestore.rules`, 616 righe, footgun già scattato 3 volte)
+         +. Andare su Supabase                                           
+      29 +   significherebbe riscrivere quelle regole in **Postgres RLS**
+         + *adesso* e poi di nuovo per il                                
+      30 +   multi-tenant: doppio rewrite del pezzo a più alto rischio si
+         +curezza, su un'app in produzione.                              
+      31 +   Restando su Firestore, le **rules + le 7 Cloud Functions + i
+         + 74 rule-test restano intatti**                                
+      32 +   (porting client ~zero) e la generalizzazione futura aggiunge
+         +rà `tenantId` a *quelle stesse*                                
+      33 +   regole **una volta sola**. Supabase resta una decisione sepa
+         +rata, futura, **opzionale**.                                   
+      34 +2. **Architettura: "Flutter core + vie di fuga".** ~90% in Flut
+         +ter/Dart (UI, routing, stato,                                  
+      35 +   business-logic, giochi su Flame); per i moduli browser-nativ
+         +e senza equivalente 1:1, una                                   
+      36 +   **singola interfaccia Dart** con **conditional import** per 
+         +piattaforma                                                    
+      37 +   (`import 'x_web.dart' if (dart.library.io) 'x_native.dart'`)
+         +. Candidato esplicito per il DSP                               
+      38 +   audio cross-platform: **Rust + FFI (nativo) / WASM (web)**. 
+         +Pattern **validato da spike** (§0bis).                         
+      39 +3. **Piattaforme: web + mobile per primi; desktop come stretch 
+         +goal.** Il mobile è in scope dal                               
+      40 +   principio (GPS/fotocamera/AR del Campo dei Giochi + obiettiv
+         +o multi-OS di Neo). Il desktop                                 
+      41 +   builda già (vedi spike) ma ha lacune di plugin (camera assen
+         +te su Linux): pianificarlo come                                
+      42 +   traguardo successivo, non come requisito di fase 1.         
+      43 +4. **Generalizzazione multi-comunità: DOPO la migrazione, non d
+         +urante.** È un piano separato                                  
+      44 +   (`GENERALIZATION_BRIEF.md`): `tenantId` sulle rules Firestor
+         +e, una volta sola, a migrazione                                
+      45 +   conclusa. **Vincolo per QUESTO piano:** non precludere quell
+         +a strada — tenere il modello dati                              
+      46 +   e le regole **parametrizzabili** (la de-hardcodifica di domi
+         +nio è già iniziata, §2).                                       
+      47 +                                                               
+      48 +### 0bis. Spike di fattibilità — esiti verificati (2026-06-29) 
+      49 +                                                               
+      50 +Spike reale (progetto Flutter separato; sintesi completa in `FL
+         +UTTER_SPIKE_FINDINGS.md`, copiato                              
+      51 +nel repo). Verificato: `flutter analyze` pulito, `flutter test`
+         + verde, **`build web` e                                        
+      52 +`build linux` entrambi verdi**, 0 errori in console, app deskto
+         +p nativa avviata senza crash.                                  
+      53 +Validazione **a runtime** dei 3 moduli "duri":                 
+      54 +                                                               
+      55 +| Modulo | Esito runtime | Verdetto |                          
+      56 +| --- | --- | --- |                                            
+      57 +| **Audio** (EQ 3 bande + analyser) | **Web**: grafo Web Audio 
+         +**reale** via `dart:js_interop`+`package:web`, EQ + analyser FF
+         +T funzionanti (spettro live). **Nativo**: `flutter_soloud` fa i
+         +nit/play/FFT, ma EQ/controlli sono **stub** | Web S/basso; nati
+         +vo M/medio — l'EQ nativo è il vero "altro dove serve" (candidat
+         +o Rust+FFI) |                                                  
+      58 +| **WebRTC P2P** | Echo round-trip verificato: 40000→40000 byte
+         +, **identici**, 3 chunk da 16KB + header meta JSON; porting fed
+         +ele di `webrtc.ts` | web+mobile S-M; desktop linka |           
+      59 +| **AR / orientamento** | `sensors_plus` + **sensor-fusion manu
+         +ale** + fallback no-sensor; camera passthrough con fallback | m
+         +obile/web M; desktop L (camera assente su Linux) |             
+      60 +| **Firestore** (FlutterFire) | `firebase_core`+`cloud_firestor
+         +e` risolvono e compilano (entrano nel build web) | **nessun att
+         +rito** — conferma la scelta §0.1 |                             
+      61 +                                                               
+      62 +**Conclusione spike:** l'architettura "Flutter core + vie di fu
+         +ga" **regge per web+mobile**;                                  
+      63 +il desktop è la gamba debole (dipendenze native dei plugin); il
+         + punto tecnico più ostico è                                    
+      64 +l'**EQ audio nativo**. Restare su Firestore non introduce attri
+         +to.                                                            
+      65 +                                                               
+      66 +---                                                            
+      67 +                                                               
+      68  ## 1. Obiettivo
+      69  
+      70  Produrre un **piano completo e production-ready** per migrare m
+          arzio1777 dallo stack attuale
+      71  (React 19 + Vite + TypeScript + Tailwind v4 + Firebase, distrib
+          uito come PWA) a
+      19 -**Flutter + Flame + Dart**, preservando funzionalità, UX e back
+         -end. **L'output è un piano**,                                  
+      20 -non codice.                                                    
+      72 +**Flutter + Flame + Dart**, **mantenendo Firebase/Firestore com
+         +e backend**, e preservando                                     
+      73 +funzionalità, UX e backend. **L'output è un piano**, non codice
+         +.                                                              
+      74  
+      75  L'app attuale **è in produzione e funziona** (https://neo1777.g
+          ithub.io/marzio1777/): la
+      23 -destinazione deve raggiungere la stessa completezza.           
+      76 +destinazione deve raggiungere la stessa completezza, **senza fa
+         +r regredire l'istanza di Marzio**.                             
+      77  
+      78  ---
+      79  
+     ...
+      81  
+      82  SPA React 19 + Vite + TS + Tailwind v4, PWA. Stato persistente 
+          su Firebase, **tranne** i file
+      83  audio della Biblioteca personale (solo in IndexedDB locale, tra
+          sferiti P2P via WebRTC).
+      84 +Codebase: ~15.400 LOC in `src/` (23 pagine), `functions/src` ~4
+         +92 LOC, `firestore.rules` 616 LOC.                             
+      85  
+      86  **Moduli/feature principali:**
+      87  - **Comunità**: La Piazza (social/post + like/commenti), Il Biv
+          acco (eventi + RSVP + spese),
+     ...
+       89    L'Alberone, Profilo, Pannello Admin/Root, Istruzioni (doc in
+           -app).
+       90  - **Il Campo dei Giochi** (`game_events`): `treasure_hunt` (ca
+           ttura AR geolocalizzata) e
+       91    `photo_quiz` (host rotativo); macchina a stati `draft→schedu
+           led→lobby→active→completed`.
+       38 -- **L'Ainulindalë** (audio): engine Web Audio singleton (EQ 3 
+          -bande + analyser), sessioni DJ,                               
+       39 -  coda con cap dinamico, libreria locale IndexedDB, trasferime
+          -nto P2P WebRTC (Firestore =                                   
+       40 -  solo signaling).                                            
+       92 +- **L'Ainulindalë** (audio): engine Web Audio singleton (EQ 3 
+          +bande + analyser fftSize 128),                                
+       93 +  sessioni DJ, coda con cap dinamico ("patto a 3"), libreria l
+          +ocale IndexedDB, trasferimento                                
+       94 +  P2P WebRTC (Firestore = solo signaling).                    
+       95  
+       42 -**Backend (Firebase):** Firestore + Auth + 7 Cloud Functions (
+          -region `europe-west1`,                                        
+       43 -`nodejs22`) + FCM Web Push. Auth/ruoli zero-trust: `Root | Adm
+          -in | Guest`, stati                                            
+       44 -`pending | approved`, regole `firestore.rules` con validatori 
+          -per entità e transazioni                                      
+       45 -atomiche. **Nota sicurezza**: il modello di permessi è ricco e
+          - load-bearing (vedi                                           
+       46 -`firestore.rules` + i test) — la sua **parità** è un requisito
+          - critico della migrazione.                                    
+       96 +**Backend (Firebase) — DA PRESERVARE, non migrare:** Firestore
+          + + Auth + 7 Cloud Functions                                   
+       97 +(region `europe-west1`, `nodejs22`) + FCM Web Push. Auth/ruoli
+          + zero-trust:                                                  
+       98 +`Root | Admin | Guest`, stati `pending | approved`, regole `fi
+          +restore.rules` con validatori per                             
+       99 +entità e transazioni atomiche. **Il modello di permessi è ricc
+          +o e load-bearing**: con FlutterFire                           
+      100 +**non si tocca** (le rules e i 74 rule-test restano validi) — 
+          +è il fulcro della scelta §0.1.                                
+      101  
+      102 +**De-hardcodifica di dominio già avviata (Fase 0):** i valori 
+          +specifici di Marzio (centro mappa,                            
+      103 +altitudine, `communityId`, prefisso storage) sono stati centra
+          +lizzati in                                                    
+      104 +[`src/config/tenant.ts`](src/config/tenant.ts); il base path è
+          + override-abile via `VITE_BASE_PATH`.                         
+      105 +È il seme della futura generalizzazione (§0.4) e va **preserva
+          +to e portato** anche nel target Flutter.                      
+      106 +                                                              
+      107  **Deploy:** GitHub Pages via GitHub Actions, base path `/marzi
+           o1777/`.
+      108  
+      109  **Documentazione di riferimento nel repo** (da leggere): `publ
+           ic/docs/TECHNICAL_DOCS_IT.md`,
+      110  `public/docs/security_spec_IT.md`, `public/docs/GAMING_SYSTEM_
+           IT.md`,
+      111  `AINULINDALE_TECHNICAL_SPEC.md`, `MIGRATION.md`, `firebase-blu
+           eprint.json`,
+       53 -`firestore.rules` (+ `firestore.rules.test.ts`).              
+      112 +`firestore.rules` (+ `firestore.rules.test.ts`, `firestore.rul
+          +es.audio.test.ts`).                                           
+      113 +> Nota: `CLAUDE.md` è **gitignored** → in cloud potrebbe non e
+          +sserci. I contenuti chiave sono                               
+      114 +> richiamati qui.                                             
+      115  
+      116  ---
+      117  
+      118  ## 3. Cosa leggere prima di pianificare
+      119  
+      120  - Tutta la documentazione del repo elencata in §2.
+       60 -- I due documenti di ricerca sulla migrazione (tecniche di por
+          -ting JS↔Flutter, signals,                                     
+       61 -  Flame/ECS, Rust/WASM, MCP/Claude Code): `ricerca_migrazione_
+          -raw.md` e                                                     
+       62 -  `Mappatura Porting Codice Dart_Flutter vs JS.md`.           
+      121 +- **`DECISIONE_ordine_generalizzare_vs_migrare.md`** — il razi
+          +onale completo delle decisioni §0                             
+      122 +  (migrare-vs-generalizzare, resta-Firestore, scope, esiti spi
+          +ke).                                                          
+      123 +- **`FLUTTER_SPIKE_FINDINGS.md`** — esiti dettagliati dello sp
+          +ike per-modulo (cosa compila, cosa                            
+      124 +  è stub, pacchetti consigliati, split web/nativo).           
+      125 +- **`GENERALIZATION_BRIEF.md`** — il piano *successivo* (multi
+          +-tenant): da non eseguire ora, ma da                          
+      126 +  **non precludere** (vincolo §0.4).                          
+      127 +- I due documenti di ricerca sulle tecniche di porting (signal
+          +s, Flame/ECS, Rust/WASM,                                      
+      128 +  MCP/Claude Code): `ricerca_migrazione_raw.md` e `Mappatura P
+          +orting Codice Dart_Flutter vs JS.md`.                         
+      129 +  *(Sono riferimenti generici, non specifici di marzio: usali 
+          +come repertorio, non come fasi.)*                             
+      130  
+      131  ---
+      132  
+     ...
+      138  - **Nessuna retrocompatibilità**: solo migliorie, aggiornament
+           i e adattamenti. Qualità da
+      139    **senior developer**.
+      140  - **Test adatti alla destinazione**: unit / widget / integrati
+           on Flutter; equivalenti dei
+       74 -  test attuali, **incluse le regole di sicurezza** del backend
+          -.                                                             
+      141 +  test attuali. **Le regole di sicurezza Firestore restano** (
+          +non si riscrivono): i 74 rule-test                            
+      142 +  vanno mantenuti verdi sul backend invariato.                
+      143 +- **Marzio non deve regredire**: il sito live resta in piedi d
+          +urante e dopo la migrazione.                                  
+      144  
+      145  ---
+      146  
+     ...
+      149  - Il più possibile **vanilla** (poche dipendenze, native quand
+           o sensato).
+      150  - Massima **sicurezza e privacy**; approccio **LLM privacy-fir
+           st e user-first**.
+      151  - **Performance** spinte ma con giudizio; **animazioni ed effe
+           tti** con giudizio.
+       83 -- Il più possibile **cross-platform, adattivo e responsive**. 
+      152 +- Il più possibile **cross-platform, adattivo e responsive** (
+          +web + mobile; desktop a seguire).                             
+      153 +- **Backend invariato**: Firestore/Auth/CF/FCM restano; non in
+          +trodurre un secondo backend.                                  
+      154  
+      155  ---
+      156  
+      157  ## 6. Scelte già prese (da rispettare nel piano)
+      158  
+      159  - **Stack**: Flutter + **Flame** (modulo giochi) + Dart. Per i
+           l resto, scegli/riusa il meglio.
+       90 -- **Backend/DB**: **privilegia la migrazione verso Supabase** 
+          -se fattibile, ma all'inizio                                   
+       91 -  **mantieni semplice e gratuito** (free tier). Valuta comunqu
+          -e **esplicitamente** le                                       
+       92 -  alternative (incluso restare su Firebase via FlutterFire) e 
+          -**raccomanda con motivazioni**,                               
+       93 -  includendo il percorso di migrazione: Firestore→Postgres, Au
+          -th, realtime, storage,                                        
+       94 -  **regole→RLS**, Cloud Functions→Edge Functions, FCM→push.   
+       95 -- **Piattaforme**: **raccomanda** la strategia. Default sugger
+          -ito: **web-first** per sostituire                             
+       96 -  la PWA con continuità di deploy; **valuta l'aggiunta di mobi
+          -le** (iOS/Android) per le feature                             
+       97 -  GPS/fotocamera/AR del Campo dei Giochi. *(Da confermare con 
+          -l'autore se mobile è in scope                                 
+       98 -  fin da subito.)*                                            
+       99 -- **Deploy**: pianifica il deploy della destinazione (web e, s
+          -e previsto, mobile/store)                                     
+      100 -  sostituendo l'attuale GitHub Pages.                         
+      160 +- **Backend/DB**: **resta Firebase via FlutterFire** (`firebas
+          +e_core`, `cloud_firestore`,                                   
+      161 +  `firebase_auth`, `firebase_messaging`, `cloud_functions`). L
+          +e `firestore.rules`, le 7 Cloud                               
+      162 +  Functions e gli indici **non si migrano**: si riusano. Realt
+          +ime `onSnapshot` → `snapshots()`                              
+      163 +  stream Dart (1:1). *(Supabase/RLS: fuori scope — vedi §0.1.)
+          +*                                                             
+      164 +- **Architettura**: **"Flutter core + vie di fuga"** (§0.2): i
+          +nterfaccia Dart unica + conditional                           
+      165 +  import web/native per i moduli browser-native; **Rust+FFI/WA
+          +SM** candidato per il DSP audio                               
+      166 +  cross-platform. Il piano deve dare la **mappa modulo-per-mod
+          +ulo** di quali pezzi sono puro                                
+      167 +  Flutter e quali richiedono una via di fuga (e quale).       
+      168 +- **Piattaforme**: **web + mobile (iOS/Android) in fase 1; des
+          +ktop come stretch goal** (§0.3).                              
+      169 +- **Deploy**: pianifica il deploy della destinazione (web a so
+          +stituire GitHub Pages; mobile/store                           
+      170 +  se in scope) **senza interrompere il sito Marzio live**.    
+      171 +- **Preservare la de-hardcodifica** già fatta (`src/config/ten
+          +ant.ts`): portarla in Dart come                               
+      172 +  config di istanza (seme multi-tenant per il piano §0.4 succe
+          +ssivo).                                                       
+      173  
+      174  ---
+      175  
+      176  ## 7. Tracce parallele (piano nel piano, da decidere)
+      177  
+      106 -1. **Prodotto open-source.** marzio1777 è già in produzione e 
+          -va spinto come **OSS**: includi                               
+      107 -   licenza, igiene del repo, CI/CD, modello di contribuzione, 
+          -documentazione.                                               
+      108 -2. **Graphify.** Valutane l'integrazione: sia come **strumento
+          - per analizzare marzio** durante                              
+      109 -   e dopo la migrazione, sia eventuali **integrazioni/upgrade 
+          -di prodotto**. *(Contesto: su                                 
+      110 -   graphify sono già state aperte issue e PR — stesso livello 
+          -di serietà.)*                                                 
+      178 +1. **Prodotto open-source.** Già avviato: `LICENSE` (MIT) e `R
+          +EADME` pubblico aggiunti in Fase 0.                           
+      179 +   Il piano completi l'OSS-readiness della destinazione Flutte
+          +r: CI/CD, modello di contribuzione,                           
+      180 +   igiene repo, documentazione.                               
+      181 +2. **Generalizzazione multi-comunità (piano successivo).** Ved
+          +i `GENERALIZATION_BRIEF.md`: NON in                           
+      182 +   scope ora, ma il piano di migrazione deve **lasciare la por
+          +ta aperta** — modello dati e regole                           
+      183 +   parametrizzabili, così che `tenantId` si aggiunga una volta
+          + sola dopo (§0.4).                                            
+      184 +3. **Graphify.** Valutane l'integrazione: sia come **strumento
+          + per analizzare marzio** durante e                            
+      185 +   dopo la migrazione, sia eventuali integrazioni/upgrade di p
+          +rodotto.                                                      
+      186  
+      187  ---
+      188  
+      189  ## 8. Aree che richiedono riprogettazione (candidati da valuta
+           re, non imposizioni)
+      190  
+      116 -Il web attuale usa tecnologie browser-native senza equivalente
+          - diretto: il piano deve                                       
+      117 -progettarne la transizione. Candidati indicativi da valutare c
+          -on giudizio:                                                  
+      191 +Il backend **non** è più in questa tabella (DECISO: resta Fire
+          +store via FlutterFire — porting                               
+      192 +client ~zero). I candidati da valutare sono i **moduli client 
+          +browser-native**; per ciascuno lo                             
+      193 +spike ha già dato un'indicazione (§0bis, dettaglio in `FLUTTER
+          +_SPIKE_FINDINGS.md`):                                         
+      194  
+      119 -| Area attuale (web) | Candidato Flutter/Dart da valutare |   
+      120 -| --- | --- |                                                 
+      121 -| Firestore (DB + realtime) | Supabase Postgres + Realtime *(o
+          - FlutterFire)* |                                              
+      122 -| Firebase Auth | Supabase Auth *(o FlutterFire Auth)* |      
+      123 -| `firestore.rules` (zero-trust) | **Postgres RLS** — porting 
+          -fedele del modello di permessi |                              
+      124 -| Cloud Functions (`europe-west1`) | Supabase Edge Functions (
+          -Deno) *(o mantenere CF)* |                                    
+      125 -| FCM Web Push | push cross-platform (FCM resta valido / alter
+          -nativa) |                                                     
+      126 -| IndexedDB (audio locale) | Drift / Isar / sqflite (store loc
+          -ale) |                                                        
+      127 -| WebRTC P2P (trasferimento audio) | `flutter_webrtc` (signali
+          -ng invariato lato DB) |                                       
+      128 -| Web Audio API (engine, EQ, analyser) | `just_audio` + DSP / 
+          -soluzione audio Flutter |                                     
+      129 -| Leaflet / react-leaflet | `flutter_map` |                   
+      130 -| AR HTML5 + device orientation | `sensors_plus` + camera *(AR
+          - con giudizio)* |                                             
+      131 -| React Router | `go_router` / Navigator 2.0 |                
+      132 -| Tailwind v4 (theme inline) | ThemeData + design tokens |    
+      133 -| `@google/genai` (Gemini per-utente) | `google_generative_ai`
+          - (Dart SDK) |                                                 
+      134 -| react-markdown / emoji-picker / cropper | `flutter_markdown`
+          - / `emoji_picker_flutter` / cropper |                         
+      135 -| canvas-confetti | particelle Flame / package confetti |     
+      136 -| PWA / service worker | Flutter Web PWA *(o install nativo)* 
+          -|                                                             
+      195 +| Area attuale (web) | Candidato Flutter/Dart da valutare | No
+          +ta spike |                                                    
+      196 +| --- | --- | --- |                                           
+      197 +| Firestore / Auth / rules / CF / FCM | **FlutterFire** (resta
+          +) — porting client | nessun attrito ✅ |                      
+      198 +| Web Audio API (engine, EQ 3 bande, analyser) | **web**: JS i
+          +nterop sul vero Web Audio; **nativo**: `flutter_soloud`/`just_
+          +audio` + **DSP (Rust+FFI?)** | web reale ✅; EQ nativo da fare
+          + ⚠️ |                                                         
+      199 +| WebRTC P2P (trasferimento audio) | `flutter_webrtc` (signali
+          +ng Firestore invariato) | echo verificato ✅ |                
+      200 +| IndexedDB (audio locale) | **nativo**: `drift`/`isar`/`sqfli
+          +te` + file; **web**: IndexedDB/OPFS | split web/nativo da prog
+          +ettare |                                                      
+      201 +| AR HTML5 + device orientation | `sensors_plus` + sensor-fusi
+          +on / `flutter_compass`; camera | lacuna heading calibrato ⚠️ |
+      202 +| Leaflet / react-leaflet | `flutter_map` (+ `geolocator`) | e
+          +quivalente solido |                                           
+      203 +| React Router | `go_router` / Navigator 2.0 | |              
+      204 +| Tailwind v4 (theme inline) | `ThemeData` + design tokens | |
+      205 +| State (Context + 18 hook) | Riverpod/Provider/Signals (la lo
+          +gica pura porta ~1:1) | `DJEngine` già DI ✅ |                
+      206 +| `@google/genai` (Gemini per-utente) | `google_generative_ai`
+          + (Dart SDK) | |                                               
+      207 +| react-markdown / emoji-picker / cropper | `flutter_markdown`
+          + / `emoji_picker_flutter` / cropper | volume, non difficoltà |
+      208 +| canvas-confetti | particelle Flame / package confetti | |   
+      209 +| PWA / service worker / FCM web | Flutter Web PWA + `firebase
+          +_messaging` (SW dedicato su web) | meno controllo della PWA Vi
+          +te ⚠️ |                                                       
+      210  
+      211  ---
+      212  
+     ...
+      214  
+      215  Un piano strutturato che contenga almeno:
+      216  
+      144 -1. **Fasi** con dipendenze e rischi (ordine di migrazione cons
+          -igliato, milestone).                                          
+      217 +1. **Fasi** con dipendenze e rischi (ordine di migrazione cons
+          +igliato, milestone). Tener conto                              
+      218 +   che i moduli a più alto rischio (audio, AR, giochi Flame) v
+          +anno de-rischiati presto e che                                
+      219 +   **web+mobile precedono il desktop**.                       
+      220  2. **Decisioni-chiave** con alternative valutate e **raccomand
+           azione motivata** — *perché prima
+      146 -   del come*. In particolare: backend (Supabase vs FlutterFire
+          -) e piattaforme.                                              
+      147 -3. **Mappatura feature-by-feature** dall'attuale al target (co
+          -n parità UI/UX e funzionale).                                 
+      148 -4. **Strategia di test** (unit/widget/integration + parità del
+          -le regole di sicurezza).                                      
+      149 -5. **Strategia di deploy + migrazione dati** (incl. percorso d
+          -ati e cutover senza downtime                                  
+      150 -   ragionato).                                                
+      151 -6. Le **due tracce parallele** (§7): OSS-readiness e integrazi
+          -one graphify.                                                 
+      152 -7. Per ogni scelta delicata, i **trade-off** espliciti.       
+      221 +   del come*. Backend e Supabase NON sono più una decisione ap
+          +erta (§0.1): il piano la **recepisce**                        
+      222 +   e semmai documenta *come* sfruttare FlutterFire al meglio. 
+          +Decisione-chiave residua più calda:                           
+      223 +   **come realizzare l'EQ audio nativo** (Rust+FFI condiviso v
+          +s per-piattaforma) e lo **split                               
+      224 +   storage** web/nativo.                                      
+      225 +3. **Mappatura feature-by-feature** dall'attuale al target, co
+          +n, per ogni modulo, *se è puro                                
+      226 +   Flutter o richiede una via di fuga* (e quale: JS interop / 
+          +FFI / platform channel / plugin).                             
+      227 +4. **Strategia di test** (unit/widget/integration). Le **rule 
+          +Firestore restano**: mantenere                                
+      228 +   verdi i 74 rule-test sul backend invariato.                
+      229 +5. **Strategia di deploy + cutover senza downtime** per non in
+          +terrompere Marzio live (web prima,                            
+      230 +   poi mobile/store; desktop dopo). **Niente migrazione dati**
+          + (il DB resta Firestore).                                     
+      231 +6. Le **tracce parallele** (§7): OSS-readiness (completare), *
+          +*non-preclusione del multi-tenant**                           
+      232 +   (§0.4), graphify.                                          
+      233 +7. Per ogni scelta delicata, i **trade-off** espliciti (specie
+          + sul confine Flutter↔via-di-fuga e                            
+      234 +   sul desktop).                                              
+      235  
+      236  > Principio guida trasversale: **perché prima del come**, qual
+           ità senior, niente
+      155 -> retrocompatibilità, niente mock/TODO/demo, tutto live.      
+      237 +> retrocompatibilità, niente mock/TODO/demo, tutto live. E: **
+          +il backend Firestore non si tocca**                           
+      238 +> — la parità si gioca sul client e sulle vie di fuga, non sul
+          +le regole di sicurezza.                                       
+
+● Brief revisionato. Committo brief + esiti spike + memo decisionale sul branch
+  autoplan/flutter-migration.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Allestimento repo completo: branch autoplan/flutter-migration con 3 commit
+  (config 909437a → OSS 4c0713d → brief revisionato 44cfed5). Resta la
+  sincronizzazione su NotebookLM (la "memoria del simposio" del metodo).
+  Controllo prima cosa esiste già nel tuo account (la sessione del 30/05 aveva
+  creato un notebook dedicato al piano), per non duplicare.
+
+  Called nb1777 (ctrl+o to expand)
+
+● Il tuo account NotebookLM ha decine di notebook (c'è un "Ultraplan" con 50
+  fonti, un "Flutter Flame" con 97, l'"agora1777 — archivio del simposio") ma
+  nessun notebook dedicato a marzio/migrazione. Il pezzo essenziale del metodo —
+  il brief pronto al lancio, committato — è fatto; il sync su NotebookLM è la
+  "memoria del simposio", e dove metterlo è una tua scelta (è il tuo account,
+  pubblicare lì è un'azione esterna). Te lo chiedo sotto.
+
+  ✅ Allestimento autoplan1777 — completato (lato repo)
+
+  Branch autoplan/flutter-migration (sopra il lavoro di Fase 0), 3 commit:
+  - 909437a config extraction (TenantConfig)
+  - 4c0713d OSS (LICENSE MIT + README)
+  - 44cfed5 brief revisionato + FLUTTER_SPIKE_FINDINGS.md + DECISIONE_...md
+
+  Il FLUTTER_MIGRATION_BRIEF.md ora ha in testa §0 "Decisioni vincolanti"
+  (resta-Firestore, vie di fuga, web+mobile-first, generalizzazione rinviata) +
+  §0bis esiti spike verificati, e §6/§7/§8/§9 riscritte di conseguenza. È
+  autosufficiente e cita i doc del repo.
+
+  ▶️ Per lanciare /ultraplan (lo fai tu)
+
+  1. Push del branch (push interattivo, lo fai tu):
+  git push -u origin autoplan/flutter-migration
+  2. Poi /ultraplan puntandolo al brief: "Leggi e segui 
+  FLUTTER_MIGRATION_BRIEF.md e tutta la documentazione del repo; produci il 
+  piano richiesto in §9".
+    - ⚠️ /ultraplan clona lo stato pushato: il push deve precedere. Assicurati
+  che cloni il branch autoplan/flutter-migration (o fai merge su main prima).
+    - ⚠️ CLAUDE.md è gitignored → non sarà nel clone (il brief ne tiene conto).
+
+  Resta solo da decidere il sync NotebookLM:
+
+● User answered Claude's questions:
+  ⎿  · Per il sync su NotebookLM (la 'memoria del simposio' del metodo 
+     autoplan1777), dove metto il brief + findings + memo decisionale? (Non 
+     serve per /ultraplan, che legge il repo — è solo archivio.) → Salta per ora
+
+● Perfetto, NotebookLM saltato (niente pubblicazione esterna). L'allestimento è
+  completo. Aggiorno la memoria con lo stato pronto-al-lancio e chiudo.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● /autoplan1777 completato. Ecco lo stato finale.
+
+  ✅ autoplan1777 — terreno pronto per il piano
+
+  Tutto sul branch autoplan/flutter-migration (3 commit, non pushato):
+
+  ┌─────────┬────────────────────────────────────────────────────────────────┐
+  │ Commit  │                           Contenuto                            │
+  ├─────────┼────────────────────────────────────────────────────────────────┤
+  │ 909437a │ Estrazione config di dominio in src/config/tenant.ts           │
+  ├─────────┼────────────────────────────────────────────────────────────────┤
+  │ 4c0713d │ OSS slice: LICENSE MIT + README pubblico                       │
+  ├─────────┼────────────────────────────────────────────────────────────────┤
+  │ 44cfed5 │ Brief ultraplan revisionato + FLUTTER_SPIKE_FINDINGS.md +      │
+  │         │ DECISIONE_...md                                                │
+  └─────────┴────────────────────────────────────────────────────────────────┘
+
+  Il FLUTTER_MIGRATION_BRIEF.md è autosufficiente e pronto al lancio: §0 con le
+  decisioni vincolanti (resta-Firestore, vie di fuga, web+mobile-first,
+  generalizzazione rinviata), §0bis con gli esiti spike verificati, e §1–§9 a
+  regola d'arte. Cita i doc del repo, tiene conto che CLAUDE.md è gitignored, e
+  ha in testa "Scopo + Come lanciarlo".
+
+  Saltato per tua scelta: sync NotebookLM (puoi farlo dopo). Non fatto perché è 
+  tuo: push e apertura PR.
+
+  ▶️ Resta solo da fare a te (2 mosse)
+
+  git push -u origin autoplan/flutter-migration   # push interattivo (PAT)
+  poi /ultraplan → "Leggi e segui FLUTTER_MIGRATION_BRIEF.md e tutta la 
+  documentazione del repo; produci il piano richiesto in §9" (assicurati che
+  cloni il branch autoplan/flutter-migration).
+
+  ---
+  Dove siamo, a colpo d'occhio (tutta la sessione)
+
+  1. Riordino — tutto marzio1777 mappato e raccolto in
+  ARCHIVE_PROJECT_MARZIO1777, niente perso, repo git = fonte di verità.
+  2. Fix — security rules deployate in produzione (test 74/74 + 66/66 verdi).
+  3. Rotta — analisi migrare-vs-generalizzare → migrare prima a Flutter restando
+  su Firestore, generalizzare dopo.
+  4. Groundwork — config extraction + OSS slice committati; spike Flutter 
+  validato a runtime (audio web reale, WebRTC echo ok, build web+linux verdi).
+  5. Piano — brief ultraplan pronto al lancio.
+
+  La palla è tua: push + /ultraplan e parte la pianificazione vera della
+  migrazione. Se vuoi, dopo posso aiutarti a leggere/raffinare il piano che ne
+  esce.
+
+✻ Worked for 6m 35s
+
+❯ git push da che cartella?                                                     
+
+● Dalla cartella del repo git: ~/Scrivania/marzio1777-main (è l'unico repo git;
+  la copia in raccolta-bot-vps-1777 non lo è). Verifico al volo che sei sul
+  branch giusto e ti do i comandi esatti.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tutto pronto: sei già sul branch giusto, nella cartella giusta.
+
+  Cartella: ~/Scrivania/marzio1777-main
+  Branch: autoplan/flutter-migration (già attivo)
+  Remote: github.com/neo1777/marzio1777
+  Da pushare: i 3 commit (909437a config → 4c0713d OSS → 44cfed5 brief).
+
+  Comando:
+  cd ~/Scrivania/marzio1777-main
+  git push -u origin autoplan/flutter-migration
+
+  Puoi lanciarlo direttamente qui in sessione col prefisso ! (così l'output
+  arriva nella chat):
+
+  ! cd ~/Scrivania/marzio1777-main && git push -u origin
+  autoplan/flutter-migration
+
+  Ti chiederà username GitHub + PAT (come da tua convenzione: il push lo fai
+  tu). Dopo il push, il branch è su GitHub e /ultraplan potrà clonarlo.
+
+✻ Brewed for 23s
+
+❯ neo1777@mint1777-desktop:~/Scrivania/marzio1777-main$ git push -u origin      
+  autoplan/flutter-migration                                                    
+  Enumerazione degli oggetti in corso: 40, fatto.                               
+  Conteggio degli oggetti in corso: 100% (40/40), fatto.                        
+  Compressione delta in corso, uso fino a 8 thread                              
+  Compressione oggetti in corso: 100% (24/24), fatto.                           
+  Scrittura degli oggetti in corso: 100% (25/25), 23.61 KiB | 2.36 MiB/s,       
+  fatto.                                                                        
+  25 oggetti totali (15 delta), 0 riutilizzati (0 delta), 0 riutilizzati nel    
+  file pack                                                                     
+  remote: Resolving deltas: 100% (15/15), completed with 13 local objects.      
+  remote:                                                                       
+  remote: Create a pull request for 'autoplan/flutter-migration' on GitHub by   
+  visiting:                                                                     
+  remote:                                                                       
+  https://github.com/neo1777/marzio1777/pull/new/autoplan/flutter-migration     
+  remote:                                                                       
+  To https://github.com/neo1777/marzio1777.git                                  
+   * [new branch]      autoplan/flutter-migration -> autoplan/flutter-migration 
+  ramo 'autoplan/flutter-migration' impostato per tracciare                     
+  'origin/autoplan/flutter-migration'.                                          
+  neo1777@mint1777-desktop:~/Scrivania/marzio1777-main$                         
+                                                                                
+
+● Push riuscito ✅ — il branch autoplan/flutter-migration è ora su GitHub con i
+  3 commit. Ma c'è un punto importante da chiarire prima di /ultraplan: verifico
+  cosa vede il clone.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● ⚠️ Attenzione, punto importante prima di lanciare /ultraplan:
+
+  Il brief revisionato (con §0 Decisioni: resta-Firestore, vie di fuga, ecc.) è
+  solo sul branch autoplan/flutter-migration. Su main c'è ancora il brief 
+  vecchio (quello che "privilegia Supabase").
+
+  → Se /ultraplan clona il branch di default (main), leggerebbe la versione
+  sbagliata e superata. Devi assicurarti che lavori sul branch giusto.
+
+  Due strade pulite:
+
+  A) Punti /ultraplan direttamente al branch autoplan/flutter-migration
+  (consigliata se il tuo /ultraplan permette di scegliere il branch/ref)
+  - Nessun deploy, nessun tocco a main. Il branch è già su GitHub.
+
+  B) Porti le modifiche su main e poi lanci /ultraplan (se il tuo /ultraplan 
+  clona sempre main)
+  - Merge fast-forward (pulito) + push di main.
+  - ⚠️ Pushare main fa partire il deploy GitHub Pages: includerebbe
+  config-extraction + OSS. Sono behavior-preserving (default Marzio invariati,
+  base path preservato, test verdi) → il sito non cambia comportamento, ma è
+  comunque un deploy di produzione, quindi è una tua decisione.
+  - Se scegli questa, posso preparartelo io:
+  git checkout main && git merge --ff-only autoplan/flutter-migration
+  # poi il push lo fai tu:
+  git push origin main
+
+  Domanda secca: il tuo /ultraplan ti fa scegliere il branch da clonare, o clona
+  sempre main?
+  - Se sì, sceglie il branch → vai con A, punta a autoplan/flutter-migration.
+  - Se clona sempre main → andiamo con B (preparo il merge, tu pushi).
+
+✻ Churned for 1m 20s
+
+❯ /ultraplan → "Leggi e segui FLUTTER_MIGRATION_BRIEF.md e tutta la             
+documentazione del repo; produci il piano richiesto in §9"                      
+◇ ultraplan · Monitor progress in Claude Code on the web https://claude.ai/code/session_01KGArUyrnXoSo1ggeq967tx?from=cli
+  ⎿  You can continue working — when the ◇ fills, press ↓ to view results
+
+❯ Ultraplan terminated: ExitPlanMode never reached after 90 minutes (the remote 
+  container failed to start, or session ID mismatch?)                           
+                                                                                
+  Session: https://claude.ai/code/session_01KGArUyrnXoSo1ggeq967tx?from=cli     
+● L'/ultraplan è fallito lato cloud — "il container remoto non è partito (o 
+  mismatch di session ID)". Non è colpa del brief né del tuo setup: il brief è
+  pronto e pushato correttamente; è un problema d'infrastruttura della sessione
+  remota (lo stesso tipo di fragilità "container/sessione" che la cloud ha a
+  volte). Niente è andato perso.
+
+  Hai due strade:
+
+  1) Riprovare la cloud — rilanci /ultraplan. Ma prima va risolta la domanda
+  rimasta in sospeso: il brief revisionato è solo sul branch 
+  autoplan/flutter-migration, non su main. Se la cloud clona main di default,
+  leggerebbe ancora il brief vecchio (Supabase). Quindi: o /ultraplan ti fa
+  puntare al branch, o facciamo il merge su main (preparo io, pushi tu).
+
+  2) Produrre il piano in locale, ora — il brief stesso dice "ultraplan o plan 
+  mode": non serve la cloud. Posso generare io il piano §9 leggendo il brief +
+  il repo, con un'orchestrazione multi-agente (fasi, decisioni-chiave motivate,
+  mappatura modulo-per-modulo Flutter↔via-di-fuga, strategia test/deploy,
+  trade-off) — lo stesso output che avrebbe prodotto la cloud, ma qui, senza
+  dipendere dal container remoto. È la strada più robusta visto che la cloud fa
+  i capricci.
+
+  La mia raccomandazione: andiamo in locale (opzione 2) — il terreno è già
+  allestito a regola d'arte, tanto vale usarlo subito invece di combattere con
+  l'infra cloud.
+
+  Procedo a generare il piano in locale? (Se invece preferisci ritentare la
+  cloud, dimmi se il tuo /ultraplan sceglie il branch o devo prepararti il merge
+  su main.)
+
+✻ Churned for 38s
+
+● Remote task "→ "Leggi e segui FLUTTER_MIGRATION_BRIEF.md e tutta la
+documentazione del repo; produci il piano richiesto in §9"" completed
+successfully
+
+● Aggiornamento: la sessione /ultraplan cloud in realtà è arrivata in fondo — è
+  appena rientrata come completata (prima il CLI aveva dato timeout, ma il
+  container remoto ha finito). Leggo il piano prodotto.
+
+  Read 1 file (ctrl+o to expand)
+
+● Il file è enorme (261k token: è l'intero transcript del remoto). Estraggo il
+  piano vero senza leggere tutto — cerco i marcatori di struttura e il messaggio
+  finale.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Il piano è stato prodotto (5 ExitPlanMode, ricerca approfondita: 225 "Rust",
+  127 "Fase 2"). Localizzo il blocco-piano finale per estrarlo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Le righe JSONL sono enormi. Estraggo direttamente il contenuto degli
+  ExitPlanMode (dove vive il piano) con uno script.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Parsing JSON non ha trovato ExitPlanMode come tool_use — il piano è
+  probabilmente in un blocco di testo finale. Cambio approccio: estraggo i
+  blocchi di testo che contengono i marcatori di piano.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I blocchi trovati sono solo il brief riecheggiato, non il piano — e 1716 righe
+  su 1850 non sono JSON validi (transcript streaming malformato). I "5
+  ExitPlanMode" sono probabilmente nelle istruzioni di sistema, non una consegna
+  reale. Verifico se il remoto ha prodotto un artefatto concreto
+  (PR/commit/branch su GitHub) e guardo la coda del transcript.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Ora è chiaro cosa è successo: il remoto ha fatto ricerca + grounding completi,
+  ma poi si è fermato per farti 3 domande ("three decisions... genuinely yours
+  to make") — e in cloud non può chiederle interattivamente, quindi ha fatto
+  teleport e si è chiuso. Non c'è un piano finito: mancano 3 tue decisioni per
+  finalizzarlo. Estraggo quelle 3 domande.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Ho ricostruito l'accaduto dalla coda del transcript. Ecco la verità:
+
+  Cos'è successo davvero con /ultraplan
+
+  Il remoto ha fatto ricerca e grounding completi (file, rules, data model, CF,
+  indici, deploy + ricerca approfondita su signals/Rust-FFI/Flutter), poi si è
+  fermato dicendo "prima di finalizzare il piano, tre decisioni del brief sono 
+  tue e cambiano la forma del piano — lascia che te le chieda"… e lì il 
+  transcript si interrompe (c'è un rate_limit_event a 5 ore + il marker
+  __ULTRAPLAN_TELEPORT_LOCAL__). In cloud non poteva farti domande interattive →
+  ha fatto teleport e si è chiuso.
+
+  Conclusione onesta: non c'è un piano finito. Il remoto ha fatto il lavoro di
+  base ma si è interrotto al momento di chiederti delle scelte (che il
+  transcript non ha nemmeno registrato), probabilmente anche per rate-limit.
+
+  La via robusta: lo finalizzo io in locale, ora
+
+  Non ha senso ricombattere con la cloud. Il brief stesso prevede "ultraplan o 
+  plan mode", e quelle "decisioni chiave" non vanno pre-risposte: il piano §9
+  deve presentarle con una raccomandazione motivata (è esattamente il suo
+  compito). Genero il piano completo in locale, grounded sul repo reale + brief
+  + esiti spike, con un'orchestrazione multi-agente. Procedo.
+
+● Workflow(Genera in locale il piano §9 di migrazione marzio1777 → Flutter
+          (grounded su repo+brief+spike))
+  ⎿  /workflows to view dynamic workflow runs
+
+● I 4 planner stanno lavorando in parallelo (fasi+diagramma, decisioni
+  d'architettura, mappatura modulo-per-modulo, backend/test/deploy/trade-off),
+  tutti grounded sul codice reale. Appena tornano assemblo il piano completo 
+  FLUTTER_MIGRATION_PLAN.md, lo committo sul branch autoplan/flutter-migration e
+  te lo consegno — con le decisioni-chiave (state management, EQ audio nativo
+  Rust-vs-soloud, ecc.) presentate con raccomandazione motivata, così tu approvi
+  invece di pre-rispondere. Ti avviso a piano pronto.
+
+✻ Cogitated for 4m 43s
+
+● Dynamic workflow "Genera in locale il piano §9 di migrazione marzio1777 →
+Flutter (grounded su repo+brief+spike)" completed · 3m 51s
+
+● I 4 planner hanno consegnato (sezioni ricche, grounded sul codice). Leggo il
+  risultato integrale per assemblare il piano.
+
+  Read 1 file (ctrl+o to expand)
+
+● Ho le sezioni 1-3. Leggo la sezione D (backend/test/deploy/trade-off).
+
+  Read 1 file (ctrl+o to expand)
+● Ho tutte e 4 le sezioni (Fasi+diagramma, Architettura, Mappatura
+  modulo-per-modulo, Backend/Test/Deploy/Trade-off), grounded sul codice reale —
+  con anche scoperte nuove (canvas-confetti è dep morta, Firebase Storage in
+  scope ma non testato dallo spike, Gemini legge localStorage). Assemblo il
+  piano in un unico file con un sommario decisionale in testa.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Piano assemblato (447 righe). Verifico la struttura e poi committo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Piano assemblato e committato (56758c2, branch autoplan/flutter-migration, ora
+  a 4 commit). Aggiorno la memoria e te lo consegno.
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● ✅ Il piano c'è — generato in locale, committato
+
+  FLUTTER_MIGRATION_PLAN.md (447 righe), commit 56758c2. È il piano §9 che la
+  cloud non è riuscita a consegnare, prodotto qui in plan-mode multi-agente,
+  grounded sul codice reale.
+
+  Decisioni-chiave (da approvare)
+
+  ┌─────────────┬───────────────────────────────────────────────────────────┐
+  │    Tema     │                      Raccomandazione                      │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │             │ Strangler sul backend (Firestore invariato): app React e  │
+  │ Approccio   │ Flutter parlano allo stesso DB; cutover web reversibile,  │
+  │             │ mobile net-new. No big-bang.                              │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ State       │ Riverpod — StreamProvider.family.autoDispose mappa 1:1 i  │
+  │ management  │ tuoi 6 hook realtime (Signals come exit path)             │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ Struttura   │ feature-first a 3 strati sottili (il codice è già di      │
+  │             │ fatto così)                                               │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ Routing     │ go_router con StatefulShellRoute (anzi migliora: preserva │
+  │             │  lo stato delle tab)                                      │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ Theming     │ ThemeData + ThemeExtension — occasione per estinguere la  │
+  │             │ deriva (70+ hex inline → token)                           │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ Vie di fuga │ tassonomia a 3 livelli; conditional import solo per audio │
+  │             │  + storage locale                                         │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ EQ audio    │ flutter_soloud in fase 1 (web già reale via JS interop),  │
+  │ nativo      │ interfaccia AudioEngine pronta per Rust+FFI se servirà    │
+  │             │ parità DSP perfetta                                       │
+  ├─────────────┼───────────────────────────────────────────────────────────┤
+  │ Backend     │ FlutterFire 1:1 — firestore.rules + 7 CF + 74 rule-test   │
+  │             │ non si toccano                                            │
+  └─────────────┴───────────────────────────────────────────────────────────┘
+
+  Struttura del piano
+
+  §1 Fasi (0→5) con diagramma mermaid delle dipendenze + milestone verificabili
+  · §2 Decisioni d'architettura motivate · §3 Mappatura modulo-per-modulo (puro
+  Flutter vs via-di-fuga, effort/rischio) · §4 Backend FlutterFire (53
+  onSnapshot→snapshots(), CF, FCM) · §5 Test (unit Dart, widget, integration,
+  rule-test invariati) · §6 Cutover senza downtime + non-preclusione
+  multi-tenant · §7 Trade-off.
+
+  Tre scoperte utili emerse
+
+  - canvas-confetti è dipendenza morta (0 usi) — un modulo in meno da portare.
+  - Firebase Storage è in scope (IlBaule carica foto) ma lo spike non l'ha 
+  testato → unico rischio non de-rischiato, da coprire in Fase 1.
+  - Gemini legge localStorage, non profile.apiKey come dice la doc → da sanare
+  nel porting.
+
+  Note
+
+  - Il commit del piano (56758c2) non è ancora pushato (i primi 3 sì). Quando
+  vuoi: git push (sei già sul branch giusto) per allineare GitHub.
+  - L'/ultraplan cloud non serve più ripeterlo: il piano è qui, completo.
+
+● Il piano di migrazione §9 completo (fasi+diagramma, decisioni motivate,
+  mappatura modulo-per-modulo, backend/test/deploy/trade-off). Committato sul
+  branch autoplan/flutter-migration.
+
+  › [file] FLUTTER_MIGRATION_PLAN.md (57.6KB)
+
+● Con questo il cerchio si chiude: dal caos di copie sparse → riordino, fix in
+  produzione, decisione di rotta con prove alla mano (spike), groundwork
+  committato, e ora il piano di migrazione completo.
+
+  Quando hai letto il piano, le strade naturali sono:
+  - Approvarlo (eventualmente correggendo qualche decisione del sommario) → poi
+  partiamo dalla Fase 0 (scaffold Flutter + FlutterFire + auth/RBAC + una slice
+  contro il Firestore vivo).
+  - Affondare una decisione prima di approvare — es. EQ audio nativo (soloud vs
+  Rust+FFI) o Riverpod vs Signals: posso dettagliare con codice di esempio.
+  - Coprire il rischio aperto subito: un mini-spike su Firebase Storage
+  (IlBaule) che lo spike non aveva toccato.
+
+  Dimmi tu. E quando vuoi allineare GitHub: git push dal repo (sei già sul
+  branch). Buon lavoro — il terreno per la migrazione è pronto e documentato.
+
+✻ Cooked for 10m 55s
+
+❯ verifichiamo alcuni dettagli del piano, hai letto tutta la documentazione     
+  tecnica dell originale? come risolvevamo la coda e p2p per la musica è        
+  elegante e voglio mantenerlo, poi l attenzione alla sicurezza, con tutti i    
+  dettagli, come nella doc originale che ti invito a rileggere (e riprodurre    
+  poi a prodotto finito) oltre che per i contenuti per la profondita, per l     
+  attenzione ai dettagli, ti invito a spawnare agenti che controllino ogni      
+  dettaglio, profondita e cura tecnica, privaci, sicurezza, architettura,       
+  performance, ricorda di fare , inserire nel piano dettagliati test per le     
+  funzionalita e antiregressione man mano che facciamo aggiornamenti. Pianifica 
+  inoltre step di pulizia, refactoring, semplificazione del codice man mano     
+  che facciamo step importanti, con test accurati che ci permettano di tenere   
+  salda l app. Ricorda inoltre di utilizzare il nostro design, anche se neutro  
+  una 'base default' dobbiamo darla, ti passerò cartella. Abbi cura di adaptive 
+  e responsive e cura gia le proporzioni, le visualizzazioni, usabilita, tutti  
+  i dettagli, anche non citati del frontend oltre che del backend. Chiama l     
+  arsenale completo, /setaccio per recuperare doc e transcript/md               
+  vari,/palantir1777   /spiegazione-tecnica per 'capire' studiare pianificare   
+  tutto in dettaglio /agora1777 per non trascurare nulla, verificate che il     
+  piano sia completo e aggiornatelo in ogni dettaglio. Prendetevi tutto il      
+  tempo necessario. Per questa fase sincronizzatevi con nb                      
+
+● Richiesta grande e giusta. E rispondo subito, con onestà, alla tua domanda
+  diretta: no — finora ho letto il CLAUDE.md (che è un digest), i due brief e le
+  sintesi prodotte dagli agenti, ma NON ho letto cover-to-cover i documenti 
+  tecnici originali (security_spec_IT con le 30 "Sporche", GAMING_SYSTEM_IT,
+  TECHNICAL_DOCS_IT, AINULINDALE_TECHNICAL_SPEC). Questo giro serve proprio a
+  colmare quel buco: leggerli alla fonte, verificare ogni dettaglio, e portare
+  nel piano la profondità che chiedi (coda+P2P elegante, sicurezza con le 30
+  Sporche, privacy, architettura, performance, frontend adaptive/responsive,
+  test anti-regressione, step di pulizia/refactoring).
+
+  Parto dall'orchestratore, come mi chiedi.
+
+● Skill(palantir1777)
+  ⎿  Successfully loaded skill
+
+● Palantir ha parlato: questo è chiaramente un flusso (più skill), e per un
+  lavoro lungo che attraversa più passaggi va tenuto un file di stato (il "filo
+  lungo"). Ecco la composizione, poi lo scrivo e parto.
+
+  Il flusso composto
+
+  Fase: A — Raccolta alla fonte
+  Skill / mezzo: /setaccio + workflow
+  Output: Dossier sorgentato di TUTTA la doc originale + transcript/md (le 30
+    Sporche, coda+P2P, gaming, ainulindale, technical docs) — letti davvero,
+    fatti distinti da inferenze
+  ────────────────────────────────────────
+  Fase: B — Studio + verifica
+  Skill / mezzo: /spiegazione-tecnica + agenti per dimensione
+  Output: Comprensione profonda (coda "patto a 3", P2P/IndexedDB, sicurezza) +
+    verifica del piano per: sicurezza/privacy, architettura, performance,
+    frontend (adaptive/responsive/design/usabilità), test+anti-regressione,
+    pulizia/refactoring
+  ────────────────────────────────────────
+  Fase: C — Concilio di completezza
+  Skill / mezzo: /agora1777
+  Output: Cosa manca, cosa nessuna lente coglie
+  ────────────────────────────────────────
+  Fase: D — Integrazione
+  Skill / mezzo: io
+  Output: FLUTTER_MIGRATION_PLAN.md riscritto e approfondito in ogni dettaglio
+  ────────────────────────────────────────
+  Fase: E — Sync
+  Skill / mezzo: NotebookLM
+  Output: Notebook dedicato con piano + dossier + doc
+
+  ▎ La cartella design che mi passerai si innesta in B/D (per ora preparo la 
+  ▎ sezione frontend con un base-default neutro pronto ad assorbirla). NB sync: 
+  ▎ ora richiesto (prima saltato).
+
+  Scrivo il file di stato del flusso e attivo la prima skill.
+
+● Write(PALANTIR_FLUSSO_migrazione-deep.md)
+  ⎿  Wrote 39 lines to PALANTIR_FLUSSO_migrazione-deep.md
+       1 # PALANTIR_FLUSSO — Verifica & approfondimento piano migrazione 
+       2 
+       3 > Stato del flusso (il "filo lungo" di palantir1777). Lavoro lun
+       4 > Avviato 2026-06-30. Obiettivo: verificare e arricchire `FLUTTE
+       5 > dettaglio (profondità, sicurezza/privacy, architettura, perfor
+         mance, frontend, test
+         TTA la doc originale, e
+       7 > sincronizzare su NotebookLM.
+       9 ## Mandato (da Neo, verbatim sintetizzato)
+         .
+     … +48 lines (ctrl+o to expand)
+
+● Stato del flusso scritto. Attivo Fase A — /setaccio per la raccolta sorgentata
+  della documentazione originale.
+
+● Skill(setaccio)
+  ⎿  Successfully loaded skill
+
+● Metodo setaccio caricato. Lo scope e la forma sono già definiti da te (file
+  elencati + archivio; un dossier indicizzato per tema, sorgentato) — nessun
+  bivio da chiedere. Seguo l'arco Rotta→Scavo→Compilazione: i file sono già
+  misurati (security_spec 36KB, GAMING 56KB, TECHNICAL_DOCS 73KB, AINULINDALE
+  57KB, ecc.). Lancio lo scavo in parallelo: un agente per tema, ognuno legge
+  integralmente le sue fonti e produce un indice di dati raw sorgentato (fatti
+  distinti dalle inferenze, niente interpretazione — quella è Fase B).
+
+● Workflow(Fase A: dossier sorgentato per tema della doc tecnica originale di
+          marzio1777 (raduna, non interpreta))
+  ⎿  /workflows to view dynamic workflow runs
+
+● Fase A in corso — 7 agenti stanno leggendo integralmente le fonti originali
+  (security_spec con le 30 Sporche, AINULINDALE per coda+P2P, GAMING,
+  TECHNICAL_DOCS, blueprint, rules, index.css/UI, cronache+transcript) ed
+  estraggono dati raw sorgentati, fatti distinti dalle inferenze. È il passo che
+  colma il buco che mi hai contestato: stavolta i documenti li leggiamo
+  davvero, alla fonte.
+
+  Appena il dossier è pronto, procedo con Fase B (studio profondo
+  /spiegazione-tecnica + agenti di verifica per dimensione: sicurezza/privacy,
+  coda+P2P da preservare, architettura, performance,
+  frontend/adaptive/responsive, test+anti-regressione, pulizia/refactoring), poi
+  Fase C /agora1777 (completezza), Fase D (riscrittura del piano) e Fase E
+  (sync NotebookLM). Ti aggiorno a ogni tappa. Quando hai la cartella design,
+  passamela: si innesta in B/D.
+
+✻ Cogitated for 4m 44s
+
+● Dynamic workflow "Fase A: dossier sorgentato per tema della doc tecnica
+originale di marzio1777 (raduna, non interpreta)" completed · 4m 41s
+
+● Fase A completa — dossier ricco e sorgentato (≈150KB: il solo tema sicurezza
+  cataloga tutte le 30 Sporche con file:riga, segnala discrepanze come
+  [IRRISOLTO], estrae validatori e footgun). Assemblo il dossier in un file e
+  aggiorno lo stato del flusso.
+
+  Ran 1 shell command (ctrl+o to expand)
+● Refuso nello script (variabile non definita). Correggo.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Dossier assemblato: 156KB, 7 temi sorgentati e bilanciati. Aggiorno lo stato
+  del flusso e attivo la skill di studio profondo per la Fase B.
+
+● Update(PALANTIR_FLUSSO_migrazione-deep.md)
+  ⎿  Added 2 lines, removed 2 lines
+      17  8. Sincronizzare su NotebookLM.
+      18  
+      19  ## Il flusso (skill in ordine)
+      20 -- [ ] **A — setaccio**: dossier sorgentato della doc originale 
+         -+ transcript/md.                                               
+      20 +- [x] **A — setaccio** ✓ (2026-06-30): dossier 156KB, 7 temi so
+         +rgentati → `scratchpad/SETACCIO_DOSSIER.md`.                   
+      21  - [ ] **B — spiegazione-tecnica + verifica multi-agente** per d
+          imensione.
+      22  - [ ] **C — agora1777**: concilio di completezza.
+      23  - [ ] **D — integrazione** nel piano.
+      24  - [ ] **E — sync NotebookLM** (notebook dedicato).
+      25  
+      26  ## Stato corrente
+      27 -- Fase: **A (avvio)**.                                         
+      27 +- Fase: **B (verifica/arricchimento)** in avvio.               
+      28  - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter
+          -migration`.
+      29  - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`5675
+          8c2`) — da arricchire.
+      30  
+
+● Skill(spiegazione-tecnica)
+  ⎿  Successfully loaded skill
+
+● Metodo caricato. La disciplina spiegazione-tecnica (verifica alla fonte,
+  perché prima del come, ponti verso Dart/Flutter, onestà fatti-vs-inferenze,
+  posizione netta) guiderà gli agenti di Fase B: ognuno prima capisce davvero il
+  pezzo (dal dossier + codice reale), poi propone l'arricchimento del piano
+  spiegando il perché. Lancio la verifica multi-dimensione.
+
+● Workflow(Fase B: verifica+arricchimento del piano migrazione per dimensione
+          (sicurezza, audio/coda/P2P, arch, perf, frontend, test, pulizia))
+  ⎿  /workflows to view dynamic workflow runs
+
+● Fase B in corso — 7 agenti verificano e approfondiscono il piano per
+  dimensione, ognuno applicando la disciplina spiegazione-tecnica (capire alla
+  fonte, poi spiegare il perché):
+
+  - 🔐 Sicurezza/privacy → matrice delle 30 Sporche "per la migrazione" (cosa
+  deve scrivere il client Dart perché ogni mitigazione regga) + privacy.
+  - 🎵 Coda+P2P+audio → come preservare con eleganza il "patto a 3", il P2P e
+  IndexedDB (incluso il rischio del 4° sito Dart della formula).
+  - 🏛️ Architettura · ⚡ Performance (budget/gate) · 🎨 Frontend (design
+  base-default neutro pronto per la tua cartella, adaptive/responsive/usabilità)
+  · 🧪 Test+anti-regressione (matrice per milestone) · 🧹 Pulizia/refactoring
+  (cadenza + debiti noti da estinguere).
+
+  Ognuno parte segnalando i gap del piano attuale e poi consegna la sezione
+  production-ready. Appena tornano: Fase C /agora1777 (concilio di completezza),
+  poi Fase D riscrivo il piano integrando tutto, poi Fase E sync NotebookLM. Ti
+  aggiorno.
+
+✻ Sautéed for 2m 45s
+
+● Dynamic workflow "Fase B: verifica+arricchimento del piano migrazione per
+dimensione (sicurezza, audio/coda/P2P, arch, perf, frontend, test, pulizia)"
+completed · 10m 22s
+
+● Fase B completa — output ricchissimo (157KB). E ha già dato valore concreto:
+  il solo agente sicurezza ha trovato 8 gap reali nel piano, tra cui trappole
+  Dart-specifiche sottili (serializzazione int vs double che la rule giudica con
+  is int; update di campo annidato FieldPath vs stringa 'a.b' che farebbe
+  respingere la write; il fallback CF che deve distinguere "blocca" da
+  "fallback" — copiarlo come catch-all riaprirebbe #14 Teleporter e #24 Queue
+  Stuffer; serverTimestamp() come invariante; e il rischio drift di deploy che
+  annullerebbe la premessa parallel-backend). Assemblo gli arricchimenti e
+  attivo il concilio di completezza.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Arricchimenti assemblati (164KB, 7 dimensioni bilanciate). Aggiorno lo stato e
+  attivo Fase C — /agora1777 (concilio di completezza).
+
+● Update(PALANTIR_FLUSSO_migrazione-deep.md)
+  ⎿  Added 2 lines, removed 2 lines
+      18  
+      19  ## Il flusso (skill in ordine)
+      20  - [x] **A — setaccio** ✓ (2026-06-30): dossier 156KB, 7 temi so
+          rgentati → `scratchpad/SETACCIO_DOSSIER.md`.
+      21 -- [ ] **B — spiegazione-tecnica + verifica multi-agente** per d
+         -imensione.                                                     
+      21 +- [x] **B — spiegazione-tecnica + verifica multi-agente** ✓ (20
+         +26-06-30): 7 dimensioni, 164KB di gap+sezioni → `scratchpad/FAS
+         +E_B_ARRICCHIMENTI.md`. Sicurezza ha trovato 8 gap reali (int/do
+         +uble, FieldPath vs 'a.b', fallback CF block-vs-fallback, server
+         +Timestamp, drift deploy).                                      
+      22  - [ ] **C — agora1777**: concilio di completezza.
+      23  - [ ] **D — integrazione** nel piano.
+      24  - [ ] **E — sync NotebookLM** (notebook dedicato).
+      25  
+      26  ## Stato corrente
+      27 -- Fase: **B (verifica/arricchimento)** in avvio.               
+      27 +- Fase: **C (concilio di completezza)** in avvio.              
+      28  - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter
+          -migration`.
+      29  - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`5675
+          8c2`) — da arricchire.
+      30  
+
+● Skill(agora1777)
+  ⎿  Successfully loaded skill
+
+● Metodo agora caricato. Questo è un caso circoscritto (completezza del piano),
+  quindi convoco un subset pertinente di voci-lente, non l'arsenale pieno.
+  Ognuna rilegge il materiale (arricchimenti Fase B + piano + dossier) e applica
+  la batteria di angoli (concorrenza, provenienza, idempotenza, incrementale,
+  costo, confine) cercando la causa non-ovvia; poi io modero e scrivo il
+  verbale.
+
+● Workflow(Fase C: concilio di completezza (5 voci-lente) sul piano migrazione,
+          batteria di angoli, tensioni inter-dimensione)
+  ⎿  /workflows to view dynamic workflow runs
+
+● Fase C in corso — 5 voci al concilio cercano cosa il piano ancora trascura:
+  contraddizioni tra dimensioni, drift di deploy, segreti/GDPR/cancellazione
+  account, tensione CanvasKit vs "leggero su cellulari vecchi",
+  observability/crash-reporting assenti, error handling/onboarding/i18n-hook/CI,
+  e l'angolo strutturale non-ovvio. Applicano la batteria di angoli.
+
+  Appena chiudono, modero e scrivo il verbale, poi Fase D: riscrivo
+  FLUTTER_MIGRATION_PLAN.md integrando tutto (le 30 Sporche per la migrazione,
+  la preservazione elegante di coda+P2P, frontend/design base-default,
+  test+anti-regressione per milestone, cadenza di pulizia/refactoring,
+  trasversali), e infine Fase E sync NotebookLM. Ti porto il piano finale a
+  valle dell'integrazione.
+
+✻ Cogitated for 2m 27s
+
+● Dynamic workflow "Fase C: concilio di completezza (5 voci-lente) sul piano
+migrazione, batteria di angoli, tensioni inter-dimensione" completed · 4m 8s
+
+● Fase C completa — e il concilio ha trovato cose che le singole lenti non
+  vedevano, esattamente il suo scopo. Le più importanti (anteprima dalla voce
+  Integratore):
+
+  - 🔴 "Staging" è una finzione al data-layer: il Flutter in costruzione (quindi
+  con bug) scriverebbe sullo stesso Firestore di produzione che l'app
+  React-live legge → Marzio può regredire PRIMA di qualsiasi cutover, via stato
+  condiviso. Serve isolamento dati durante la costruzione (progetto separato /
+  emulator-only / anticipare tenantId).
+  - 🔴 Coesistenza = N client, non "stessa shape della rule": React-web +
+  Flutter-web + Flutter-mobile scrivono lo stesso DB; il P2P reale è
+  RTCPeerConnection (React) ↔ flutter_webrtc (Dart), mai testato (lo spike era
+  Flutter↔Flutter).
+  - 🔴 Resilienza in LETTURA: i modelli Dart devono tollerare >1 anno di shape
+  storiche scritte da React (utenti legacy, campi assenti, timestamp in doppio
+  formato) — tensione col modello strict immutabile proposto dall'architettura.
+  - 🔴 Provenienza delle rules: 3 copie (working-tree / HEAD / PROD)
+  potenzialmente diverse; precondizione bloccante: una sola rule canonica
+  committata+pushata+deployata, SHA pinnato.
+
+  Assemblo il verbale e leggo tutte e 5 le voci per la sintesi.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Concilio assemblato (46KB). Leggo le 5 voci per intero per estrarre il verbale
+  di sintesi (moderatore).
+
+  Read 1 file (ctrl+o to expand)
+● Lette tutte e 5 le voci — profondità notevole. Ora modero e scrivo il verbale 
+  di sintesi (Fase C), che diventa la "Parte II" del piano: precondizioni
+  bloccanti, revisioni alle fasi, trasversali dimenticati, tensioni risolte. Poi
+  creo gli annessi di approfondimento (dalle sezioni Fase B) e committo.
+
+● Write(FLUTTER_MIGRATION_PLAN_CONCILIO.md)
+  ⎿  Wrote 88 lines to FLUTTER_MIGRATION_PLAN_CONCILIO.md
+      1 # Piano migrazione marzio1777→Flutter — Parte II: approfondimento
+      2 
+      3 > **Cos'è.** L'esito del flusso di verifica profonda (palantir177
+        7 → setaccio → spiegazione-tecnica → agora1777, 2026-06-30) sul p
+        alida nell'impianto; questa Parte II aggiunge ciò che la verifica
+         alla fonte e il concilio di completezza hanno fatto emergere e c
+        alle fasi, trasversali dimenticati, tensioni fra dimensioni da ri
+        solvere.
+      4 > **Fonti:** dossier sorgentato (le 30 Sporche, coda+P2P, ecc.) e
+         su cod
+     … +269 lines (ctrl+o to expand)
+
+● Verbale (Parte II) scritto. Ora genero gli annessi di approfondimento nel repo
+  (dalle sezioni Fase B + il dossier), poi committo tutto.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tutti gli 8 annessi creati nel repo. Committo l'intero approfondimento.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● 5° commit sul branch (daf732d). Ora Fase E — sync NotebookLM (richiesto).
+  Carico lo strumento per aggiungere file per path (così non devo leggere 350KB
+  nel contesto) e creo il notebook dedicato.
+
+● source_add_file accetta path locali. Creo il notebook dedicato.
+
+  Called nb1777 (ctrl+o to expand)
+
+● Notebook creato. Aggiungo i deliverable come fonti (per path, wait:false per
+  non bloccare). Batch 1: i 3 documenti di piano + il dossier.
+
+  Called nb1777 4 times (ctrl+o to expand)
+
+● Lo strumento source_add_file non vede il filesystem locale (l'MCP NotebookLM
+  gira via gateway, altra macchina). Uso source_add_text — ma per non leggere
+  350KB nel mio contesto, delego a un agente la lettura dei file e l'aggiunta
+  come fonti al notebook.
+
+● Agent(Sync deliverable su NotebookLM)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+● Sync NotebookLM avviato in background. Aggiorno lo stato del flusso e ti
+  consegno il quadro completo (il sync NB sta finendo).
+
+● Update(PALANTIR_FLUSSO_migrazione-deep.md)
+  ⎿  Added 4 lines, removed 4 lines
+      19  ## Il flusso (skill in ordine)
+      20  - [x] **A — setaccio** ✓ (2026-06-30): dossier 156KB, 7 temi so
+          rgentati → `scratchpad/SETACCIO_DOSSIER.md`.
+      21  - [x] **B — spiegazione-tecnica + verifica multi-agente** ✓ (20
+          26-06-30): 7 dimensioni, 164KB di gap+sezioni → `scratchpad/FAS
+          E_B_ARRICCHIMENTI.md`. Sicurezza ha trovato 8 gap reali (int/do
+          uble, FieldPath vs 'a.b', fallback CF block-vs-fallback, server
+          Timestamp, drift deploy).
+      22 -- [ ] **C — agora1777**: concilio di completezza.              
+      23 -- [ ] **D — integrazione** nel piano.                          
+      24 -- [ ] **E — sync NotebookLM** (notebook dedicato).             
+      22 +- [x] **C — agora1777** ✓ (2026-06-30): 5 voci, concilio → `scr
+         +atchpad/FASE_C_CONCILIO.md`; trovati 4 precondizioni bloccanti 
+         ++ trasversali + tensioni.                                      
+      23 +- [x] **D — integrazione** ✓ (2026-06-30): `FLUTTER_MIGRATION_P
+         +LAN_CONCILIO.md` (Parte II) + 7 annessi `PLAN_ANNEX_*.md` + `PL
+         +AN_DOSSIER_corpus.md`. Commit `daf732d`.                       
+      24 +- [~] **E — sync NotebookLM**: notebook `af7ca152-c7a2-4117-82f
+         +9-6ad73160cbae` creato; aggiunta fonti in corso (agente backgro
+         +und).                                                          
+      25  
+      26  ## Stato corrente
+      27 -- Fase: **C (concilio di completezza)** in avvio.              
+      27 +- Fase: **E (sync NB)** in corso; flusso quasi chiuso.         
+      28  - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter
+          -migration`.
+      29  - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`5675
+          8c2`) — da arricchire.
+      30  
+
+● Flusso completato (sync NB in chiusura). Ti consegno il quadro.
+
+  ✅ Verifica profonda eseguita — /palantir1777 → /setaccio → 
+  /spiegazione-tecnica → /agora1777
+
+  Stavolta i documenti originali li abbiamo letti davvero, alla fonte (le 30
+  Sporche, AINULINDALE, GAMING, TECHNICAL_DOCS, rules, blueprint, index.css), in
+  un dossier sorgentato; poi 7 agenti hanno verificato e approfondito il piano
+  per dimensione; poi un concilio di 5 voci ha cercato cosa nessuna lente
+  coglie. Tutto committato (daf732d, branch a 5 commit).
+
+  🔴 Le scoperte che cambiano il piano (precondizioni bloccanti)
+
+  Il concilio ha trovato 4 cose che invalidano premesse del piano se non risolte
+  per prime — e che nessuno degli agenti per-dimensione aveva visto da solo:
+
+  1. "Staging" è una finzione al data-layer. Il Flutter in costruzione (con bug)
+  scriverebbe sullo stesso Firestore di produzione che l'app React-live mostra
+  → Marzio può regredire prima di qualsiasi cutover. Serve isolamento dati
+  (progetto Firebase separato / solo emulatori per i write).
+  2. storage.rules è un punto cieco totale. Le foto vanno su Firebase Storage,
+  ma le sue regole vivono solo nella console — fuori dal repo, fuori dai 74
+  test. "Backend provato" copre Firestore al 100% e Storage allo 0%.
+  3. Cancellazione account/GDPR rompe "backend invariato". Non esiste oggi, ma
+  App Store e Google Play la esigono per pubblicare, e il GDPR pure → serve una
+  nuova Cloud Function + nuove rule prima della submission mobile. "Backend
+  invariato" è falso per il ramo mobile.
+  4. Rules canoniche con SHA pinnato. 3 copie potenzialmente diverse
+  (working-tree/HEAD/PROD); la premessa parallel-backend poggia su un artefatto
+  non allineato.
+
+  E i trasversali dimenticati più pesanti: observability (crash-reporting — è
+  "la metà mancante" del rollback: un rollback senza trigger è morto), i18n come
+  hook ora (il gemello esatto dell'argomento sui colori, che il piano aveva
+  fatto e poi dimenticato sulle stringhe), CI è Fase 0 non Fase 4, regime 
+  multi-versione dal lancio store (N versioni mobile vecchie scrivono lo stesso
+  DB → "rules invariate" diventa vincolo permanente di compatibilità),
+  resilienza in lettura sui dati storici di React (in tensione col modello
+  strict → vince la difensività).
+
+  📦 Cosa c'è ora nel repo (branch autoplan/flutter-migration)
+
+  File: FLUTTER_MIGRATION_PLAN.md
+  Contenuto: Parte I — il piano §1-§7
+  ────────────────────────────────────────
+  File: FLUTTER_MIGRATION_PLAN_CONCILIO.md
+  Contenuto: Parte II — precondizioni, revisioni fasi, trasversali, tensioni
+    risolte, priorità
+  ────────────────────────────────────────
+  File: PLAN_ANNEX_sicurezza.md
+  Contenuto: Matrice delle 30 Sporche → shape Dart perché ogni mitigazione regga
+  ────────────────────────────────────────
+  File: PLAN_ANNEX_audio-coda-p2p.md
+  Contenuto: Preservazione elegante di coda "patto a 3" + P2P + IndexedDB
+  ────────────────────────────────────────
+  File: PLAN_ANNEX_{architettura,performance,frontend-design,test-antiregression
+  e,pulizia-refactoring}.md
+  Contenuto: Approfondimenti per dimensione
+  ────────────────────────────────────────
+  File: PLAN_DOSSIER_corpus.md
+  Contenuto: Dossier sorgentato della doc originale
+
+  Coda+P2P preservati con cura (annesso dedicato): incluso il rischio che il
+  "patto a 3" diventi un 4° sito in Dart e il fatto che il P2P reale
+  React↔Flutter non sia mai stato testato (lo spike era Flutter↔Flutter).
+
+  ⏳ In chiusura
+
+  - Sync NotebookLM: notebook dedicato creato, fonti in caricamento (agente
+  background) — ti confermo a fine.
+  - Cartella design: quando me la passi, si innesta in
+  PLAN_ANNEX_frontend-design.md (già predisposto come base-default
+  parametrizzabile).
+
+  Ti mando la Parte II (il verbale del concilio): è la sintesi che fa da spina
+  dorsale del piano aggiornato.
+
+● Parte II — esito del concilio: 4 precondizioni bloccanti, revisioni alle fasi,
+  trasversali dimenticati, tensioni risolte. È la sintesi che aggiorna il piano
+  in profondità (gli annessi per-dimensione sono nel repo).
+
+  › [file] FLUTTER_MIGRATION_PLAN_CONCILIO.md (15KB)
+
+● Resto in attesa della conferma del sync NotebookLM (l'agente sta caricando le
+  13 fonti nel notebook dedicato); ti aggiorno appena chiude. Per il resto, la 
+  verifica profonda è completa e committata: il piano ora ha la profondità, la
+  sicurezza (30 Sporche → shape Dart), la preservazione di coda+P2P, i
+  test/anti-regressione e gli step di pulizia che mi hai chiesto — più le
+  precondizioni critiche che il concilio ha fatto emergere. Quando hai la
+  cartella design, passamela e la innesto.
+
+✻ Worked for 8m 50s
+
+● Agent "Sync deliverable su NotebookLM" finished · 43m 33s
+
+● Fase E completa — sync NotebookLM riuscito: tutti i 13 file caricati → 14 
+  fonti nel notebook dedicato (il dossier da 156KB diviso in 2 per trasferimento
+  sicuro), confermate da source_list. (E l'MCP era raggiungibile dal subagent —
+  il mio timore era infondato.)
+
+  Aggiorno stato e memoria e chiudo il flusso.
+
+● Update(PALANTIR_FLUSSO_migrazione-deep.md)
+  ⎿  Added 4 lines, removed 2 lines
+      21  - [x] **B — spiegazione-tecnica + verifica multi-agente** ✓ (20
+          26-06-30): 7 dimensioni, 164KB di gap+sezioni → `scratchpad/FAS
+          E_B_ARRICCHIMENTI.md`. Sicurezza ha trovato 8 gap reali (int/do
+          uble, FieldPath vs 'a.b', fallback CF block-vs-fallback, server
+          Timestamp, drift deploy).
+      22  - [x] **C — agora1777** ✓ (2026-06-30): 5 voci, concilio → `scr
+          atchpad/FASE_C_CONCILIO.md`; trovati 4 precondizioni bloccanti 
+          + trasversali + tensioni.
+      23  - [x] **D — integrazione** ✓ (2026-06-30): `FLUTTER_MIGRATION_P
+          LAN_CONCILIO.md` (Parte II) + 7 annessi `PLAN_ANNEX_*.md` + `PL
+          AN_DOSSIER_corpus.md`. Commit `daf732d`.
+      24 -- [~] **E — sync NotebookLM**: notebook `af7ca152-c7a2-4117-82f
+         -9-6ad73160cbae` creato; aggiunta fonti in corso (agente backgro
+         -und).                                                          
+      24 +- [x] **E — sync NotebookLM** ✓ (2026-06-30): notebook `af7ca15
+         +2-c7a2-4117-82f9-6ad73160cbae` "marzio1777 — migrazione Flutter
+         + (piano + verifica profonda)" con **14 fonti** (13 file; dossie
+         +r in 2 parti). Confermato da source_list.                      
+      25  
+      26  ## Stato corrente
+      27 -- Fase: **E (sync NB)** in corso; flusso quasi chiuso.         
+      27 +- Fase: **FLUSSO COMPLETO** (A→E). Piano verificato e approfond
+         +ito; archiviato su NB.                                         
+      28 +- ⚠️ Branch `autoplan/flutter-migration`: 5 commit; gli ultimi 
+         +2 (`56758c2` piano Parte I, `daf732d` Parte II+annessi) **non p
+         +ushati** → `git push` quando Neo vuole.                        
+      29 +- ⏳ Atteso: **cartella design** di Neo → innesto in `PLAN_ANNE
+         +X_frontend-design.md`.                                         
+      30  - Repo: `~/Scrivania/marzio1777-main`, branch `autoplan/flutter
+          -migration`.
+      31  - Piano base già committato: `FLUTTER_MIGRATION_PLAN.md` (`5675
+          8c2`) — da arricchire.
+      32  
+
+  Wrote 1 memory (ctrl+o to expand)
+● Flusso completo (A→E). Chiudo con lo stato e le prossime mosse.
+
+  ✅ Fatto
+
+  - Lettura alla fonte di tutta la doc originale → dossier sorgentato.
+  - Verifica + approfondimento per 7 dimensioni (sicurezza, audio/coda/P2P,
+  architettura, performance, frontend, test, pulizia).
+  - Concilio di completezza → 4 precondizioni bloccanti + trasversali
+  dimenticati + tensioni risolte.
+  - Integrazione: Parte II + 7 annessi + dossier, committati (daf732d).
+  - Archivio NotebookLM: notebook "marzio1777 — migrazione Flutter (piano + 
+  verifica profonda)" con 14 fonti. Lì puoi farci Q&A o generare un
+  report/briefing quando vuoi.
+
+  Tutto tracciato nel file di stato del flusso
+  (PALANTIR_FLUSSO_migrazione-deep.md).
+
+  ▶️ Prossime mosse (tue)
+
+  1. Rivedi la Parte II (te l'ho mandata) — soprattutto le 4 precondizioni 
+  bloccanti: sono quelle che, se ignorate, farebbero partire la migrazione su
+  basi fragili. La più urgente: isolamento dati durante la costruzione (niente
+  write del Flutter-in-costruzione sul Firestore di Marzio live).
+  2. Push quando vuoi: il branch ha 2 commit non pushati (56758c2 Parte I,
+  daf732d Parte II+annessi) — git push dal repo.
+  3. Cartella design: passamela e la innesto in PLAN_ANNEX_frontend-design.md
+  (predisposto come base-default parametrizzabile).
+
+  Quando hai deciso sulle precondizioni e (se vuoi) approvato il piano, possiamo
+  aprire la Fase 0 vera (scaffold Flutter + FlutterFire + impalcatura
+  write-shape/observability/CI, provata su La Piazza contro un backend isolato).
+  Dimmi tu.
+
+✻ Churned for 1h 21m 7s

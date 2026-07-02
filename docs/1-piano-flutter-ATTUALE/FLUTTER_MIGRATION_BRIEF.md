@@ -108,7 +108,7 @@ altitudine, `communityId`, prefisso storage) sono stati centralizzati in
 
 **Documentazione di riferimento nel repo** (da leggere): `public/docs/TECHNICAL_DOCS_IT.md`,
 `public/docs/security_spec_IT.md`, `public/docs/GAMING_SYSTEM_IT.md`,
-`AINULINDALE_TECHNICAL_SPEC.md`, `MIGRATION.md`, `firebase-blueprint.json`,
+`docs/3-spec-originali/AINULINDALE_TECHNICAL_SPEC.md`, `docs/3-spec-originali/MIGRATION.md`, `docs/3-spec-originali/firebase-blueprint.json`,
 `firestore.rules` (+ `firestore.rules.test.ts`, `firestore.rules.audio.test.ts`).
 > Nota: `CLAUDE.md` è **gitignored** → in cloud potrebbe non esserci. I contenuti chiave sono
 > richiamati qui.
@@ -125,7 +125,7 @@ altitudine, `communityId`, prefisso storage) sono stati centralizzati in
 - **`GENERALIZATION_BRIEF.md`** — il piano *successivo* (multi-tenant): da non eseguire ora, ma da
   **non precludere** (vincolo §0.4).
 - I due documenti di ricerca sulle tecniche di porting (signals, Flame/ECS, Rust/WASM,
-  MCP/Claude Code): `ricerca_migrazione_raw.md` e `Mappatura Porting Codice Dart_Flutter vs JS.md`.
+  MCP/Claude Code): `docs/4-ricerca/ricerca_migrazione_raw.md` e `docs/4-ricerca/Mappatura Porting Codice Dart_Flutter vs JS.md`.
   *(Sono riferimenti generici, non specifici di marzio: usali come repertorio, non come fasi.)*
 
 ---
